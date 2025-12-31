@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { clsx } from 'clsx';
+
 import { Trash2 } from 'lucide-react';
 
 interface ImageCardProps {
@@ -33,10 +33,11 @@ export const ImageCard = memo(({
                 <img
                     src={previewUrl}
                     alt="preview"
-                    className={clsx('w-full h-full object-contain pointer-events-none', filterStyle)}
+                    className="w-full h-full object-contain pointer-events-none block"
                     style={{
-                        transform: `rotate(${rotation}deg)`,
-                        filter: filterStyle
+                        transform: `rotate(${rotation}deg) translateZ(0)`,
+                        filter: filterStyle || 'none',
+                        WebkitBackfaceVisibility: 'hidden', // Safari fix
                     }}
                 />
             </div>

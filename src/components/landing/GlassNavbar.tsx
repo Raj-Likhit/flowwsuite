@@ -23,12 +23,6 @@ export const GlassNavbar: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <a href="https://github.com" target="_blank" rel="noreferrer" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
-                        GitHub
-                    </a>
-                    <button className="hidden sm:flex text-xs font-bold bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg backdrop-blur-md border border-white/5 transition-all">
-                        v1.0.0
-                    </button>
                 </div>
             </div>
         </motion.nav>

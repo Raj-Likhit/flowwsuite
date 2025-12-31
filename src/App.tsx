@@ -46,7 +46,7 @@ function App() {
               <BentoGrid />
             </main>
             <footer className="py-8 text-center text-slate-600 text-sm border-t border-white/5 mx-6">
-              <p>© 2024 ConvertFlow. Built for Speed.</p>
+              <p>© 2025 ConvertFlow. Built for Speed.</p>
             </footer>
           </motion.div>
         ) : (

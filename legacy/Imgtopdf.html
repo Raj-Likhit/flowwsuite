@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ConvertFlow | V1.0 Final</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        .nav-glass {
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+        }
+
+        .a4-preview-card {
+            aspect-ratio: 210/297;
+            background: white;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            cursor: grab;
+        }
+
+        @media (min-width: 768px) {
+            .a4-preview-card {
+                width: 170px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .a4-preview-card {
+                width: 44vw;
+            }
+        }
+
+        /* Reactive Buttons */
+        .btn-reactive {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-reactive:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #334155;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .toggle-switch.active {
+            background: #10b981;
+        }
+
+        .toggle-circle {
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+
+        .toggle-switch.active .toggle-circle {
+            left: 22px;
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .color-swatch.active {
+            border-color: #10b981;
+            transform: scale(1.1);
+        }
+
+        .filter-chip {
+            padding: 5px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 8px;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            color: #64748b;
+            cursor: pointer;
+        }
+
+        .filter-chip.active {
+            background: #10b981;
+            color: #000;
+            border-color: #10b981;
+        }
+
+        .rick-layer {
+            position: absolute;
+            inset: 0;
+            background-size: 50%;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+
+<body class="pt-20">
+
+    <nav class="fixed top-0 inset-x-0 z-50 nav-glass">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center"><i data-lucide="zap"
+                        class="w-4 h-4 text-black fill-current"></i></div>
+                <span class="text-base font-bold text-white tracking-tighter">Convert<span
+                        class="text-emerald-500 font-black">Flow</span></span>
+            </div>
+            <div id="nav-actions" class="hidden flex items-center gap-2">
+                <button id="btn-add-blank"
+                    class="btn-reactive text-[9px] font-bold border border-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-800 uppercase">Add
+                    Blank</button>
+                <input type="text" id="doc-name" value="ConvertFlow_Doc"
+                    class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-emerald-500 w-24 text-white text-center">
+                <button id="btn-download"
+                    class="btn-reactive bg-emerald-500 text-black px-4 py-2 rounded-lg font-bold text-[9px] tracking-widest uppercase">Export</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4">
+        <div id="view-upload" class="max-w-xl mx-auto mt-10 p-8 glass-panel rounded-[2rem] text-center">
+            <label for="file-input"
+                class="block border-2 border-dashed border-slate-800 rounded-[1.5rem] p-10 hover:border-emerald-500 cursor-pointer group btn-reactive">
+                <input type="file" id="file-input" multiple accept="image/*,.heic" class="hidden">
+                <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-4 text-emerald-500"></i>
+                <h2 class="text-lg font-bold text-white">Choose Images</h2>
+                <div id="status-bar" class="hidden mt-6">
+                    <div id="progress-bar-fill" class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500" style="width: 0%"></div>
+                    </div>
+                    <p id="upload-status-text" class="text-[10px] mt-2 uppercase text-emerald-500 font-bold">Syncing
+                        Assets...</p>
+                </div>
+            </label>
+        </div>
+
+        <div id="view-preview" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div class="md:col-span-5 glass-panel p-4 rounded-xl flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Border</span>
+                        <div id="border-toggle" class="toggle-switch btn-reactive">
+                            <div class="toggle-circle"></div>
+                        </div>
+                    </div>
+                    <div id="border-controls"
+                        class="opacity-30 pointer-events-none flex items-center justify-between gap-4">
+                        <input type="range" id="border-width" min="1" max="15" value="3"
+                            class="w-16 accent-emerald-500">
+                        <div class="flex gap-1.5 items-center">
+                            <div class="color-swatch active btn-reactive" style="background: #000000"
+                                data-color="#000000"></div>
+                            <div class="color-swatch btn-reactive" style="background: #10b981" data-color="#10b981">
+                            </div>
+                            <button id="btn-more-colors"
+                                class="w-5 h-5 rounded bg-slate-800 flex items-center justify-center btn-reactive"><i
+                                    data-lucide="palette" class="w-3"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:col-span-4 glass-panel p-4 rounded-xl flex flex-col gap-3">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filters</span>
+                    <div class="flex gap-1 justify-between">
+                        <button onclick="updateFilter(this, 'none')"
+                            class="filter-chip active btn-reactive">RAW</button>
+                        <button onclick="updateFilter(this, 'grayscale')" class="filter-chip btn-reactive">MONO</button>
+                        <button onclick="updateFilter(this, 'sepia')" class="filter-chip btn-reactive">RETRO</button>
+                    </div>
+                </div>
+                <div class="md:col-span-3 glass-panel p-4 rounded-xl flex flex-col gap-3">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Page #</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-numbers" class="sr-only peer">
+                        <div
+                            class="w-8 h-4 bg-slate-700 rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4">
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div id="preview-grid" class="flex flex-wrap justify-center gap-6 py-6"></div>
+        </div>
+    </main>
+
+    <div id="color-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90">
+        <div class="glass-panel w-full max-w-xs p-6 rounded-3xl">
+            <div class="grid grid-cols-4 gap-3 mb-6" id="preset-colors"></div>
+            <input type="color" id="manual-color" class="w-full h-10 bg-transparent border-none cursor-pointer">
+            <button id="close-modal"
+                class="w-full mt-6 bg-emerald-500 text-black py-3 rounded-xl text-xs font-bold uppercase btn-reactive">Apply</button>
+        </div>
+    </div>
+
+    <div id="global-loader"
+        class="hidden fixed inset-0 bg-slate-950/98 z-[110] flex flex-col items-center justify-center text-center">
+        <div class="w-12 h-12 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <p id="loader-text" class="mt-4 text-[10px] font-bold text-emerald-500 uppercase tracking-[0.3em]">Building
+            PDF...</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            let imagesData = [];
+            let activeFilter = 'none';
+            let borderActive = false;
+            let selectedColor = '#000000';
+            let previewObjectURLs = [];
+
+            const fileInput = document.getElementById('file-input');
+            const gridElement = document.getElementById('preview-grid');
+
+            const cleanupPreviews = () => {
+                previewObjectURLs.forEach(url => window.URL.revokeObjectURL(url));
+                previewObjectURLs = [];
+            };
+
+            const renderGrid = () => {
+                cleanupPreviews();
+                gridElement.innerHTML = '';
+                const bw = borderActive ? document.getElementById('border-width').value : 0;
+                const showNums = document.getElementById('toggle-numbers').checked;
+
+                imagesData.forEach((item, i) => {
+                    const page = document.createElement('div');
+                    page.className = `a4-preview-card filter-${activeFilter} group`;
+                    page.dataset.id = item.id;
+                    let inner = item.type === 'image' ? `<img src="${window.URL.createObjectURL(item.file)}" class="w-full h-full object-contain pointer-events-none" style="transform: rotate(${item.rotation}deg)">` : `<div class="text-[8px] text-slate-400 font-bold uppercase">Blank</div>`;
+                    if (item.type === 'image') previewObjectURLs.push(inner.match(/src="([^"]+)"/)[1]);
+
+                    page.innerHTML = `
+                        <div class="absolute inset-[8px] flex items-center justify-center bg-white overflow-hidden" style="border: ${bw / 2}px solid ${selectedColor};">
+                            ${inner}
+                        </div>
+                        ${showNums ? `<div class="absolute bottom-1 left-0 right-0 text-center text-[6px] font-bold text-slate-300">P. ${i + 1}</div>` : ''}
+                        <button class="btn-delete absolute top-1 right-1 p-1 bg-black/60 rounded text-red-400 opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                    `;
+                    page.querySelector('.btn-delete').onclick = () => {
+                        imagesData = imagesData.filter(img => img.id !== item.id);
+                        if (imagesData.length === 0) location.reload(); else renderGrid();
+                    };
+                    gridElement.appendChild(page);
+                });
+                lucide.createIcons();
+            };
+
+            fileInput.onchange = async (e) => {
+                const files = Array.from(e.target.files).slice(0, 15);
+                if (!files.length) return;
+                document.getElementById('status-bar').classList.remove('hidden');
+                const fill = document.querySelector('#progress-bar-fill div');
+
+                imagesData = [];
+                for (let i = 0; i < files.length; i++) {
+                    fill.style.width = ((i + 1) / files.length * 100) + '%';
+                    let file = files[i];
+                    if (file.name.toLowerCase().endsWith('.heic')) {
+                        const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.6 });
+                        file = new File([blob], "img.jpg", { type: "image/jpeg" });
+                    }
+                    imagesData.push({ file, rotation: 0, id: Math.random(), type: 'image' });
+                    await new Promise(r => setTimeout(r, 40));
+                }
+                document.getElementById('view-upload').classList.add('hidden');
+                document.getElementById('view-preview').classList.remove('hidden');
+                document.getElementById('nav-actions').classList.remove('hidden');
+                renderGrid();
+            };
+
+            document.getElementById('btn-add-blank').onclick = () => {
+                if (imagesData.length < 15) { imagesData.push({ type: 'blank', id: Math.random(), rotation: 0 }); renderGrid(); }
+            };
+
+            document.getElementById('border-toggle').onclick = function () {
+                borderActive = !borderActive;
+                this.classList.toggle('active');
+                document.getElementById('border-controls').style.opacity = borderActive ? '1' : '0.3';
+                document.getElementById('border-controls').style.pointerEvents = borderActive ? 'all' : 'none';
+                renderGrid();
+            };
+
+            document.getElementById('btn-download').onclick = async function () {
+                this.innerText = "WAIT...";
+                const loader = document.getElementById('global-loader');
+                loader.classList.remove('hidden');
+
+                await new Promise(r => setTimeout(r, 300));
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+
+                    for (let i = 0; i < imagesData.length; i++) {
+                        if (i > 0) doc.addPage();
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = 1100; canvas.height = 1550;
+                        ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        if (activeFilter === 'grayscale') ctx.filter = 'grayscale(1)';
+                        else if (activeFilter === 'sepia') ctx.filter = 'sepia(1)';
+                        else if (activeFilter === 'vibrant') ctx.filter = 'saturate(1.8) contrast(1.1)';
+
+                        if (imagesData[i].type === 'image') {
+                            const img = new Image();
+                            const url = URL.createObjectURL(imagesData[i].file);
+                            await new Promise(resolve => {
+                                img.onload = () => {
+                                    ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2);
+                                    ctx.rotate((imagesData[i].rotation * Math.PI) / 180);
+                                    const ratio = Math.min((canvas.width - 150) / img.naturalWidth, (canvas.height - 150) / img.naturalHeight);
+                                    ctx.drawImage(img, -(img.naturalWidth * ratio) / 2, -(img.naturalHeight * ratio) / 2, img.naturalWidth * ratio, img.naturalHeight * ratio);
+                                    ctx.restore(); resolve();
+                                };
+                                img.src = url;
+                            });
+                            URL.revokeObjectURL(url);
+                        }
+
+                        if (borderActive) {
+                            ctx.filter = 'none'; ctx.strokeStyle = selectedColor; ctx.lineWidth = 15;
+                            ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+                        }
+
+                        doc.addImage(canvas.toDataURL('image/jpeg', 0.7), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+                        canvas.width = 0; await new Promise(r => setTimeout(r, 50));
+                    }
+                    doc.save((document.getElementById('doc-name').value || 'CF_V1') + '.pdf');
+                } catch (e) { alert("Error generating PDF."); }
+                finally { loader.classList.add('hidden'); this.innerText = "EXPORT"; }
+            };
+
+            document.querySelectorAll('.color-swatch').forEach(s => s.onclick = () => {
+                document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.remove('active'));
+                s.classList.add('active'); selectedColor = s.dataset.color; renderGrid();
+            });
+
+            window.updateFilter = (el, filter) => {
+                activeFilter = filter;
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                el.classList.add('active'); renderGrid();
+            };
+
+            new Sortable(gridElement, {
+                animation: 150, onEnd: () => {
+                    const newOrder = [];
+                    gridElement.querySelectorAll('.a4-preview-card').forEach(el => newOrder.push(imagesData.find(img => img.id == el.dataset.id)));
+                    imagesData = newOrder; renderGrid();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

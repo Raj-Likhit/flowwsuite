@@ -27,17 +27,17 @@ export const ImageCard = memo(({
         <div className="relative group a4-preview-card bg-white shadow-2xl transition-transform hover:rotate-1 cursor-grab active:cursor-grabbing">
             {/* Main Card Content */}
             <div
-                className="absolute inset-[8px] flex items-center justify-center bg-white overflow-hidden"
+                className="absolute inset-[8px] bg-white overflow-hidden"
                 style={borderStyle}
             >
                 <img
                     src={previewUrl}
                     alt="preview"
-                    className="w-full h-full object-contain pointer-events-none block"
+                    loading="lazy"
+                    className="w-full h-full object-contain pointer-events-none block will-change-transform"
                     style={{
-                        transform: `rotate(${rotation}deg) translateZ(0)`,
+                        transform: `rotate(${rotation}deg)`,
                         filter: filterStyle || 'none',
-                        WebkitBackfaceVisibility: 'hidden', // Safari fix
                     }}
                 />
             </div>

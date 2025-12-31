@@ -22,6 +22,7 @@ export const SortableItem: React.FC<SortableItemProps> = ({ id, children }) => {
         transition,
         opacity: isDragging ? 0.5 : 1,
         zIndex: isDragging ? 999 : 'auto',
+        touchAction: 'manipulation',
     };
 
     return (

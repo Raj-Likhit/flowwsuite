@@ -2,23 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-base: #0A0A0A;
+  --bg-surface: #111111;
+  --bg-surface-light: #1A1A1A;
+  --accent-start: #6366f1;
+  --accent-end: #a855f7;
+  --color-emerald: #10b981;
+  --color-amber: #f59e0b;
+  --color-crimson: #ef4444;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --spacing-unit: 8px;
+}
+
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-50 antialiased;
+    @apply antialiased;
     font-feature-settings: "cv11", "ss01";
+    background-color: var(--bg-base);
+    color: #f1f5f9;
+  }
+
+  /* Keep the old slate-950 bg for converter compatibility */
+  .converter-scope {
+    @apply bg-slate-950 text-slate-50;
   }
 }
 
 @layer utilities {
+
+  /* Original glass — used by converter components (SmartDropzone, UploadZone, etc.) */
   .glass {
     @apply bg-slate-900/40 backdrop-blur-xl border border-white/10;
   }
 
+  /* New glass — used by attendance module */
+  .glass-new {
+    background: rgba(17, 17, 17, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-strong {
+    background: rgba(17, 17, 17, 0.8);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
   .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, var(--accent-start), var(--accent-end));
+  }
+
+  .text-gradient-emerald {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400;
+  }
+
+  .accent-gradient {
+    background-image: linear-gradient(to right, var(--accent-start), var(--accent-end));
   }
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

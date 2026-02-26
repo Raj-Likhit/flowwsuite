@@ -1,12 +1,12 @@
 import React from 'react';
-import { useStore } from '../../store/useStore';
+import { useConverterStore } from '../store/useConverterStore';
 import { clsx } from 'clsx';
-import { ColorPopover } from '../ui/ColorPopover';
+import { ColorPopover } from '../../../shared/components/ui/ColorPopover';
 import { Palette, Layers, Hash } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const SettingsPanel: React.FC = () => {
-    const { settings, updateSettings } = useStore();
+    const { settings, updateSettings } = useConverterStore();
     const { borderWidth, baseColor, showPageNumbers, activeFilter } = settings;
 
     const filters = [

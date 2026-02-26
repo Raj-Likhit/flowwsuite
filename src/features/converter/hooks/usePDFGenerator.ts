@@ -1,12 +1,12 @@
 import { useRef, useCallback } from 'react';
-import { useStore } from '../store/useStore';
-import { FileStorage } from './fileStorage';
-import { WorkerPool } from './workerPool';
-import PDFAssemblerWorker from '../workers/pdf.assembler?worker';
+import { useConverterStore } from '../store/useConverterStore';
+import { FileStorage } from '../../../core/services/fileStorage';
+import { WorkerPool } from '../../../core/services/workerPool';
+import PDFAssemblerWorker from '../../../workers/pdf.assembler?worker';
 
 export const usePDFGenerator = () => {
     const assemblerRef = useRef<Worker | null>(null);
-    const { pages, settings, setProcessing } = useStore();
+    const { pages, settings, setProcessing, setError } = useConverterStore();
 
     const generatePDF = useCallback(async () => {
         if (pages.length === 0) return;
@@ -76,7 +76,7 @@ export const usePDFGenerator = () => {
                 } else if (type === 'ERROR') {
                     console.error("Assembler Error:", payload);
                     setProcessing(false);
-                    alert('PDF Assembly Failed: ' + payload);
+                    setError('PDF Assembly Failed: ' + payload);
                     assembler.terminate();
                 }
             };
@@ -91,10 +91,10 @@ export const usePDFGenerator = () => {
         } catch (err) {
             console.error("Pipeline Error:", err);
             setProcessing(false);
-            alert('Generation Failed: ' + (err as Error).message);
+            setError('Generation Failed: ' + (err as Error).message);
         }
 
-    }, [pages, settings, setProcessing]);
+    }, [pages, settings, setProcessing, setError]);
 
     return { generatePDF };
 };

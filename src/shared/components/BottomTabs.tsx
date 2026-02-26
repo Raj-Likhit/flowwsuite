@@ -3,19 +3,17 @@ import { motion } from 'framer-motion';
 import { CalendarCheck, FileText } from 'lucide-react';
 import { clsx } from 'clsx';
 
-export type TabId = 'attendance' | 'converter';
+import { useNavigationStore } from '../store/useNavigationStore';
 
-interface BottomTabsProps {
-    activeTab: TabId;
-    onTabChange: (tab: TabId) => void;
-}
+export type TabId = 'attendance' | 'converter';
 
 const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
     { id: 'converter', label: 'Converter', icon: FileText },
 ];
 
-export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onTabChange }) => {
+export const BottomTabs: React.FC = () => {
+    const { activeTab, setActiveTab } = useNavigationStore();
     return (
         <nav
             className="fixed bottom-0 inset-x-0 z-[60] glass-strong safe-bottom"
@@ -33,7 +31,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, onTabChange }
                             role="tab"
                             aria-selected={isActive}
                             aria-controls={`${tab.id}-panel`}
-                            onClick={() => onTabChange(tab.id)}
+                            onClick={() => setActiveTab(tab.id)}
                             className={clsx(
                                 'relative flex flex-col items-center gap-1 py-2 px-6 rounded-xl transition-colors',
                                 isActive ? 'text-white' : 'text-white/35 hover:text-white/60'

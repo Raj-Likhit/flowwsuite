@@ -1,17 +1,17 @@
 import { create } from 'zustand';
-import { FileStorage } from '../lib/fileStorage';
+import { FileStorage } from '../../../core/services/fileStorage';
 
 export interface ScannedPage {
     id: string;
-    // file: File; // Removed: Stored in FileStorage
     previewUrl: string;
     rotation: number;
 }
 
-interface AppState {
+interface ConverterState {
     pages: ScannedPage[];
     isProcessing: boolean;
     statusText: string;
+    error: string | null;
     settings: {
         borderWidth: number;
         baseColor: string;
@@ -22,14 +22,16 @@ interface AppState {
     updatePageRotation: (id: string, rotation: number) => void;
     removePage: (id: string) => void;
     reorderPages: (newOrder: ScannedPage[]) => void;
-    updateSettings: (settings: Partial<AppState['settings']>) => void;
+    updateSettings: (settings: Partial<ConverterState['settings']>) => void;
     setProcessing: (isProcessing: boolean, text?: string) => void;
+    setError: (error: string | null) => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useConverterStore = create<ConverterState>((set, get) => ({
     pages: [],
     isProcessing: false,
     statusText: '',
+    error: null,
     settings: {
         borderWidth: 3,
         baseColor: '#000000',
@@ -71,4 +73,5 @@ export const useStore = create<AppState>((set, get) => ({
     updateSettings: (newSettings) =>
         set((state) => ({ settings: { ...state.settings, ...newSettings } })),
     setProcessing: (isProcessing, text = '') => set({ isProcessing, statusText: text }),
+    setError: (error) => set({ error }),
 }));

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useStore } from '../store/useStore';
-import ImageWorker from '../workers/image.worker?worker';
+import { useConverterStore } from '../store/useConverterStore';
+import ImageWorker from '../../../workers/image.worker?worker';
 
 export const useImageProcessor = () => {
     const workerRef = useRef<Worker | null>(null);
-    const { addPages, setProcessing } = useStore();
+    const { addPages, setProcessing, setError } = useConverterStore();
 
     useEffect(() => {
         workerRef.current = new ImageWorker();
@@ -17,7 +17,7 @@ export const useImageProcessor = () => {
             } else if (type === 'ERROR') {
                 console.error("Worker Error:", payload);
                 setProcessing(false);
-                alert('Image Processing Failed: ' + payload);
+                setError('Image Processing Failed: ' + payload);
             }
         };
 
@@ -28,6 +28,7 @@ export const useImageProcessor = () => {
 
     const processFiles = useCallback((files: File[]) => {
         if (!files.length) return;
+        setError(null);
         setProcessing(true, 'Processing Images...');
         workerRef.current?.postMessage({
             type: 'PROCESS_FILES',
@@ -36,11 +37,12 @@ export const useImageProcessor = () => {
     }, [setProcessing]);
 
     const createBlankPage = useCallback(() => {
+        setError(null);
         setProcessing(true, 'Creating Blank Page...');
         workerRef.current?.postMessage({
             type: 'CREATE_BLANK'
         });
-    }, [setProcessing]);
+    }, [setProcessing, setError]);
 
     return { processFiles, createBlankPage };
 };

@@ -1,4 +1,4 @@
-import PageRendererWorker from '../workers/page.renderer?worker';
+import PageRendererWorker from '../../workers/page.renderer?worker';
 
 interface RenderTask {
     id: string;

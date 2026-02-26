@@ -1,10 +1,10 @@
 import React, { type ChangeEvent } from 'react';
 import { UploadCloud } from 'lucide-react';
-import { useStore } from '../../store/useStore';
-import { useImageProcessor } from '../../lib/useImageProcessor';
+import { useConverterStore } from '../store/useConverterStore';
+import { useImageProcessor } from '../hooks/useImageProcessor';
 
 export const UploadZone: React.FC = () => {
-    const { isProcessing, statusText } = useStore();
+    const { isProcessing, statusText } = useConverterStore();
     const { processFiles } = useImageProcessor();
 
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {

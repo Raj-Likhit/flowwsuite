@@ -34,8 +34,8 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
 
     // Animated count-up
     const motionPct = useMotionValue(0);
-    const displayPct = useTransform(motionPct, (v) => Math.round(v));
-    const [displayValue, setDisplayValue] = useState(0);
+    const displayPct = useTransform(motionPct, (v) => Math.round(v * 10) / 10);
+    const [displayValue, setDisplayValue] = useState<number | string>(0);
 
     useEffect(() => {
         const controls = animate(motionPct, clampedPct, {
@@ -102,7 +102,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
                     className="text-5xl font-black tabular-nums tracking-tight"
                     style={{ color }}
                 >
-                    {displayValue}
+                    {typeof displayValue === 'number' ? displayValue.toFixed(1) : displayValue}
                     <span className="text-2xl font-bold opacity-60">%</span>
                 </span>
                 <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mt-1">

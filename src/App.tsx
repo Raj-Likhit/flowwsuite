@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useAppStore } from './store/useAppStore';
-import { BottomTabs } from './components/shared/BottomTabs';
-import { AttendanceView } from './modules/attendance/AttendanceView';
-import { ConverterView } from './modules/converter/ConverterView';
+import { useNavigationStore } from './shared/store/useNavigationStore';
+import { BottomTabs } from './shared/components/BottomTabs';
+import { AttendanceView } from './features/attendance/components/AttendanceView';
+import { ConverterView } from './features/converter/components/ConverterView';
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -16,7 +16,7 @@ const pageTransition = {
 };
 
 function App() {
-  const { activeTab, setActiveTab } = useAppStore();
+  const { activeTab } = useNavigationStore();
 
   return (
     <div className="min-h-screen text-white selection:bg-indigo-500/30 overflow-x-hidden" style={{ background: 'var(--bg-base)' }}>
@@ -27,7 +27,7 @@ function App() {
       </div>
 
       {/* Page Content */}
-      <div className="relative z-10">
+      <div className="relative">
         <AnimatePresence mode="wait">
           {activeTab === 'attendance' ? (
             <motion.div
@@ -56,7 +56,7 @@ function App() {
       </div>
 
       {/* Bottom Navigation */}
-      <BottomTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomTabs />
     </div>
   );
 }

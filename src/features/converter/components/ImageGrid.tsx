@@ -1,5 +1,5 @@
 import React from 'react';
-import { useStore } from '../../store/useStore';
+import { useConverterStore } from '../store/useConverterStore';
 import {
     DndContext,
     closestCenter,
@@ -16,11 +16,11 @@ import {
     sortableKeyboardCoordinates,
     rectSortingStrategy
 } from '@dnd-kit/sortable';
-import { SortableItem } from '../ui/SortableItem';
-import { ImageCard } from '../ui/ImageCard';
+import { SortableItem } from '../../../shared/components/ui/SortableItem';
+import { ImageCard } from '../../../shared/components/ui/ImageCard';
 
 export const ImageGrid: React.FC = () => {
-    const { pages, removePage, settings, reorderPages } = useStore();
+    const { pages, removePage, settings, reorderPages } = useConverterStore();
     const { borderWidth, baseColor, showPageNumbers, activeFilter } = settings;
 
     const sensors = useSensors(

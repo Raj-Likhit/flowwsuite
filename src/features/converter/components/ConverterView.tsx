@@ -1,19 +1,20 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useStore } from '../../store/useStore';
-import { usePDFGenerator } from '../../lib/usePDFGenerator';
-import { useImageProcessor } from '../../lib/useImageProcessor';
+import { useConverterStore } from '../store/useConverterStore';
+import { usePDFGenerator } from '../hooks/usePDFGenerator';
+import { useImageProcessor } from '../hooks/useImageProcessor';
 
-import { GlassNavbar } from '../../components/landing/GlassNavbar';
-import { HeroSection } from '../../components/landing/HeroSection';
-import { SmartDropzone } from '../../components/landing/SmartDropzone';
-import { BentoGrid } from '../../components/landing/BentoGrid';
-import { Navbar } from '../../components/ui/Navbar';
-import { SettingsPanel } from '../../components/features/SettingsPanel';
-import { ImageGrid } from '../../components/features/ImageGrid';
-import { Button } from '../../components/ui/Button';
+import { GlassNavbar } from '../../../shared/components/GlassNavbar';
+import { HeroSection } from '../../../shared/components/HeroSection';
+import { SmartDropzone } from '../../../shared/components/SmartDropzone';
+import { BentoGrid } from '../../../shared/components/BentoGrid';
+import { Navbar } from '../../../shared/components/ui/Navbar';
+import { SettingsPanel } from './SettingsPanel';
+import { ImageGrid } from './ImageGrid';
+import { Button } from '../../../shared/components/ui/Button';
+import { AlertTriangle, X } from 'lucide-react';
 
 export const ConverterView = () => {
-    const { pages } = useStore();
+    const { pages, error, setError } = useConverterStore();
     const { generatePDF } = usePDFGenerator();
     const { createBlankPage } = useImageProcessor();
 
@@ -60,6 +61,25 @@ export const ConverterView = () => {
                     >
                         <Navbar />
                         <main className="max-w-7xl mx-auto p-4 pt-24 space-y-8 pb-32">
+                            <AnimatePresence>
+                                {error && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0, y: -20 }}
+                                        animate={{ opacity: 1, height: 'auto', y: 0 }}
+                                        exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                                        className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start justify-between gap-3 text-red-400"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                            <div className="text-sm font-medium leading-relaxed">{error}</div>
+                                        </div>
+                                        <button onClick={() => setError(null)} className="p-1 hover:bg-red-500/10 rounded-lg transition-colors">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <SettingsPanel />
                                 <ImageGrid />

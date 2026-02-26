@@ -1,7 +1,7 @@
 import React, { useRef, useState, type ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, FileImage, ArrowRight } from 'lucide-react';
-import { useImageProcessor } from '../../lib/useImageProcessor';
+import { useImageProcessor } from '../../features/converter/hooks/useImageProcessor';
 
 export const SmartDropzone: React.FC = () => {
     const { processFiles } = useImageProcessor();

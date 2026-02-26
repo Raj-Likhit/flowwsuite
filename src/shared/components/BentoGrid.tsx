@@ -8,7 +8,7 @@ const features = [
         title: "100% Client-Side",
         description: "Your files never leave your device. Zero server uploads, absolute privacy.",
         icon: Shield,
-        className: "md:col-span-2 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20"
+        className: "md:col-span-2 bg-gradient-to-br from-primary-500/10 to-secondary-500/10 border-primary-500/20"
     },
     {
         title: "HEIC Support",

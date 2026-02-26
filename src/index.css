@@ -2,12 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme="indigo"] {
   --bg-base: #0A0A0A;
   --bg-surface: #111111;
   --bg-surface-light: #1A1A1A;
-  --accent-start: #6366f1;
-  --accent-end: #a855f7;
+
+  --primary: #6366f1;
+  --primary-400: #818cf8;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+
+  --secondary: #a855f7;
+  --secondary-400: #c084fc;
+  --secondary-500: #a855f7;
+
+  --accent-start: var(--primary-500);
+  --accent-end: var(--secondary-500);
+  --accent-start-trans: #6366f133;
+  --accent-end-trans: #a855f733;
+
   --color-emerald: #10b981;
   --color-amber: #f59e0b;
   --color-crimson: #ef4444;
@@ -16,6 +30,82 @@
   --radius-lg: 24px;
   --radius-xl: 32px;
   --spacing-unit: 8px;
+}
+
+[data-theme="obsidian"] {
+  /* Cyberverse (Sci-Fi) */
+  --bg-base: #050510;
+  --bg-surface: #0a0a1a;
+  --bg-surface-light: #151525;
+
+  --primary: #00f0ff;
+  /* Neon Cyan */
+  --primary-400: #70ffff;
+  --primary-500: #00f0ff;
+  --primary-600: #00a0b0;
+
+  --secondary: #ff003c;
+  /* Cyberpunk Red */
+  --secondary-400: #ff5577;
+  --secondary-500: #ff003c;
+
+  --accent-start: var(--primary-500);
+  --accent-end: var(--secondary-500);
+  --accent-start-trans: #00f0ff33;
+  --accent-end-trans: #ff003c33;
+}
+
+[data-theme="crimson"] {
+  /* Solar Flare (High Energy) */
+  --bg-base: #140505;
+  --bg-surface: #1f0a0a;
+  --bg-surface-light: #2b1212;
+
+  --primary: #ff4500;
+  /* Deep Orange/Red */
+  --primary-400: #ff7540;
+  --primary-500: #ff4500;
+  --primary-600: #c23500;
+
+  --secondary: #ffd700;
+  /* Golden Yellow */
+  --secondary-400: #ffea70;
+  --secondary-500: #ffd700;
+
+  --accent-start: var(--primary-500);
+  --accent-end: var(--secondary-500);
+  --accent-start-trans: #ff450033;
+  --accent-end-trans: #ffd70033;
+}
+
+[data-theme="forest"] {
+  /* Ethereal Nature */
+  --bg-base: #020a05;
+  --bg-surface: #05140a;
+  --bg-surface-light: #0a2012;
+
+  --primary: #a3e635;
+  /* Lime/Leaf Green */
+  --primary-400: #bef264;
+  --primary-500: #a3e635;
+  --primary-600: #65a30d;
+
+  --secondary: #14b8a6;
+  /* Teal/Water */
+  --secondary-400: #5eead4;
+  --secondary-500: #14b8a6;
+
+  --accent-start: var(--primary-500);
+  --accent-end: var(--secondary-500);
+  --accent-start-trans: #a3e63533;
+  --accent-end-trans: #14b8a633;
+}
+
+:root.high-contrast,
+html.high-contrast[data-theme] {
+  --bg-base: #000000;
+  --bg-surface: #000000;
+  --bg-surface-light: #111111;
 }
 
 @layer base {
@@ -52,6 +142,15 @@
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .high-contrast .glass,
+  .high-contrast .glass-new,
+  .high-contrast .glass-strong {
+    background: #000000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   .text-gradient {

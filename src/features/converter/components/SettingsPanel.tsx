@@ -107,7 +107,7 @@ export const SettingsPanel: React.FC = () => {
             {/* Metadata */}
             <motion.div variants={itemVariants} className="md:col-span-3 bg-slate-900/60 border border-white/10 p-5 rounded-2xl backdrop-blur-xl hover:border-white/20 transition-colors shadow-xl flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-purple-400">
+                    <div className="flex items-center gap-2 text-secondary-400">
                         <Hash className="w-4 h-4" />
                         <span className="text-[10px] font-bold uppercase tracking-widest">Pagination</span>
                     </div>

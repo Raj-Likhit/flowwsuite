@@ -1,5 +1,6 @@
 import React from 'react';
 import { useConverterStore } from '../store/useConverterStore';
+import { Trash2 } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -20,7 +21,7 @@ import { SortableItem } from '../../../shared/components/ui/SortableItem';
 import { ImageCard } from '../../../shared/components/ui/ImageCard';
 
 export const ImageGrid: React.FC = () => {
-    const { pages, removePage, settings, reorderPages } = useConverterStore();
+    const { pages, removePage, settings, reorderPages, clearPages } = useConverterStore();
     const { borderWidth, baseColor, showPageNumbers, activeFilter } = settings;
 
     const sensors = useSensors(
@@ -68,6 +69,17 @@ export const ImageGrid: React.FC = () => {
                 items={pages.map(p => p.id)}
                 strategy={rectSortingStrategy}
             >
+                <div className="flex justify-end px-2 sm:px-0">
+                    {pages.length > 0 && (
+                        <button
+                            onClick={clearPages}
+                            className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-400/70 hover:text-red-400 bg-red-400/5 hover:bg-red-400/10 px-4 py-2 rounded-lg transition-all"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Clear All
+                        </button>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 py-6 pb-24 justify-items-center">
                     {pages.map((page, index) => (
                         <SortableItem key={page.id} id={page.id}>

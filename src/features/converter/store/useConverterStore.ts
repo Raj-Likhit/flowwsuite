@@ -21,6 +21,7 @@ interface ConverterState {
     addPages: (files: File[]) => void;
     updatePageRotation: (id: string, rotation: number) => void;
     removePage: (id: string) => void;
+    clearPages: () => void;
     reorderPages: (newOrder: ScannedPage[]) => void;
     updateSettings: (settings: Partial<ConverterState['settings']>) => void;
     setProcessing: (isProcessing: boolean, text?: string) => void;
@@ -68,6 +69,13 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
         set((state) => ({
             pages: state.pages.filter((p) => p.id !== id),
         }));
+    },
+    clearPages: () => {
+        get().pages.forEach(page => {
+            URL.revokeObjectURL(page.previewUrl);
+            FileStorage.remove(page.id);
+        });
+        set({ pages: [] });
     },
     reorderPages: (newOrder) => set({ pages: newOrder }),
     updateSettings: (newSettings) =>

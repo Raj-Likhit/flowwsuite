@@ -18,7 +18,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         <motion.div
             className={clsx(
                 'glass-new rounded-2xl p-5',
-                glow && 'shadow-lg shadow-indigo-500/5',
+                glow && 'shadow-lg shadow-primary-500/5',
                 className
             )}
             {...motionProps}

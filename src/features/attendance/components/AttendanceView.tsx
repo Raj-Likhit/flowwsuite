@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, Shield, AlertTriangle, TrendingDown, TrendingUp, CheckCircle2, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle } from 'lucide-react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { ProgressRing } from '../../../shared/components/ProgressRing';
 import { PremiumButton } from '../../../shared/components/PremiumButton';
+import { AttendanceControls } from './AttendanceControls';
 import { useAttendanceReport } from './useAttendanceReport';
 import { ProfileSelection } from './ProfileSelection';
+import { SafeDangerCards } from './SafeDangerCards';
+import { AuditTrail } from './AuditTrail';
 import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
+import { toast } from 'sonner';
 
 export const AttendanceView: React.FC = () => {
     const {
@@ -16,15 +20,19 @@ export const AttendanceView: React.FC = () => {
         loading,
         setLoading,
         updateAttendance,
+        deleteLog,
+        hideProfileName
     } = useAttendanceStore();
 
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const { generateReport } = useAttendanceReport();
+    const isSyncing = useRef(false);
 
     const handleSync = async () => {
-        if (!activeProfile) return;
+        if (!activeProfile || isSyncing.current) return;
+        isSyncing.current = true;
         setLoading(true);
 
         try {
@@ -39,19 +47,24 @@ export const AttendanceView: React.FC = () => {
             if (error) {
                 if (error.code === '42703') {
                     setSyncError('Database Column Missing. Please add attended/total columns.');
+                    toast.error('Database configuration error.');
                 } else {
                     setSyncError(error.message);
+                    toast.error(error.message);
                 }
                 throw error;
             }
 
             setSyncSuccess(true);
+            toast.success('Successfully synced to cloud');
             setTimeout(() => setSyncSuccess(false), 2000);
         } catch (err) {
             console.error('Sync failed:', err);
             setSyncError('Failed to sync. Please try again.');
+            toast.error('Failed to sync to cloud');
         } finally {
             setLoading(false);
+            isSyncing.current = false;
         }
     };
 
@@ -64,28 +77,28 @@ export const AttendanceView: React.FC = () => {
     const totalCount = activeProfile.total ?? 0;
     const percentage = totalCount > 0 ? Math.round((attendedCount / totalCount) * 1000) / 10 : 0;
 
-    const isSafe = percentage >= 75;
-    const safeToSkip = Math.max(0, Math.floor(attendedCount / 0.75 - totalCount));
-    const classesNeeded = Math.max(0, Math.ceil((0.75 * totalCount - attendedCount) / 0.25));
-
     return (
-        <div className="min-h-screen bg-black text-white p-6 relative overflow-x-hidden">
+        <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative overflow-x-hidden">
             {/* Header Area */}
-            <div className="flex items-center justify-between mb-8 max-w-md mx-auto">
+            <div className="flex items-center mb-8 max-w-md mx-auto">
                 <button
                     onClick={() => setActiveProfile(null)}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center relative -left-2"
+                    aria-label="Back to profiles"
                 >
                     <ArrowLeft className="w-5 h-5 text-white/40" />
                 </button>
-                <div className="text-center">
-                    <h1 className="text-2xl font-black tracking-tight">
-                        Attendance <span className="text-indigo-500">Guardian</span>
-                    </h1>
-                    <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest">
-                        Track your 75% attendance requirement
-                    </p>
-                </div>
+            </div>
+
+            <div className="text-center mb-8">
+                <h1 className="text-2xl font-black tracking-tight" onClick={() => { }}>
+                    Attendance <span className="text-primary-500">Guardian</span>
+                </h1>
+                <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest">
+                    Track your 75% attendance requirement
+                </p>
+            </div>
+            <div className="flex justify-center mb-8 max-w-md mx-auto">
                 <div className="w-9 h-9 rounded-lg overflow-hidden ring-1 ring-white/10">
                     {activeProfile.avatar_url ? (
                         <img src={activeProfile.avatar_url} alt={activeProfile.name} className="w-full h-full object-cover" />
@@ -97,89 +110,40 @@ export const AttendanceView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="max-w-md mx-auto space-y-12 pb-32">
+            <div className="max-w-md mx-auto space-y-8 sm:space-y-12 pb-32">
                 {/* Profile Chip */}
                 <div className="flex justify-center">
-                    <div className="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-                        <span className="text-[10px] font-black uppercase text-indigo-400">Student: {activeProfile.name}</span>
+                    <div className="px-4 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20">
+                        <span className={clsx(
+                            "text-[10px] font-black uppercase text-primary-400 transition-all duration-300",
+                            hideProfileName ? "blur-[6px] select-none pointer-events-none opacity-50" : ""
+                        )}>
+                            Student: {activeProfile.name}
+                        </span>
                     </div>
                 </div>
 
-                {/* Input Controls Row */}
-                <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Total Classes</label>
-                        <div className="bg-[#111] rounded-2xl border border-white/5 p-6 focus-within:border-indigo-500/50 transition-all">
-                            <input
-                                type="number"
-                                value={totalCount || ''}
-                                onChange={(e) => updateAttendance(attendedCount, parseInt(e.target.value) || 0)}
-                                className="w-full bg-transparent text-3xl font-black text-center outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Attended</label>
-                        <div className="bg-[#111] rounded-2xl border border-white/5 p-6 focus-within:border-indigo-500/50 transition-all">
-                            <input
-                                type="number"
-                                value={attendedCount || ''}
-                                onChange={(e) => updateAttendance(parseInt(e.target.value) || 0, totalCount)}
-                                className="w-full bg-transparent text-3xl font-black text-center outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                        </div>
-                    </div>
-                </div>
+                {/* Input Controls */}
+                <AttendanceControls
+                    totalCount={totalCount}
+                    attendedCount={attendedCount}
+                    onUpdate={updateAttendance}
+                />
 
                 {/* Central Circle */}
                 <div className="relative flex flex-col items-center justify-center py-4">
-                    <ProgressRing percentage={percentage} size={280} strokeWidth={16} />
+                    <ProgressRing percentage={percentage} size={260} strokeWidth={16} />
                 </div>
 
                 {/* Safe / Danger Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {isSafe ? (
-                        <>
-                            <div className="bg-[#111] p-5 rounded-2xl border border-white/5 space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <Shield className="w-5 h-5 text-emerald-400" />
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400">Safe Zone</span>
-                                </div>
-                                <p className="text-sm font-medium text-white/60 leading-relaxed">
-                                    You're above the 75% threshold.<br />Keep it up!
-                                </p>
-                            </div>
-                            <div className="bg-[#111] p-5 rounded-2xl border border-white/5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <TrendingDown className="w-4 h-4 text-indigo-400" />
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-400">Safe to Skip</span>
-                                </div>
-                                <div className="text-4xl font-black text-white">{safeToSkip}</div>
-                                <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider">classes you can safely miss</p>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="bg-[#111] p-5 rounded-2xl border border-white/5 space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <AlertTriangle className="w-5 h-5 text-red-400" />
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-red-400">Danger Zone</span>
-                                </div>
-                                <p className="text-sm font-medium text-white/60 leading-relaxed">
-                                    You're below 75%. Focus on attending consecutive classes.
-                                </p>
-                            </div>
-                            <div className="bg-[#111] p-5 rounded-2xl border border-white/5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <TrendingUp className="w-4 h-4 text-indigo-400" />
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-indigo-400">Recovery Mode</span>
-                                </div>
-                                <div className="text-4xl font-black text-white">{classesNeeded}</div>
-                                <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider">consecutive classes needed to reach 75%</p>
-                            </div>
-                        </>
-                    )}
-                </div>
+                <SafeDangerCards
+                    percentage={percentage}
+                    attendedCount={attendedCount}
+                    totalCount={totalCount}
+                />
+
+                {/* Audit Trail / History Logs */}
+                <AuditTrail />
 
                 {/* Action Buttons */}
                 <div className="space-y-4">
@@ -204,7 +168,7 @@ export const AttendanceView: React.FC = () => {
                         disabled={loading || syncSuccess}
                         className={clsx(
                             "w-full py-6 rounded-2xl flex items-center justify-center gap-3 transition-colors",
-                            syncSuccess ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "bg-indigo-600 hover:bg-indigo-500 shadow-[0_10px_40px_rgba(79,70,229,0.2)]"
+                            syncSuccess ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "bg-primary-600 hover:bg-primary-500 shadow-lg shadow-primary-500/20"
                         )}
                     >
                         {syncSuccess ? (
@@ -222,7 +186,10 @@ export const AttendanceView: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <button
-                            onClick={() => generateReport()}
+                            onClick={() => {
+                                generateReport();
+                                toast.success('Report successfully generated!');
+                            }}
                             className="flex items-center justify-center gap-3 bg-[#111] hover:bg-white/5 border border-white/5 py-4 rounded-2xl transition-all"
                         >
                             <FileDown className="w-4 h-4 text-white/40" />
@@ -235,6 +202,7 @@ export const AttendanceView: React.FC = () => {
                                     onClick={() => {
                                         updateAttendance(0, 0);
                                         setShowResetConfirm(false);
+                                        toast.success('Attendance reset to zero');
                                     }}
                                     className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 py-4 rounded-2xl transition-all"
                                 >
@@ -262,8 +230,8 @@ export const AttendanceView: React.FC = () => {
 
             {/* Bottom Navigation */}
             <div className="fixed bottom-0 left-0 right-0 h-24 bg-black border-t border-white/5 flex items-center justify-around px-12 pb-4">
-                <div className="flex flex-col items-center gap-1 text-indigo-500">
-                    <div className="w-12 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                <div className="flex flex-col items-center gap-1 text-primary-500">
+                    <div className="w-12 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center">
                         <RefreshCw className="w-5 h-5" />
                     </div>
                     <span className="text-[8px] font-black uppercase tracking-widest">Attendance</span>
@@ -278,8 +246,21 @@ export const AttendanceView: React.FC = () => {
 
             {/* Floating Plus Button */}
             <button
-                onClick={() => updateAttendance(attendedCount + 1, totalCount + 1)}
-                className="fixed bottom-32 right-6 w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all text-white z-[60]"
+                onClick={() => {
+                    if (navigator.vibrate) navigator.vibrate(50);
+                    const logId = updateAttendance(attendedCount + 1, totalCount + 1, 'Logged today\'s class');
+                    toast.success('Logged today\'s class!', {
+                        duration: 5000,
+                        action: logId ? {
+                            label: 'Undo',
+                            onClick: () => {
+                                deleteLog(logId);
+                                toast.success('Log entry reverted');
+                            }
+                        } : undefined
+                    });
+                }}
+                className="fixed bottom-32 right-6 w-14 h-14 bg-primary-600 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all text-white z-[60]"
             >
                 <Plus className="w-6 h-6" />
             </button>

@@ -53,7 +53,20 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     const offset = circumference - (clampedPct / 100) * circumference;
 
     return (
-        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        <div
+            className="relative flex items-center justify-center"
+            style={{ width: size, height: size }}
+            role="progressbar"
+            aria-valuenow={Math.round(clampedPct)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Attendance Progress: ${displayValue}%`}
+        >
+            {/* Visually hidden assertive region for screen readers */}
+            <span className="sr-only" aria-live="polite">
+                Current attendance is {displayValue} percent. Minimum required is 75 percent.
+            </span>
+
             {/* Glow effect */}
             <div
                 className="absolute inset-0 rounded-full opacity-50 blur-2xl animate-ring-pulse"
@@ -65,8 +78,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
                 height={size}
                 viewBox={`0 0 ${size} ${size}`}
                 className="transform -rotate-90 relative z-10"
-                role="img"
-                aria-label={`Attendance: ${displayValue}%`}
+                aria-hidden="true"
             >
                 {/* Track */}
                 <circle
@@ -105,7 +117,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
                     {typeof displayValue === 'number' ? displayValue.toFixed(1) : displayValue}
                     <span className="text-2xl font-bold opacity-60">%</span>
                 </span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mt-1">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mt-1" aria-hidden="true">
                     Attendance
                 </span>
             </div>

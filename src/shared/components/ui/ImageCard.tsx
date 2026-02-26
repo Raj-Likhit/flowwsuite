@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { motion } from 'framer-motion';
 
 import { Trash2 } from 'lucide-react';
 
@@ -24,7 +25,11 @@ export const ImageCard = memo(({
     onRemove
 }: ImageCardProps) => {
     return (
-        <div className="relative group a4-preview-card bg-white shadow-2xl transition-transform hover:rotate-1 cursor-grab active:cursor-grabbing">
+        <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative group a4-preview-card bg-white shadow-2xl transition-transform hover:rotate-1 cursor-grab active:cursor-grabbing"
+        >
             {/* Main Card Content */}
             <div
                 className="absolute inset-[8px] bg-white overflow-hidden"
@@ -50,14 +55,16 @@ export const ImageCard = memo(({
             )}
 
             {/* Delete Button */}
-            <button
+            <motion.button
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.9 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onRemove(id); }}
-                className="absolute top-1 right-1 p-1.5 bg-black/60 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black hover:scale-110 z-20"
+                className="absolute top-1 right-1 p-1.5 bg-black/60 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black z-20"
             >
                 <Trash2 className="w-3 h-3" />
-            </button>
-        </div>
+            </motion.button>
+        </motion.div>
     );
 }, (prev, next) => {
     // Custom comparison to prevent re-renders if props haven't materially changed

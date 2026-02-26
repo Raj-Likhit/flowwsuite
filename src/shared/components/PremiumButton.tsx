@@ -19,7 +19,7 @@ export const PremiumButton: React.FC<PremiumButtonProps> = ({
     ...motionProps
 }) => {
     const variants = {
-        primary: 'accent-gradient text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30',
+        primary: 'accent-gradient text-white shadow-lg shadow-primary-500/20 hover:shadow-primary-500/30',
         secondary: 'glass-new text-white hover:bg-white/[0.08]',
         ghost: 'bg-transparent text-white/60 hover:text-white hover:bg-white/[0.04]',
     };

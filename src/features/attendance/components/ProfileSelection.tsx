@@ -11,7 +11,7 @@ export const ProfileSelection: React.FC = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    const [selectedAvatar, setSelectedAvatar] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky');
+    const [selectedAvatar, setSelectedAvatar] = useState('');
 
     const avatars = [
         'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Tiger&backgroundColor=ff8c00',
@@ -46,7 +46,19 @@ export const ProfileSelection: React.FC = () => {
 
     const handleAddProfile = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName.trim()) return;
+
+        if (!selectedAvatar && !newName.trim()) {
+            setErrorMsg('Please enter a profile name and select an avatar.');
+            return;
+        }
+        if (!newName.trim()) {
+            setErrorMsg('Please enter a profile name.');
+            return;
+        }
+        if (!selectedAvatar) {
+            setErrorMsg('Please select an avatar for your profile.');
+            return;
+        }
 
         setLoading(true);
         setErrorMsg(null);
@@ -87,7 +99,7 @@ export const ProfileSelection: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 pb-32 bg-gradient-to-b from-indigo-950/20 to-transparent">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 pb-32 bg-gradient-to-b from-primary-600/10 to-transparent">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -101,11 +113,11 @@ export const ProfileSelection: React.FC = () => {
 
             {loading && profiles.length === 0 ? (
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                    <Loader2 className="w-10 h-10 text-primary-500 animate-spin" />
                     <span className="text-white/20 animate-pulse uppercase tracking-[0.2em] text-[10px] font-bold">Loading...</span>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8 max-w-5xl">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-8 max-w-5xl">
                     <AnimatePresence>
                         {profiles.map((profile) => (
                             <motion.button
@@ -118,7 +130,7 @@ export const ProfileSelection: React.FC = () => {
                                 onClick={() => setActiveProfile(profile)}
                                 className="group flex flex-col items-center gap-5"
                             >
-                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-indigo-500/20 via-transparent to-purple-500/20 group-hover:from-indigo-500 group-hover:to-purple-500 transition-all duration-500 shadow-2xl relative">
+                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-500/20 group-hover:from-primary-500 group-hover:to-secondary-500 transition-all duration-500 shadow-2xl relative">
                                     <div className="w-full h-full rounded-[1.4rem] glass-strong flex items-center justify-center overflow-hidden relative">
                                         {profile.avatar_url ? (
                                             <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -143,8 +155,8 @@ export const ProfileSelection: React.FC = () => {
                             onClick={() => setIsAdding(true)}
                             className="group flex flex-col items-center gap-5"
                         >
-                            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl border-2 border-dashed border-white/10 group-hover:border-indigo-500 group-hover:bg-indigo-500/5 transition-all flex items-center justify-center">
-                                <Plus className="w-12 h-12 text-white/10 group-hover:text-indigo-400 group-hover:rotate-90 transition-all duration-500" />
+                            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl border-2 border-dashed border-white/10 group-hover:border-primary-500 group-hover:bg-primary-500/5 transition-all flex items-center justify-center">
+                                <Plus className="w-12 h-12 text-white/10 group-hover:text-primary-400 group-hover:rotate-90 transition-all duration-500" />
                             </div>
                             <span className="text-white/20 font-bold group-hover:text-white/40 transition-colors">
                                 Add Profile
@@ -192,21 +204,23 @@ export const ProfileSelection: React.FC = () => {
                                     <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black">
                                         Choose Avatar
                                     </label>
-                                    <div className="grid grid-cols-3 gap-4 pb-2">
+                                    <div className="grid grid-cols-4 gap-3 sm:gap-4 pb-2">
                                         {avatars.map((url) => (
-                                            <button
+                                            <motion.button
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
                                                 key={url}
                                                 type="button"
                                                 onClick={() => setSelectedAvatar(url)}
                                                 className={clsx(
                                                     "w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all p-1",
                                                     selectedAvatar === url
-                                                        ? "border-indigo-500 bg-indigo-500/20 scale-105 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                                                        ? "border-primary-500 bg-primary-500/20 shadow-xl shadow-primary-500/30"
                                                         : "border-transparent bg-white/5 hover:bg-white/10"
                                                 )}
                                             >
                                                 <img src={url} alt="Avatar option" className="w-full h-full object-cover" />
-                                            </button>
+                                            </motion.button>
                                         ))}
                                     </div>
                                 </div>
@@ -221,23 +235,27 @@ export const ProfileSelection: React.FC = () => {
                                         value={newName}
                                         onChange={(e) => setNewName(e.target.value.slice(0, 15))}
                                         placeholder="Enter name..."
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg outline-none focus:border-indigo-500 focus:bg-white/10 transition-all font-bold"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg outline-none focus:border-primary-500 focus:bg-white/10 transition-all font-bold"
                                     />
                                 </div>
                                 <div className="flex gap-4 pt-4">
-                                    <button
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                         type="button"
                                         onClick={() => setIsAdding(false)}
                                         className="flex-1 py-4 rounded-2xl bg-white/5 text-white/40 font-black hover:bg-white/10 transition-colors uppercase tracking-widest text-[10px]"
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                         type="submit"
-                                        className="flex-[2] py-4 rounded-2xl accent-gradient text-white font-black shadow-2xl shadow-indigo-500/30 uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                                        className="flex-[2] py-4 rounded-2xl accent-gradient text-white font-black shadow-2xl shadow-primary-500/30 uppercase tracking-widest text-[10px] transition-transform"
                                     >
                                         Initialize Profile
-                                    </button>
+                                    </motion.button>
                                 </div>
                             </form>
                         </GlassCard>

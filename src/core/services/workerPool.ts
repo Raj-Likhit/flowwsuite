@@ -38,12 +38,12 @@ export class WorkerPool {
     }
 
     private processQueue() {
-        if (this.queue.length === 0) return;
+        while (this.queue.length > 0) {
+            // Find idle worker
+            const idleWorkerIndex = this.workers.findIndex((_, index) => !this.activeTasks.has(index));
 
-        // Find idle worker
-        const idleWorkerIndex = this.workers.findIndex((_, index) => !this.activeTasks.has(index));
+            if (idleWorkerIndex === -1) break; // All workers are busy
 
-        if (idleWorkerIndex !== -1) {
             const task = this.queue.shift();
             if (task) {
                 this.activeTasks.set(idleWorkerIndex, task);

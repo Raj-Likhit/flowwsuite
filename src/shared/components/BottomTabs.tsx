@@ -26,7 +26,9 @@ export const BottomTabs: React.FC = () => {
                     const Icon = tab.icon;
 
                     return (
-                        <button
+                        <motion.button
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 2, scale: 0.95 }}
                             key={tab.id}
                             role="tab"
                             aria-selected={isActive}
@@ -46,14 +48,14 @@ export const BottomTabs: React.FC = () => {
                                 />
                             )}
 
-                            <Icon className={clsx('w-5 h-5 relative z-10 transition-transform', isActive && 'scale-110')} />
+                            <Icon className={clsx('w-5 h-5 relative z-10 transition-transform duration-300', isActive && 'scale-110 text-primary-400')} />
                             <span className={clsx(
-                                'text-[10px] font-bold uppercase tracking-wider relative z-10',
-                                isActive && 'text-gradient'
+                                'text-[10px] font-bold uppercase tracking-wider relative z-10 transition-colors duration-300',
+                                isActive ? 'text-primary-400' : ''
                             )}>
                                 {tab.label}
                             </span>
-                        </button>
+                        </motion.button>
                     );
                 })}
             </div>

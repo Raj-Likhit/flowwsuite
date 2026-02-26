@@ -13,9 +13,20 @@ export default {
         base: '#0A0A0A',
         surface: '#111111',
         'surface-light': '#1A1A1A',
+        primary: {
+          DEFAULT: 'var(--primary)',
+          400: 'var(--primary-400)',
+          500: 'var(--primary-500)',
+          600: 'var(--primary-600)',
+        },
+        secondary: {
+          DEFAULT: 'var(--secondary)',
+          400: 'var(--secondary-400)',
+          500: 'var(--secondary-500)',
+        },
         accent: {
-          start: '#6366f1',
-          end: '#a855f7',
+          start: 'var(--accent-start)',
+          end: 'var(--accent-end)',
         },
         slate: {
           950: '#020617',
@@ -23,8 +34,8 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'hero-glow': 'conic-gradient(from 180deg at 50% 50%, #6366f133 0deg, #a855f733 180deg, #6366f133 360deg)',
-        'accent-gradient': 'linear-gradient(to right, #6366f1, #a855f7)',
+        'hero-glow': 'conic-gradient(from 180deg at 50% 50%, var(--accent-start-trans) 0deg, var(--accent-end-trans) 180deg, var(--accent-start-trans) 360deg)',
+        'accent-gradient': 'linear-gradient(to right, var(--accent-start), var(--accent-end))',
       },
       animation: {
         'blob': 'blob 7s infinite',

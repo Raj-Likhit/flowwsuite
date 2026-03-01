@@ -1,5 +1,0 @@
-﻿
-> temp_app@0.0.0 build
-> node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build
-
-src/shared/components/SettingsMenu.tsx(11,11): error TS6198: All destructured elements are unused.

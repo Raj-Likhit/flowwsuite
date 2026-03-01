@@ -183,7 +183,7 @@ export const ProfileSelection: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-center"
+                    className="text-center select-none"
                 >
                     <h2 className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tighter px-4">
                         Who's <span className="text-gradient animate-pulse">Studying?</span>
@@ -318,7 +318,7 @@ export const ProfileSelection: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        <span className="text-white/50 text-base font-bold group-hover:text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all">
+                                        <span className="text-white/50 text-base font-bold group-hover:text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all select-none">
                                             {profile.name}
                                         </span>
                                     </motion.button>
@@ -337,7 +337,7 @@ export const ProfileSelection: React.FC = () => {
                             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl border-2 border-dashed border-white/10 group-hover:border-primary-500 group-hover:bg-primary-500/5 transition-all flex items-center justify-center glass-tubular">
                                 <Plus className="w-12 h-12 text-white/10 group-hover:text-primary-400 group-hover:rotate-90 transition-all duration-500" />
                             </div>
-                            <span className="text-white/20 font-bold group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] transition-colors">Add Profile</span>
+                            <span className="text-white/20 font-bold group-hover:text-white group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] transition-colors select-none">Add Profile</span>
                         </motion.button>
                     </AnimatePresence>
                 </div>
@@ -345,7 +345,7 @@ export const ProfileSelection: React.FC = () => {
 
             {/* Hint text for long-press */}
             {profiles.length > 0 && (
-                <p className="mt-8 text-white/20 text-[10px] uppercase tracking-widest font-bold">
+                <p className="mt-8 text-white/20 text-[10px] uppercase tracking-widest font-bold select-none">
                     Hold a profile to edit or delete
                 </p>
             )}
@@ -367,7 +367,7 @@ export const ProfileSelection: React.FC = () => {
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
                             className="relative z-10 w-full max-w-md p-6 sm:p-10 border border-white/5"
                         >
-                            <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tighter">
+                            <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tighter select-none">
                                 {modalMode === 'add' ? 'New Profile' : 'Edit Profile'}
                             </h3>
 
@@ -387,7 +387,7 @@ export const ProfileSelection: React.FC = () => {
 
                             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                                 <div className="space-y-4">
-                                    <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black">
+                                    <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black select-none">
                                         Choose Avatar
                                     </label>
                                     <div className="grid grid-cols-4 gap-3 sm:gap-4 pb-2">
@@ -412,7 +412,7 @@ export const ProfileSelection: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black">
+                                    <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black select-none">
                                         Name
                                     </label>
                                     <input

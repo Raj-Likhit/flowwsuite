@@ -98,7 +98,7 @@ export const ConverterView = () => {
                             </div>
                         </main>
                         <footer className="py-8 text-center text-white/40 text-sm border-t border-white/5 mx-6">
-                            <p>© 2025 FlowSuite. Built for Speed.</p>
+                            <p>© 2025 Flowwsuite. Built for Speed.</p>
                         </footer>
                     </motion.div>
                 ) : (

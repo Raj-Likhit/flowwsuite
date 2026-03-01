@@ -1,5 +1,4 @@
 import React from 'react';
-import { Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const GlassNavbar: React.FC = () => {
@@ -14,11 +13,11 @@ export const GlassNavbar: React.FC = () => {
 
             <div className="relative h-full px-6 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-400/20 to-primary-600/20 rounded-lg flex items-center justify-center border border-primary-500/20 shadow-lg shadow-primary-500/10">
-                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400 fill-current" />
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+                        <img src="/logo.png" alt="Flowwsuite Logo" className="w-full h-full object-cover" />
                     </div>
                     <span className="text-base sm:text-lg font-bold text-white tracking-tight">
-                        Convert<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-300">Flow</span>
+                        Flowwsuite
                     </span>
                 </div>
 

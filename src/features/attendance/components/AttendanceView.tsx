@@ -78,7 +78,7 @@ export const AttendanceView: React.FC = () => {
     const percentage = totalCount > 0 ? Math.round((attendedCount / totalCount) * 1000) / 10 : 0;
 
     return (
-        <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative overflow-x-hidden">
+        <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative overflow-x-hidden select-none">
             {/* Header Area */}
             <div className="flex items-center mb-8 max-w-md mx-auto">
                 <motion.button
@@ -95,7 +95,7 @@ export const AttendanceView: React.FC = () => {
 
             <div className="text-center mb-8">
                 <h1 className="text-2xl font-black tracking-tight" onClick={() => { }}>
-                    Attendance <span className="text-primary-500">Guardian</span>
+                    Floww<span className="text-primary-500">suite</span>
                 </h1>
                 <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest">
                     Track your 75% attendance requirement
@@ -118,8 +118,8 @@ export const AttendanceView: React.FC = () => {
                 <div className="flex justify-center">
                     <div className="px-4 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20">
                         <span className={clsx(
-                            "text-[10px] font-black uppercase text-primary-400 transition-all duration-300",
-                            hideProfileName ? "blur-[6px] select-none pointer-events-none opacity-50" : ""
+                            "text-[10px] font-black uppercase text-primary-400 transition-all duration-300 select-none",
+                            hideProfileName ? "blur-[6px] pointer-events-none opacity-50" : ""
                         )}>
                             Student: {activeProfile.name}
                         </span>

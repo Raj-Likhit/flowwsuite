@@ -1,4 +1,4 @@
-# ConvertFlow
+# Flowwsuite
 
 > **Secure, Client-Side Image to PDF Converter**
 
@@ -35,8 +35,8 @@ ConvertFlow is a high-performance, privacy-focused web application that converts
 
 1.  **Clone the repo**
     ```bash
-    git clone https://github.com/yourusername/convertflow.git
-    cd convertflow
+    git clone https://github.com/yourusername/flowwsuite.git
+    cd flowwsuite
     ```
 
 2.  **Install dependencies**

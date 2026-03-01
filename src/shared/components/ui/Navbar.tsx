@@ -1,4 +1,3 @@
-import { Zap } from 'lucide-react';
 import React from 'react';
 
 import { motion } from 'framer-motion';
@@ -14,11 +13,11 @@ export const Navbar: React.FC = () => {
 
             <div className="relative h-full px-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-primary-500/20 border border-primary-500/30 rounded-lg flex items-center justify-center">
-                        <Zap className="w-3.5 h-3.5 text-primary-400 fill-current" />
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
+                        <img src="/logo.png" alt="Flowwsuite Logo" className="w-full h-full object-cover" />
                     </div>
                     <span className="text-sm font-black text-white tracking-tighter uppercase">
-                        Convert<span className="text-primary-500">Flow</span>
+                        Floww<span className="text-primary-500">suite</span>
                     </span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -69,7 +69,7 @@ export const ImageGrid: React.FC = () => {
                 items={pages.map(p => p.id)}
                 strategy={rectSortingStrategy}
             >
-                <div className="flex justify-end px-2 sm:px-0">
+                <div className="flex justify-end px-4 sm:px-0">
                     {pages.length > 0 && (
                         <button
                             onClick={clearPages}
@@ -80,7 +80,7 @@ export const ImageGrid: React.FC = () => {
                         </button>
                     )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 py-6 pb-24 justify-items-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 py-4 pb-32 sm:pb-36 justify-items-center sm:px-0 px-2">
                     {pages.map((page, index) => (
                         <SortableItem key={page.id} id={page.id}>
                             <ImageCard
@@ -100,10 +100,21 @@ export const ImageGrid: React.FC = () => {
             .a4-preview-card {
                 aspect-ratio: 210/297;
                 width: 100%;
-                max-width: 160px;
+                min-height: 180px;
+                max-width: 150px;
+                position: relative;
             }
-            @media (min-width: 768px) {
-                .a4-preview-card { max-width: 180px; }
+            @media (min-width: 640px) {
+                .a4-preview-card { 
+                    max-width: 180px; 
+                    min-height: 250px;
+                }
+            }
+            @media (min-width: 1024px) {
+                .a4-preview-card { 
+                    max-width: 200px; 
+                    min-height: 280px;
+                }
             }
           `}</style>
                 </div>

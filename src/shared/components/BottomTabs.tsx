@@ -1,64 +1,54 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { CalendarCheck, FileText } from 'lucide-react';
-import { clsx } from 'clsx';
-
+import { motion } from 'framer-motion';
 import { useNavigationStore } from '../store/useNavigationStore';
+import Dock from './ui/reactbits/Dock';
 
 export type TabId = 'attendance' | 'converter';
 
-const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-    { id: 'converter', label: 'Converter', icon: FileText },
-];
-
 export const BottomTabs: React.FC = () => {
     const { activeTab, setActiveTab } = useNavigationStore();
-    return (
-        <nav
-            className="fixed bottom-0 inset-x-0 z-[60] glass-strong safe-bottom"
-            role="tablist"
-            aria-label="Main navigation"
-        >
-            <div className="max-w-md mx-auto flex items-center justify-around px-4 pt-2 pb-1">
-                {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    const Icon = tab.icon;
 
-                    return (
-                        <motion.button
-                            whileHover={{ y: -2 }}
-                            whileTap={{ y: 2, scale: 0.95 }}
-                            key={tab.id}
-                            role="tab"
-                            aria-selected={isActive}
-                            aria-controls={`${tab.id}-panel`}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={clsx(
-                                'relative flex flex-col items-center gap-1 py-2 px-6 rounded-xl transition-colors',
-                                isActive ? 'text-white' : 'text-white/35 hover:text-white/60'
-                            )}
-                        >
-                            {/* Active indicator */}
-                            {isActive && (
+    const items = [
+        {
+            icon: <CalendarCheck size={22} className={activeTab === 'attendance' ? 'text-primary-400' : 'text-white/60'} />,
+            label: 'Attendance',
+            onClick: () => setActiveTab('attendance')
+        },
+        {
+            icon: <FileText size={22} className={activeTab === 'converter' ? 'text-primary-400' : 'text-white/60'} />,
+            label: 'Converter',
+            onClick: () => setActiveTab('converter')
+        }
+    ];
+
+    return (
+        <div className="fixed bottom-0 inset-x-0 z-[60] pb-2 pointer-events-none flex justify-center">
+            <div className="pointer-events-auto w-full max-w-md h-24 relative">
+                <Dock
+                    items={items.map(item => ({
+                        ...item,
+                        className: activeTab === item.label.toLowerCase() ? 'ring-1 ring-primary-500/40 relative overflow-visible' : ''
+                    }))}
+                    panelHeight={64}
+                    baseItemSize={48}
+                    magnification={68}
+                />
+                {/* Active Indicator Glow */}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-16 pointer-events-none">
+                    {['attendance', 'converter'].map(tab => (
+                        <div key={tab} className="w-8 relative">
+                            {activeTab === tab && (
                                 <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute inset-0 rounded-xl accent-gradient opacity-[0.12]"
-                                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                    layoutId="activeTabGlow"
+                                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary-500 blur-[4px] rounded-full opacity-60"
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                 />
                             )}
-
-                            <Icon className={clsx('w-5 h-5 relative z-10 transition-transform duration-300', isActive && 'scale-110 text-primary-400')} />
-                            <span className={clsx(
-                                'text-[10px] font-bold uppercase tracking-wider relative z-10 transition-colors duration-300',
-                                isActive ? 'text-primary-400' : ''
-                            )}>
-                                {tab.label}
-                            </span>
-                        </motion.button>
-                    );
-                })}
+                        </div>
+                    ))}
+                </div>
             </div>
-        </nav>
+        </div>
     );
 };

@@ -8,7 +8,7 @@ export const HeroSection: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[120px] -z-10 animate-blob"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-500/20 rounded-full blur-[120px] -z-10 animate-blob"
             />
 
 
@@ -20,7 +20,7 @@ export const HeroSection: React.FC = () => {
                 className="text-5xl sm:text-7xl font-bold text-white tracking-tight mb-6 max-w-4xl mx-auto leading-[1.1]"
             >
                 Secure Image to PDF <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 animate-gradient-x">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-primary-300 to-primary-400 animate-gradient-x">
                     Conversion Engine
                 </span>
             </motion.h1>

@@ -17,7 +17,7 @@ export const AttendanceControls: React.FC<AttendanceControlsProps> = ({
         <div className="grid grid-cols-2 gap-4 sm:gap-8">
             <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2" id="total-classes-label">Total Classes</label>
-                <div className="bg-[#111] rounded-2xl border border-white/5 p-4 flex items-center justify-between focus-within:border-primary-500/50 transition-all shadow-lg hover:shadow-primary-500/5">
+                <div className="glass-tubular bg-white/5 rounded-2xl border border-white/10 p-4 flex items-center justify-between focus-within:border-primary-500/50 transition-all shadow-xl shadow-black/20">
                     <motion.button
                         whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
                         whileTap={{ scale: 0.9 }}
@@ -47,7 +47,7 @@ export const AttendanceControls: React.FC<AttendanceControlsProps> = ({
             </div>
             <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2" id="attended-classes-label">Attended</label>
-                <div className="bg-[#111] rounded-2xl border border-white/5 p-4 flex items-center justify-between focus-within:border-primary-500/50 transition-all shadow-lg hover:shadow-primary-500/5">
+                <div className="glass-tubular bg-white/5 rounded-2xl border border-white/10 p-4 flex items-center justify-between focus-within:border-primary-500/50 transition-all shadow-xl shadow-black/20">
                     <motion.button
                         whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
                         whileTap={{ scale: 0.9 }}

@@ -67,9 +67,19 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
                 Current attendance is {displayValue} percent. Minimum required is 75 percent.
             </span>
 
-            {/* Glow effect */}
-            <div
-                className="absolute inset-0 rounded-full opacity-50 blur-2xl animate-ring-pulse"
+            {/* Animated Glow effect */}
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{
+                    scale: [0.9, 1.05, 0.9],
+                    opacity: [0.3, 0.5, 0.3]
+                }}
+                transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+                className="absolute inset-0 rounded-full blur-3xl pointer-events-none"
                 style={{ background: glowColor }}
             />
 

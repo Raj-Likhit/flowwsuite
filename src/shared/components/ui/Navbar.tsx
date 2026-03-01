@@ -1,20 +1,31 @@
 import { Zap } from 'lucide-react';
 import React from 'react';
 
+import { motion } from 'framer-motion';
+
 export const Navbar: React.FC = () => {
     return (
-        <nav className="fixed top-0 inset-x-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-white/5">
-            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <motion.nav
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="fixed top-6 inset-x-6 z-[100] max-w-5xl h-14 mx-auto"
+        >
+            <div className="absolute inset-0 glass-tubular rounded-2xl border border-white/20"></div>
+
+            <div className="relative h-full px-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                        <Zap className="w-4 h-4 text-black fill-current" />
+                    <div className="w-7 h-7 bg-primary-500/20 border border-primary-500/30 rounded-lg flex items-center justify-center">
+                        <Zap className="w-3.5 h-3.5 text-primary-400 fill-current" />
                     </div>
-                    <span className="text-base font-bold text-white tracking-tighter">
-                        Convert<span className="text-emerald-500 font-black">Flow</span>
+                    <span className="text-sm font-black text-white tracking-tighter uppercase">
+                        Convert<span className="text-primary-500">Flow</span>
                     </span>
                 </div>
-                {/* Actions will be injected here later based on state */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest hidden sm:block">Workspace Engine 2.0</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></div>
+                </div>
             </div>
-        </nav>
+        </motion.nav>
     );
 };

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 
-import { Trash2 } from 'lucide-react';
+import { Trash2, ImageOff } from 'lucide-react';
 
 interface ImageCardProps {
     id: string;
@@ -24,27 +24,37 @@ export const ImageCard = memo(({
     pageIndex,
     onRemove
 }: ImageCardProps) => {
+    const [hasError, setHasError] = React.useState(false);
+
     return (
         <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative group a4-preview-card bg-white shadow-2xl transition-transform hover:rotate-1 cursor-grab active:cursor-grabbing"
+            className="relative group a4-preview-card bg-white shadow-2xl transition-transform hover:rotate-1 cursor-grab active:cursor-grabbing mx-auto border border-white/5"
         >
             {/* Main Card Content */}
             <div
-                className="absolute inset-[8px] bg-white overflow-hidden"
+                className="absolute inset-[8px] bg-slate-50 overflow-hidden flex items-center justify-center"
                 style={borderStyle}
             >
-                <img
-                    src={previewUrl}
-                    alt="preview"
-                    loading="lazy"
-                    className="w-full h-full object-contain pointer-events-none block will-change-transform"
-                    style={{
-                        transform: `rotate(${rotation}deg)`,
-                        filter: filterStyle || 'none',
-                    }}
-                />
+                {hasError ? (
+                    <div className="flex flex-col items-center gap-2 text-slate-300">
+                        <ImageOff className="w-8 h-8 opacity-20" />
+                        <span className="text-[8px] font-bold uppercase tracking-tighter opacity-40">Load Failed</span>
+                    </div>
+                ) : (
+                    <img
+                        src={previewUrl}
+                        alt="preview"
+                        loading="lazy"
+                        onError={() => setHasError(true)}
+                        className="w-full h-full object-contain pointer-events-none block will-change-transform"
+                        style={{
+                            transform: `rotate(${rotation}deg)`,
+                            filter: filterStyle || 'none',
+                        }}
+                    />
+                )}
             </div>
 
             {/* Page Number */}

@@ -34,4 +34,15 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          animations: ['framer-motion'],
+          ui: ['lucide-react', 'sonner', 'clsx']
+        }
+      }
+    }
+  }
 })

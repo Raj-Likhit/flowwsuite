@@ -36,6 +36,8 @@ interface AttendanceStore {
     updateAttendance: (attended: number, total: number, title?: string) => string | undefined;
     deleteLog: (logId: string) => void;
     toggleHideProfileName: () => void;
+    deleteProfile: (profileId: string) => void;
+    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url'>>) => void;
 }
 
 export const useAttendanceStore = create<AttendanceStore>()(
@@ -104,6 +106,25 @@ export const useAttendanceStore = create<AttendanceStore>()(
             },
 
             toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
+
+            deleteProfile: (profileId) =>
+                set((state) => ({
+                    profiles: state.profiles.filter((p) => p.id !== profileId),
+                    activeProfile:
+                        state.activeProfile?.id === profileId ? null : state.activeProfile,
+                })),
+
+            updateProfile: (profileId, updates) =>
+                set((state) => {
+                    const updatedProfiles = state.profiles.map((p) =>
+                        p.id === profileId ? { ...p, ...updates } : p
+                    );
+                    const updatedActive =
+                        state.activeProfile?.id === profileId
+                            ? { ...state.activeProfile, ...updates }
+                            : state.activeProfile;
+                    return { profiles: updatedProfiles, activeProfile: updatedActive };
+                }),
 
             deleteLog: (logId) =>
                 set((state) => {

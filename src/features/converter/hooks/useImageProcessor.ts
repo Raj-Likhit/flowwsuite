@@ -7,24 +7,40 @@ export const useImageProcessor = () => {
     const { addPages, setProcessing, setError } = useConverterStore();
 
     useEffect(() => {
-        workerRef.current = new ImageWorker();
+        if (typeof Worker === 'undefined') {
+            setError('Web Workers are not supported in this browser.');
+            return;
+        }
 
-        workerRef.current.onmessage = (e) => {
-            const { type, payload } = e.data;
-            if (type === 'FILES_PROCESSED' || type === 'BLANK_CREATED') {
-                addPages(payload);
+        try {
+            workerRef.current = new ImageWorker();
+
+            workerRef.current.onmessage = (e) => {
+                const { type, payload } = e.data;
+                if (type === 'FILES_PROCESSED' || type === 'BLANK_CREATED') {
+                    addPages(payload);
+                    setProcessing(false);
+                } else if (type === 'ERROR') {
+                    console.error("Worker Error:", payload);
+                    setProcessing(false);
+                    setError('Image Processing Failed: ' + payload);
+                }
+            };
+
+            workerRef.current.onerror = (err) => {
+                console.error("Worker Script Error:", err);
                 setProcessing(false);
-            } else if (type === 'ERROR') {
-                console.error("Worker Error:", payload);
-                setProcessing(false);
-                setError('Image Processing Failed: ' + payload);
-            }
-        };
+                setError('Internal Processor Error. Please refresh.');
+            };
+        } catch (err) {
+            console.error("Failed to initialize worker:", err);
+            setError('Failed to initialize image processor.');
+        }
 
         return () => {
             workerRef.current?.terminate();
         };
-    }, [addPages, setProcessing]);
+    }, [addPages, setProcessing, setError]);
 
     const processFiles = useCallback((files: File[]) => {
         if (!files.length) return;

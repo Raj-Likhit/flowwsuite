@@ -297,17 +297,23 @@ export const ProfileSelection: React.FC = () => {
                                             if (isInEditMode) return;
                                             setActiveProfile(profile);
                                         }}
+                                        onContextMenu={(e) => e.preventDefault()}
                                         onMouseDown={() => startLongPress(profile.id)}
                                         onMouseUp={cancelLongPress}
                                         onMouseLeave={cancelLongPress}
                                         onTouchStart={() => startLongPress(profile.id)}
                                         onTouchEnd={cancelLongPress}
-                                        className="group flex flex-col items-center gap-5"
+                                        className="group flex flex-col items-center gap-5 select-none no-touch-menu"
                                     >
                                         <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-500/20 group-hover:from-primary-500 group-hover:to-secondary-500 transition-all duration-500 shadow-2xl relative">
                                             <div className="w-full h-full rounded-[1.4rem] glass-strong flex items-center justify-center overflow-hidden relative">
                                                 {profile.avatar_url ? (
-                                                    <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                    <img
+                                                        src={profile.avatar_url}
+                                                        alt={profile.name}
+                                                        draggable="false"
+                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 select-none pointer-events-none no-touch-menu"
+                                                    />
                                                 ) : (
                                                     <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />
                                                 )}

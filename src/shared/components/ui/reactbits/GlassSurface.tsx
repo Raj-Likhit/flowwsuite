@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useRef, useId } from 'react';
 import './GlassSurface.css';
@@ -227,7 +226,7 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
         return div.style.backdropFilter !== '';
     };
 
-    const containerStyle = {
+    const containerStyle: React.CSSProperties & Record<string, any> = {
         ...style,
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,
@@ -241,9 +240,9 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
         <div
             ref={containerRef}
             className={`glass-surface ${svgSupported ? 'glass-surface--svg' : 'glass-surface--fallback'} ${className}`}
-            style={containerStyle as any}
+            style={containerStyle}
         >
-            <svg className="glass-surface__filter" xmlns="http://www.w3.org/2000/svg">
+            <svg className="glass-surface__filter" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <filter id={filterId} colorInterpolationFilters="sRGB" x="0%" y="0%" width="100%" height="100%">
                         <feImage ref={feImageRef} x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="map" />

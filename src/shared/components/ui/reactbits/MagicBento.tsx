@@ -1,13 +1,33 @@
-// @ts-nocheck
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { gsap } from 'gsap';
 import './MagicBento.css';
 import React from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 const DEFAULT_PARTICLE_COUNT = 12;
 const DEFAULT_SPOTLIGHT_RADIUS = 300;
 const DEFAULT_GLOW_COLOR = 'var(--color-primary-500, 14, 165, 233)'; // Convert flow theme handles
 const MOBILE_BREAKPOINT = 768;
+
+export interface CardData {
+    title: string;
+    description: string;
+    icon?: LucideIcon;
+    className?: string;
+    color?: string;
+}
+
+interface ParticleCardProps {
+    children: React.ReactNode;
+    className?: string;
+    disableAnimations?: boolean;
+    style?: React.CSSProperties;
+    particleCount?: number;
+    glowColor?: string;
+    enableTilt?: boolean;
+    clickEffect?: boolean;
+    enableMagnetism?: boolean;
+}
 
 const createParticleElement = (x: number, y: number, color = DEFAULT_GLOW_COLOR) => {
     const el = document.createElement('div');
@@ -43,7 +63,7 @@ const updateCardGlowProperties = (card: HTMLDivElement, mouseX: number, mouseY: 
     card.style.setProperty('--glow-radius', `${radius}px`);
 };
 
-const ParticleCard = ({
+const ParticleCard: React.FC<ParticleCardProps> = ({
     children,
     className = '',
     disableAnimations = false,
@@ -53,14 +73,14 @@ const ParticleCard = ({
     enableTilt = true,
     clickEffect = false,
     enableMagnetism = false
-}: any) => {
+}) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const particlesRef = useRef<HTMLElement[]>([]);
-    const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+    const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const isHoveredRef = useRef(false);
     const memoizedParticles = useRef<HTMLElement[]>([]);
     const particlesInitialized = useRef(false);
-    const magnetismAnimationRef = useRef<any>(null);
+    const magnetismAnimationRef = useRef<gsap.core.Tween | null>(null);
 
     const initializeParticles = useCallback(() => {
         if (particlesInitialized.current || !cardRef.current) return;
@@ -430,7 +450,22 @@ const useMobileDetection = () => {
     return isMobile;
 };
 
-const MagicBento = ({
+interface MagicBentoProps {
+    cards?: CardData[];
+    textAutoHide?: boolean;
+    enableStars?: boolean;
+    enableSpotlight?: boolean;
+    enableBorderGlow?: boolean;
+    disableAnimations?: boolean;
+    spotlightRadius?: number;
+    particleCount?: number;
+    enableTilt?: boolean;
+    glowColor?: string;
+    clickEffect?: boolean;
+    enableMagnetism?: boolean;
+}
+
+const MagicBento: React.FC<MagicBentoProps> = ({
     cards = [],
     textAutoHide = true,
     enableStars = true,
@@ -443,7 +478,7 @@ const MagicBento = ({
     glowColor = DEFAULT_GLOW_COLOR,
     clickEffect = true,
     enableMagnetism = true
-}: any) => {
+}) => {
     const gridRef = useRef<HTMLDivElement>(null);
     const isMobile = useMobileDetection();
     const shouldDisableAnimations = disableAnimations || isMobile;

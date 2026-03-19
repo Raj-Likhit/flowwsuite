@@ -1,14 +1,13 @@
 import React from 'react';
 import './StarBorder.css';
 
-interface StarBorderProps {
+interface StarBorderProps extends React.HTMLAttributes<HTMLElement> {
     as?: React.ElementType;
     className?: string;
     color?: string;
     speed?: string;
     thickness?: number;
     children: React.ReactNode;
-    [key: string]: any;
 }
 
 const StarBorder: React.FC<StarBorderProps> = ({

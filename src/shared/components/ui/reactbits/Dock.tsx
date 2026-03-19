@@ -1,8 +1,7 @@
-// @ts-nocheck
 'use client';
 
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
-import { Children, cloneElement, useEffect, useMemo, useRef, useState, ReactElement, ReactNode } from 'react';
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence, type MotionValue } from 'framer-motion';
+import { useRef, useState, useEffect, useMemo, Children, cloneElement, type ReactElement, type ReactNode } from 'react';
 
 import './Dock.css';
 
@@ -10,59 +9,61 @@ interface DockItemProps {
     children?: ReactNode;
     className?: string;
     onClick?: () => void;
-    mouseX?: any;
-    spring?: any;
+    mouseX: MotionValue<number>;
+    spring: { mass: number; stiffness: number; damping: number };
     distance?: number;
     magnification?: number;
     baseItemSize?: number;
 }
 
-function DockItem({ children, className = '', onClick, mouseX, spring, distance, magnification, baseItemSize }: DockItemProps) {
+const DockItem = ({
+    children,
+    className = '',
+    onClick,
+    mouseX,
+    spring,
+    distance = 150,
+    magnification = 80,
+    baseItemSize = 48
+}: DockItemProps) => {
     const ref = useRef<HTMLDivElement>(null);
-    const isHovered = useMotionValue(0);
 
-    const mouseDistance = useTransform(mouseX, (val: number) => {
-        const rect = ref.current?.getBoundingClientRect() ?? {
-            x: 0,
-            width: baseItemSize
-        };
-        return val - rect.x - (baseItemSize ?? 0) / 2;
+    const distanceCalc = useTransform(mouseX, (val: number | undefined) => {
+        const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+        return (val ?? 0) - bounds.x - bounds.width / 2;
     });
 
-    const targetSize = useTransform(mouseDistance, [-distance!, 0, distance!], [baseItemSize, magnification, baseItemSize]);
+    const targetSize = useTransform(distanceCalc, [-distance, 0, distance], [baseItemSize, magnification, baseItemSize]);
     const size = useSpring(targetSize, spring);
+
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <motion.div
             ref={ref}
-            style={{
-                width: size,
-                height: size
-            }}
-            onHoverStart={() => isHovered.set(1)}
-            onHoverEnd={() => isHovered.set(0)}
-            onFocus={() => isHovered.set(1)}
-            onBlur={() => isHovered.set(0)}
-            onClick={onClick}
+            role="menuitem"
             className={`dock-item ${className}`}
-            tabIndex={0}
-            role="button"
-            aria-haspopup="true"
+            style={{ width: size, height: size }}
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
-            {Children.map(children, child => cloneElement(child as ReactElement, { isHovered }))}
+            {Children.map(children, (child) => {
+                if (child && (child as ReactElement).type === DockLabel) {
+                    return cloneElement(child as ReactElement<{ isHovered: boolean }>, { isHovered });
+                }
+                return child;
+            })}
         </motion.div>
     );
-}
+};
 
-function DockLabel({ children, className = '', ...rest }: any) {
+function DockLabel({ children, className = '', ...rest }: { children: ReactNode; className?: string; isHovered?: boolean }) {
     const { isHovered } = rest;
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = isHovered.on('change', (latest: number) => {
-            setIsVisible(latest === 1);
-        });
-        return () => unsubscribe();
+        setIsVisible(!!isHovered);
     }, [isHovered]);
 
     return (
@@ -91,7 +92,7 @@ function DockIcon({ children, className = '' }: { children: ReactNode; className
 interface DockProps {
     items: Array<{ icon: ReactNode; label: string; onClick: () => void; className?: string }>;
     className?: string;
-    spring?: any;
+    spring?: { mass: number; stiffness: number; damping: number };
     magnification?: number;
     distance?: number;
     panelHeight?: number;

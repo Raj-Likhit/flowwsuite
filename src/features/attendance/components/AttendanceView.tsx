@@ -12,6 +12,7 @@ import { AuditTrail } from './AuditTrail';
 import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
+import { AnnouncementModal } from '../../../shared/components/AnnouncementModal';
 
 export const AttendanceView: React.FC = () => {
     const {
@@ -27,11 +28,65 @@ export const AttendanceView: React.FC = () => {
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
 
+    // Fetch announcements on mount with robust error handling
+    React.useEffect(() => {
+        const fetchAnnouncement = async () => {
+            if (!supabase || !activeProfile) {
+                console.warn("Supabase client or active profile not available - skipping announcements");
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('announcements')
+                    .select('id, content, target_profile_ids, created_at')
+                    .eq('is_active', true)
+                    .or(`target_profile_ids.is.null,target_profile_ids.cs.{${activeProfile.id}}`)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (data && !error && activeProfile) {
+                    // Per-profile tracking: "seen_announcements_[profileId]"
+                    const storageKey = `seen_announcements_${activeProfile.id}`;
+                    const seenAnnouncements = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    
+                    if (!seenAnnouncements.includes(data.id)) {
+                        setActiveAnnouncement(data);
+                    }
+                }
+            } catch (err) {
+                // Graceful fallback: just log and continue
+                console.error("Graceful Fallback: Failed to fetch announcements:", err);
+            }
+        };
+
+        if (activeProfile) {
+            fetchAnnouncement();
+        }
+    }, [activeProfile]);
+
+    const handleDismissAnnouncement = () => {
+        if (activeAnnouncement && activeProfile) {
+            const storageKey = `seen_announcements_${activeProfile.id}`;
+            const seenAnnouncements = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            seenAnnouncements.push(activeAnnouncement.id);
+            localStorage.setItem(storageKey, JSON.stringify(seenAnnouncements));
+            setActiveAnnouncement(null);
+        }
+    };
+
     const handleSync = async () => {
         if (!activeProfile || isSyncing.current) return;
+        
+        if (!supabase) {
+            toast.error("Sync Unavailable: Database connection failed");
+            return;
+        }
         isSyncing.current = true;
         setLoading(true);
 
@@ -263,6 +318,11 @@ export const AttendanceView: React.FC = () => {
             >
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
             </motion.button>
+
+            <AnnouncementModal 
+                announcement={activeAnnouncement} 
+                onClose={handleDismissAnnouncement} 
+            />
         </div>
     );
 };

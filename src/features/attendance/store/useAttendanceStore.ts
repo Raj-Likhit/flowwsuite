@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';
+
+const sanitize = (str: string) => str.replace(/[<>]/g, '').slice(0, 100).trim();
 
 export interface AttendanceLog {
     id: string;
@@ -15,6 +18,7 @@ export interface Profile {
     attended: number;
     total: number;
     avatar_url?: string;
+    password?: string;
     created_at?: string;
     logs?: AttendanceLog[];
 }
@@ -26,6 +30,7 @@ interface AttendanceStore {
     loading: boolean;
     error: string | null;
     hideProfileName: boolean;
+    isCloudSyncEnabled: boolean;
 
     // Actions
     setProfiles: (profiles: Profile[]) => void;
@@ -37,7 +42,8 @@ interface AttendanceStore {
     deleteLog: (logId: string) => void;
     toggleHideProfileName: () => void;
     deleteProfile: (profileId: string) => void;
-    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url'>>) => void;
+    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password'>>) => void;
+    uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
 }
 
 export const useAttendanceStore = create<AttendanceStore>()(
@@ -48,6 +54,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             loading: false,
             error: null,
             hideProfileName: false,
+            isCloudSyncEnabled: isSupabaseAvailable(),
 
             setProfiles: (profiles) => set({ profiles }),
             setActiveProfile: (activeProfile) => {
@@ -74,7 +81,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     if (diffAttended === 0 && diffTotal === 0) return state;
 
                     // Auto-detect title if not provided
-                    let finalTitle = title || 'Manual Edit';
+                    let finalTitle = title ? sanitize(title) : 'Manual Edit';
                     if (!title && diffAttended === 1 && diffTotal === 1) {
                         finalTitle = 'Logged +1 class';
                     }
@@ -116,12 +123,15 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
             updateProfile: (profileId, updates) =>
                 set((state) => {
+                    const sanitizedUpdates = { ...updates };
+                    if (updates.name) sanitizedUpdates.name = sanitize(updates.name);
+
                     const updatedProfiles = state.profiles.map((p) =>
-                        p.id === profileId ? { ...p, ...updates } : p
+                        p.id === profileId ? { ...p, ...sanitizedUpdates } : p
                     );
                     const updatedActive =
                         state.activeProfile?.id === profileId
-                            ? { ...state.activeProfile, ...updates }
+                            ? { ...state.activeProfile, ...sanitizedUpdates }
                             : state.activeProfile;
                     return { profiles: updatedProfiles, activeProfile: updatedActive };
                 }),
@@ -149,6 +159,30 @@ export const useAttendanceStore = create<AttendanceStore>()(
                         ),
                     };
                 }),
+
+            uploadAvatar: async (profileId, file) => {
+                const sp = supabase;
+                if (!sp) return null;
+
+                try {
+                    const fileName = `${profileId}-${Date.now()}.jpg`;
+                    const { data, error } = await sp.storage
+                        .from('avatars')
+                        .upload(fileName, file, { contentType: 'image/jpeg', upsert: true });
+
+                    if (error) throw error;
+
+                    const { data: { publicUrl } } = sp.storage.from('avatars').getPublicUrl(data.path);
+
+                    // Update profile with new avatar URL
+                    useAttendanceStore.getState().updateProfile(profileId, { avatar_url: publicUrl });
+
+                    return publicUrl;
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    return null;
+                }
+            },
         }),
         {
             name: 'attendance-profile-metrics-storage',

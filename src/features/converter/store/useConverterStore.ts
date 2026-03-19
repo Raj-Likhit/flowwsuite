@@ -41,7 +41,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
     },
     addPages: (files) => {
         const newPages = files.map((file) => {
-            const id = Math.random().toString(36).substring(7);
+            const id = crypto.randomUUID();
             const url = URL.createObjectURL(file);
 
             // Store heavy file in static map

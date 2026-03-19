@@ -1,6 +1,5 @@
-// @ts-nocheck
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
 // replace icons with your own if needed
 import { Circle, Code, FileText, Layers, Layout } from 'lucide-react';
 
@@ -42,9 +41,26 @@ const DEFAULT_ITEMS = [
 const DRAG_BUFFER = 0;
 const VELOCITY_THRESHOLD = 500;
 const GAP = 16;
-const SPRING_OPTIONS = { type: 'spring', stiffness: 300, damping: 30 };
+const SPRING_OPTIONS = { type: 'spring' as const, stiffness: 300, damping: 30 };
 
-function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, transition }) {
+interface CarouselItemData {
+    title: string;
+    description: string;
+    id: number | string;
+    icon: ReactNode;
+}
+
+interface CarouselItemProps {
+    item: CarouselItemData;
+    index: number;
+    itemWidth: number;
+    round: boolean;
+    trackItemOffset: number;
+    x: any;
+    transition: any;
+}
+
+function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, transition }: CarouselItemProps) {
     const range = [-(index + 1) * trackItemOffset, -index * trackItemOffset, -(index - 1) * trackItemOffset];
     const outputRange = [90, 0, -90];
     const rotateY = useTransform(x, range, outputRange, { clamp: false });
@@ -72,6 +88,16 @@ function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, trans
     );
 }
 
+interface CarouselProps {
+    items?: CarouselItemData[];
+    baseWidth?: number;
+    autoplay?: boolean;
+    autoplayDelay?: number;
+    pauseOnHover?: boolean;
+    loop?: boolean;
+    round?: boolean;
+}
+
 export default function Carousel({
     items = DEFAULT_ITEMS,
     baseWidth = 300,
@@ -80,7 +106,7 @@ export default function Carousel({
     pauseOnHover = false,
     loop = false,
     round = false
-}) {
+}: CarouselProps) {
     const containerPadding = 16;
     const itemWidth = baseWidth - containerPadding * 2;
     const trackItemOffset = itemWidth + GAP;
@@ -175,7 +201,7 @@ export default function Carousel({
         setIsAnimating(false);
     };
 
-    const handleDragEnd = (_: any, info: any) => {
+    const handleDragEnd = (_: any, info: PanInfo) => {
         const { offset, velocity } = info;
         const direction =
             offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY_THRESHOLD
@@ -209,6 +235,8 @@ export default function Carousel({
         <div
             ref={containerRef}
             className={`carousel-container ${round ? 'round' : ''}`}
+            role="region"
+            aria-label="Image Carousel"
             style={{
                 width: `${baseWidth}px`,
                 ...(round && { height: `${baseWidth}px`, borderRadius: '50%' })
@@ -250,6 +278,9 @@ export default function Carousel({
                         <motion.div
                             key={index}
                             className={`carousel-indicator ${activeIndex === index ? 'active' : 'inactive'}`}
+                            role="button"
+                            aria-label={`Go to slide ${index + 1}`}
+                            aria-current={activeIndex === index}
                             animate={{
                                 scale: activeIndex === index ? 1.2 : 1
                             }}

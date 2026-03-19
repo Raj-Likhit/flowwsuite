@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Eye, EyeOff, Trash2, ShieldAlert, Palette, X } from 'lucide-react';
+import { Settings, Eye, EyeOff, Trash2, ShieldAlert, Palette, X, Lock } from 'lucide-react';
 import { useThemeStore } from '../store/useThemeStore';
 import { useAttendanceStore } from '../../features/attendance/store/useAttendanceStore';
 import { GlassCard } from './GlassCard';
+import { toast } from 'sonner';
 
 export const SettingsMenu: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
     const { isHighContrast, toggleHighContrast, theme, setTheme } = useThemeStore();
-    const { hideProfileName, toggleHideProfileName } = useAttendanceStore();
+    const { hideProfileName, toggleHideProfileName, activeProfile, updateProfile } = useAttendanceStore();
 
     const themes = [
         { id: 'indigo', name: 'Indigo Dream', color: '#6366f1' },
@@ -57,6 +59,7 @@ export const SettingsMenu: React.FC = () => {
                             </div>
 
                             <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+
                                 {/* Accessibility / Visuals */}
                                 <div className="space-y-4">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-primary-400 flex items-center gap-2">
@@ -125,15 +128,66 @@ export const SettingsMenu: React.FC = () => {
                                     </div>
                                 </div>
 
+                                {/* Profile Security (only when active profile) */}
+                                {activeProfile && (
+                                    <div className="space-y-4 pt-2 border-t border-white/5">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary-400 flex items-center gap-2">
+                                            <Lock className="w-3 h-3" /> Profile Security
+                                        </h3>
+                                        <div className="bg-black/20 rounded-xl p-4 border border-white/5 space-y-4">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="text-sm font-bold text-white/90">Change Password</div>
+                                                <div className="text-xs text-white/40">Set a new numeric or text password for your profile.</div>
+                                            </div>
+                                            
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="New password..."
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-primary-500 outline-none transition-all"
+                                                    value={newPassword}
+                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!newPassword.trim()) {
+                                                            toast.error("Please enter a password");
+                                                            return;
+                                                        }
+                                                        try {
+                                                            const { supabase: sp } = await import('../../core/lib/supabase');
+                                                            if (sp) {
+                                                                const { error } = await sp
+                                                                    .from('profiles')
+                                                                    .update({ password: newPassword.trim() })
+                                                                    .eq('id', activeProfile.id);
+                                                                if (error) throw error;
+                                                            }
+                                                            updateProfile(activeProfile.id, { password: newPassword.trim() });
+                                                            toast.success("Password updated successfully!");
+                                                            setNewPassword('');
+                                                        } catch (err: any) {
+                                                            toast.error("Failed to update password: " + err.message);
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-primary-500 hover:bg-primary-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                                >
+                                                    Update
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Danger Zone */}
-                                <div className="space-y-4 pt-2">
+                                <div className="space-y-4 pt-2 border-t border-white/5">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
                                         <ShieldAlert className="w-3 h-3" /> Danger Zone
                                     </h3>
                                     <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 flex flex-col gap-3">
                                         <div className="text-sm font-bold text-white/90">Reset App Data</div>
                                         <div className="text-xs text-white/50 leading-relaxed mb-1">
-                                            This will clear local cache and disconnect your profile stream. Cloud backups remain intact.
+                                            This will clear local cache and disconnect your profile stream.
                                         </div>
                                         <button
                                             onClick={() => {

@@ -23,10 +23,13 @@ export interface Profile {
     logs?: AttendanceLog[];
 }
 
+export type AttendanceAccessMode = 'editable' | 'readOnly';
+
 interface AttendanceStore {
     // State
     profiles: Profile[];
     activeProfile: Profile | null;
+    accessMode: AttendanceAccessMode;
     loading: boolean;
     error: string | null;
     hideProfileName: boolean;
@@ -34,7 +37,7 @@ interface AttendanceStore {
 
     // Actions
     setProfiles: (profiles: Profile[]) => void;
-    setActiveProfile: (profile: Profile | null) => void;
+    setActiveProfile: (profile: Profile | null, accessMode?: AttendanceAccessMode) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 
@@ -51,14 +54,18 @@ export const useAttendanceStore = create<AttendanceStore>()(
         (set) => ({
             profiles: [],
             activeProfile: null,
+            accessMode: 'editable',
             loading: false,
             error: null,
             hideProfileName: false,
             isCloudSyncEnabled: isSupabaseAvailable(),
 
             setProfiles: (profiles) => set({ profiles }),
-            setActiveProfile: (activeProfile) => {
-                set({ activeProfile });
+            setActiveProfile: (activeProfile, accessMode = 'editable') => {
+                set({
+                    activeProfile,
+                    accessMode: activeProfile ? accessMode : 'editable',
+                });
             },
             setLoading: (loading) => set({ loading }),
             setError: (error) => set({ error }),
@@ -66,7 +73,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             updateAttendance: (rawAttended, rawTotal, title) => {
                 let generatedId: string | undefined;
                 set((state) => {
-                    if (!state.activeProfile) return state;
+                    if (!state.activeProfile || state.accessMode === 'readOnly') return state;
 
                     // Clamping and Sanitization logic for robustness
                     const safeRawTotal = isNaN(rawTotal) ? 0 : rawTotal;
@@ -119,6 +126,8 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     profiles: state.profiles.filter((p) => p.id !== profileId),
                     activeProfile:
                         state.activeProfile?.id === profileId ? null : state.activeProfile,
+                    accessMode:
+                        state.activeProfile?.id === profileId ? 'editable' : state.accessMode,
                 })),
 
             updateProfile: (profileId, updates) =>
@@ -138,7 +147,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
             deleteLog: (logId) =>
                 set((state) => {
-                    if (!state.activeProfile || !state.activeProfile.logs) return state;
+                    if (!state.activeProfile || !state.activeProfile.logs || state.accessMode === 'readOnly') return state;
                     const logToRevert = state.activeProfile.logs.find((l) => l.id === logId);
                     if (!logToRevert) return state;
 

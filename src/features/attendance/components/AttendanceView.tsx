@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { ProgressRing } from '../../../shared/components/ProgressRing';
 import { PremiumButton } from '../../../shared/components/PremiumButton';
@@ -18,6 +18,7 @@ export const AttendanceView: React.FC = () => {
     const {
         activeProfile,
         setActiveProfile,
+        accessMode,
         loading,
         setLoading,
         updateAttendance,
@@ -31,10 +32,16 @@ export const AttendanceView: React.FC = () => {
     const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
+    const isReadOnly = accessMode === 'readOnly';
 
     // Fetch announcements on mount with robust error handling
     React.useEffect(() => {
         const fetchAnnouncement = async () => {
+            if (isReadOnly) {
+                setActiveAnnouncement(null);
+                return;
+            }
+
             if (!supabase || !activeProfile) {
                 console.warn("Supabase client or active profile not available - skipping announcements");
                 return;
@@ -65,10 +72,19 @@ export const AttendanceView: React.FC = () => {
             }
         };
 
-        if (activeProfile) {
+        if (activeProfile && !isReadOnly) {
             fetchAnnouncement();
         }
-    }, [activeProfile]);
+    }, [activeProfile, isReadOnly]);
+
+    React.useEffect(() => {
+        if (isReadOnly) {
+            setShowResetConfirm(false);
+            setSyncSuccess(false);
+            setSyncError(null);
+            setActiveAnnouncement(null);
+        }
+    }, [isReadOnly]);
 
     const handleDismissAnnouncement = () => {
         if (activeAnnouncement && activeProfile) {
@@ -81,7 +97,7 @@ export const AttendanceView: React.FC = () => {
     };
 
     const handleSync = async () => {
-        if (!activeProfile || isSyncing.current) return;
+        if (!activeProfile || isSyncing.current || isReadOnly) return;
         
         if (!supabase) {
             toast.error("Sync Unavailable: Database connection failed");
@@ -171,13 +187,23 @@ export const AttendanceView: React.FC = () => {
             <div className="max-w-md mx-auto space-y-6 sm:space-y-12 pb-24 sm:pb-32 px-4 sm:px-0">
                 {/* Profile Chip */}
                 <div className="flex justify-center">
-                    <div className="px-4 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20">
-                        <span className={clsx(
-                            "text-[10px] font-black uppercase text-primary-400 transition-all duration-300 select-none",
-                            hideProfileName ? "blur-[6px] pointer-events-none opacity-50" : ""
-                        )}>
-                            Student: {activeProfile.name}
-                        </span>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                        <div className="px-4 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20">
+                            <span className={clsx(
+                                "text-[10px] font-black uppercase text-primary-400 transition-all duration-300 select-none",
+                                hideProfileName ? "blur-[6px] pointer-events-none opacity-50" : ""
+                            )}>
+                                Student: {activeProfile.name}
+                            </span>
+                        </div>
+                        {isReadOnly && (
+                            <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/60">
+                                    <Eye className="w-3 h-3" />
+                                    Read Only
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -186,6 +212,7 @@ export const AttendanceView: React.FC = () => {
                     totalCount={totalCount}
                     attendedCount={attendedCount}
                     onUpdate={updateAttendance}
+                    readOnly={isReadOnly}
                 />
 
                 {/* Central Circle - Responsive Size */}
@@ -208,7 +235,7 @@ export const AttendanceView: React.FC = () => {
                 </div>
 
                 {/* Audit Trail / History Logs */}
-                <AuditTrail />
+                <AuditTrail readOnly={isReadOnly} />
 
                 {/* Action Buttons */}
                 <div className="space-y-4">
@@ -230,9 +257,9 @@ export const AttendanceView: React.FC = () => {
                     <PremiumButton
                         variant={syncSuccess ? "secondary" : "primary"}
                         onClick={handleSync}
-                        disabled={loading || syncSuccess}
+                        disabled={loading || syncSuccess || isReadOnly}
                         className={clsx(
-                            "w-full py-6 rounded-2xl flex items-center justify-center gap-3 transition-colors",
+                            "w-full py-6 rounded-2xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
                             syncSuccess ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "bg-primary-600 hover:bg-primary-500 shadow-lg shadow-primary-500/20"
                         )}
                     >
@@ -253,10 +280,12 @@ export const AttendanceView: React.FC = () => {
                         <PremiumButton
                             variant="secondary"
                             onClick={() => {
+                                if (isReadOnly) return;
                                 generateReport();
                                 toast.success('Report successfully generated!');
                             }}
-                            className="flex items-center justify-center gap-3 py-4"
+                            disabled={isReadOnly}
+                            className="flex items-center justify-center gap-3 py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FileDown className="w-4 h-4 text-white/40" />
                             <span className="text-[10px] sm:text-xs">Export PDF</span>
@@ -266,11 +295,13 @@ export const AttendanceView: React.FC = () => {
                             <div className="flex gap-2">
                                 <PremiumButton
                                     onClick={() => {
+                                        if (isReadOnly) return;
                                         updateAttendance(0, 0);
                                         setShowResetConfirm(false);
                                         toast.success('Attendance reset to zero');
                                     }}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 py-4 !shadow-red-500/10"
+                                    disabled={isReadOnly}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 py-4 !shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <span className="text-[10px] sm:text-xs leading-tight">Confirm</span>
                                 </PremiumButton>
@@ -284,8 +315,12 @@ export const AttendanceView: React.FC = () => {
                         ) : (
                             <PremiumButton
                                 variant="secondary"
-                                onClick={() => setShowResetConfirm(true)}
-                                className="flex items-center justify-center gap-3 py-4 group"
+                                onClick={() => {
+                                    if (isReadOnly) return;
+                                    setShowResetConfirm(true);
+                                }}
+                                disabled={isReadOnly}
+                                className="flex items-center justify-center gap-3 py-4 group disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RotateCcw className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
                                 <span className="text-[10px] sm:text-xs">Reset</span>
@@ -301,6 +336,7 @@ export const AttendanceView: React.FC = () => {
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => {
+                    if (isReadOnly) return;
                     if (navigator.vibrate) navigator.vibrate(50);
                     const logId = updateAttendance(attendedCount + 1, totalCount + 1, 'Logged today\'s class');
                     toast.success('Logged today\'s class!', {
@@ -314,15 +350,23 @@ export const AttendanceView: React.FC = () => {
                         } : undefined
                     });
                 }}
-                className="fixed bottom-[max(7rem,calc(env(safe-area-inset-bottom)+6.5rem))] right-6 w-12 h-12 sm:w-14 sm:h-14 bg-primary-600 rounded-full flex items-center justify-center shadow-2xl transition-all text-white z-[60]"
+                disabled={isReadOnly}
+                className={clsx(
+                    "fixed bottom-[max(7rem,calc(env(safe-area-inset-bottom)+6.5rem))] right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-2xl transition-all text-white z-[60]",
+                    isReadOnly
+                        ? "bg-white/10 text-white/30 cursor-not-allowed shadow-none"
+                        : "bg-primary-600"
+                )}
             >
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
             </motion.button>
 
-            <AnnouncementModal 
-                announcement={activeAnnouncement} 
-                onClose={handleDismissAnnouncement} 
-            />
+            {!isReadOnly && (
+                <AnnouncementModal 
+                    announcement={activeAnnouncement} 
+                    onClose={handleDismissAnnouncement} 
+                />
+            )}
         </div>
     );
 };

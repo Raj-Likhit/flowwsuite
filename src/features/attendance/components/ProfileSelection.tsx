@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import bcrypt from 'bcryptjs';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, User, Loader2, AlertTriangle, Trash2, Pencil, RefreshCw, Check } from 'lucide-react';
+import { Plus, User, Loader2, AlertTriangle, RefreshCw, Check, Eye } from 'lucide-react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { supabase } from '../../../core/lib/supabase';
 import { GlassCard } from '../../../shared/components/GlassCard';
@@ -9,7 +9,7 @@ import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import { ProfilePicturePicker } from '../../../shared/components/ProfilePicturePicker';
 
-type ModalMode = 'add' | 'edit';
+// Modal mode is no longer needed as we only add profiles here
 
 const AVATARS = [
     'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Tiger&backgroundColor=ff8c00',
@@ -31,34 +31,24 @@ const AVATARS = [
 ];
 
 export const ProfileSelection: React.FC = () => {
-    const {
+    const { 
+        profiles, 
+        loading, 
+        setActiveProfile, 
         setProfiles,
-        profiles,
-        setActiveProfile,
         setLoading,
-        loading,
-        deleteProfile,
-        updateProfile,
+        updateProfile
     } = useAttendanceStore();
 
     // Modal state
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<ModalMode>('add');
-    const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [selectedAvatar, setSelectedAvatar] = useState('');
     const [customAvatarBlob, setCustomAvatarBlob] = useState<Blob | null>(null);
-    const [newPassword, setNewPassword] = useState('123');
+    const [newPassword, setNewPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
-
-    // Edit mode (long-press / tap to toggle) state
-    const [editModeId, setEditModeId] = useState<string | null>(null);
-
-    // Delete confirmation
-    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-    const [deletePassword, setDeletePassword] = useState('');
 
     // Refresh
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -68,19 +58,6 @@ export const ProfileSelection: React.FC = () => {
     const [enteredPassword, setEnteredPassword] = useState('');
     const [passwordError, setPasswordError] = useState(false);
 
-    // Long-press logic
-    const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const startLongPress = (profileId: string) => {
-        pressTimer.current = setTimeout(() => {
-            if (navigator.vibrate) navigator.vibrate(40);
-            setEditModeId(profileId);
-        }, 500);
-    };
-
-    const cancelLongPress = () => {
-        if (pressTimer.current) clearTimeout(pressTimer.current);
-    };
 
     const fetchProfiles = useCallback(async (isRefresh = false) => {
         if (isRefresh) setIsRefreshing(true);
@@ -108,27 +85,11 @@ export const ProfileSelection: React.FC = () => {
     }, []);
 
     const openAddModal = () => {
-        setModalMode('add');
-        setEditingProfileId(null);
         setNewName('');
         setSelectedAvatar('');
         setCustomAvatarBlob(null);
-        setNewPassword('123');
+        setNewPassword('');
         setErrorMsg(null);
-        setModalOpen(true);
-    };
-
-    const openEditModal = (profileId: string) => {
-        const profile = profiles.find((p) => p.id === profileId);
-        if (!profile) return;
-        setModalMode('edit');
-        setEditingProfileId(profileId);
-        setNewName(profile.name);
-        setSelectedAvatar(profile.avatar_url ?? '');
-        setCustomAvatarBlob(null);
-        setNewPassword(profile.password ?? '123');
-        setErrorMsg(null);
-        setEditModeId(null);
         setModalOpen(true);
     };
 
@@ -147,67 +108,36 @@ export const ProfileSelection: React.FC = () => {
 
         try {
             const { uploadAvatar } = useAttendanceStore.getState();
-            let finalId = editingProfileId;
             
             // If it's a blob URL, we don't want to save it to the DB yet
             const isCustom = selectedAvatar.startsWith('blob:');
             const initialAvatarUrl = isCustom ? '' : selectedAvatar;
 
-            if (modalMode === 'add') {
-                if (!supabase) throw new Error('Supabase not initialized');
-                
-                // Hash the new password
-                const hashedPassword = await bcrypt.hash(newPassword, 10);
+            if (!supabase) throw new Error('Supabase not initialized');
+            
+            // Hash the new password
+            const hashedPassword = await bcrypt.hash(newPassword || '123', 10);
 
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .insert([{ 
-                        name: newName.trim(), 
-                        avatar_url: initialAvatarUrl, 
-                        password: hashedPassword,
-                        attended: 0, 
-                        total: 0 
-                    }])
-                    .select()
-                    .single();
-                if (error) throw error;
-                if (data) {
-                    finalId = data.id;
-                    setProfiles([...profiles, data]);
-                }
-                toast.success('Profile created!');
-            } else {
-                if (!editingProfileId) return;
-                if (!supabase) throw new Error('Supabase not initialized');
-
-                const profile = profiles.find(p => p.id === editingProfileId);
-                let passwordToSave = newPassword;
-
-                // Only hash if the password has changed (and isn't already a hash)
-                // A simple check for $2a$ (bcrypt prefix) to avoid double hashing
-                if (newPassword !== profile?.password) {
-                    passwordToSave = await bcrypt.hash(newPassword, 10);
-                }
-
-                const updates = { 
+            const { data, error } = await supabase
+                .from('profiles')
+                .insert([{ 
                     name: newName.trim(), 
                     avatar_url: initialAvatarUrl, 
-                    password: passwordToSave 
-                };
-                const { error } = await supabase
-                    .from('profiles')
-                    .update(updates)
-                    .eq('id', editingProfileId);
-                
-                // Update local store with the initial changes
-                updateProfile(editingProfileId, updates);
-
-                if (error) {
-                    console.warn('DB Update partial failure:', error.message);
-                } else {
-                    toast.success('Profile updated!');
-                }
+                    password: hashedPassword,
+                    attended: 0, 
+                    total: 0 
+                }])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            let finalId = '';
+            if (data) {
+                finalId = data.id;
+                setProfiles([...profiles, data]);
             }
+            toast.success('Profile created!');
 
             // Handle custom avatar upload if selected
             if (customAvatarBlob && finalId) {
@@ -233,44 +163,56 @@ export const ProfileSelection: React.FC = () => {
         }
     };
 
-    const confirmDelete = async (profileId: string) => {
-        const profile = profiles.find(p => p.id === profileId);
-        if (!profile) return;
 
-        const storedPassword = profile.password || '123';
-        const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
-        let isCorrect = false;
+    const closePasswordPrompt = () => {
+        setPasswordPromptProfile(null);
+        setEnteredPassword('');
+        setPasswordError(false);
+    };
+
+    const unlockProfile = async () => {
+        if (!passwordPromptProfile) return;
+
+        let correct = false;
+        let needsMigration = false;
+        const stored = passwordPromptProfile.password || '123';
+        const isHashed = typeof stored === 'string' && stored.startsWith('$2');
 
         if (isHashed) {
-            isCorrect = await bcrypt.compare(deletePassword, storedPassword);
+            correct = await bcrypt.compare(enteredPassword, stored);
         } else {
-            isCorrect = deletePassword === storedPassword;
+            correct = enteredPassword === stored;
+            if (correct) needsMigration = true;
         }
 
-        if (!isCorrect) {
-            toast.error('Incorrect password');
+        if (!correct) {
+            setPasswordError(true);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             return;
         }
 
-        setPendingDeleteId(null);
-        setDeletePassword('');
-        if (!supabase) return;
-        try {
-            const { error } = await supabase.from('profiles').delete().eq('id', profileId);
-            if (error) throw error;
-            deleteProfile(profileId);
-            toast.success('Profile deleted');
-        } catch (err: any) {
-            console.error(err);
-            toast.error('Failed to delete profile');
+        setActiveProfile(passwordPromptProfile, 'editable');
+        closePasswordPrompt();
+
+        if (needsMigration && supabase) {
+            const hashed = await bcrypt.hash(enteredPassword, 10);
+            await supabase
+                .from('profiles')
+                .update({ password: hashed })
+                .eq('id', passwordPromptProfile.id);
+            updateProfile(passwordPromptProfile.id, { password: hashed });
         }
+    };
+
+    const viewAttendance = () => {
+        if (!passwordPromptProfile) return;
+        setActiveProfile(passwordPromptProfile, 'readOnly');
+        closePasswordPrompt();
     };
 
     return (
         <div
             className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 pb-44 pt-12 sm:pt-24 bg-gradient-to-b from-primary-600/10 to-transparent"
-            onClick={() => { setEditModeId(null); setPendingDeleteId(null); }}
         >
             {/* Header */}
             <div className="w-full max-w-5xl flex items-start justify-between mb-10 sm:mb-16">
@@ -311,140 +253,49 @@ export const ProfileSelection: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-8 max-w-5xl px-2 sm:px-0">
                     <AnimatePresence>
-                        {profiles.map((profile) => {
-                            const isInEditMode = editModeId === profile.id;
-                            const isPendingDelete = pendingDeleteId === profile.id;
-                            return (
-                                <motion.div
-                                    key={profile.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                                    className="relative flex flex-col items-center gap-5"
-                                    onClick={(e) => e.stopPropagation()}
+                        {profiles.map((profile) => (
+                            <motion.div
+                                key={profile.id}
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                                className="relative flex flex-col items-center gap-5"
+                            >
+                                {/* Profile card button */}
+                                <motion.button
+                                    whileHover={{ scale: 1.08, y: -8 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => {
+                                        setPasswordPromptProfile(profile);
+                                        setEnteredPassword('');
+                                        setPasswordError(false);
+                                    }}
+                                    className="group flex flex-col items-center gap-5 select-none no-touch-menu"
                                 >
-                                    {/* Edit / Delete overlays */}
-                                    <AnimatePresence>
-                                        {isInEditMode && (
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.8 }}
-                                                className="absolute -top-2 -right-2 z-20 flex gap-1.5"
-                                            >
-                                                <button
-                                                    onClick={() => openEditModal(profile.id)}
-                                                    className="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg shadow-primary-500/30 hover:bg-primary-400 transition-colors"
-                                                    aria-label="Edit profile"
-                                                >
-                                                    <Pencil className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => { setPendingDeleteId(profile.id); setEditModeId(null); }}
-                                                    className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 hover:bg-red-400 transition-colors"
-                                                    aria-label="Delete profile"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-
-                                    {/* Delete confirmation */}
-                                    <AnimatePresence>
-                                        {isPendingDelete && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -8 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -8 }}
-                                                className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 bg-red-950/90 border border-red-500/30 rounded-2xl px-3 py-2 backdrop-blur-sm whitespace-nowrap"
-                                            >
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-red-400">Confirm Deletion</span>
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="password"
-                                                            value={deletePassword}
-                                                            onChange={(e) => setDeletePassword(e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    confirmDelete(profile.id);
-                                                                }
-                                                            }}
-                                                            placeholder="Enter Password"
-                                                            className="w-28 bg-white/5 border border-red-500/30 rounded-lg px-2.5 py-1.5 text-[10px] text-white outline-none focus:border-red-500"
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            onClick={() => confirmDelete(profile.id)}
-                                                            className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center hover:bg-red-400 transition-colors shrink-0"
-                                                            aria-label="Confirm delete"
-                                                        >
-                                                            <Check className="w-4 h-4 text-white" />
-                                                        </button>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => { setPendingDeleteId(null); setDeletePassword(''); }}
-                                                        className="w-full py-1 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors text-[8px] font-black uppercase text-white/30"
-                                                        aria-label="Cancel delete"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-
-                                    {/* Profile card button */}
-                                    <motion.button
-                                        whileHover={!isInEditMode ? { scale: 1.08, y: -8 } : {}}
-                                        whileTap={{ scale: 0.95 }}
-                                        animate={isInEditMode ? { rotate: [0.5, -0.5, 0.5, -0.5, 0] } : { rotate: 0 }}
-                                        transition={isInEditMode
-                                            ? { repeat: Infinity, duration: 0.4, ease: "linear" }
-                                            : { duration: 0.2, repeat: 0 }
-                                        }
-                                        onClick={() => {
-                                            if (isInEditMode) return;
-                                            setPasswordPromptProfile(profile);
-                                            setEnteredPassword('');
-                                            setPasswordError(false);
-                                        }}
-                                        onContextMenu={(e) => e.preventDefault()}
-                                        onMouseDown={() => startLongPress(profile.id)}
-                                        onMouseUp={cancelLongPress}
-                                        onMouseLeave={cancelLongPress}
-                                        onTouchStart={() => startLongPress(profile.id)}
-                                        onTouchEnd={cancelLongPress}
-                                        className="group flex flex-col items-center gap-5 select-none no-touch-menu"
-                                    >
-                                        <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-500/20 group-hover:from-primary-500 group-hover:to-secondary-500 transition-all duration-500 shadow-2xl relative">
-                                            <div className="w-full h-full rounded-[1.4rem] glass-strong flex items-center justify-center overflow-hidden relative">
-                                                {profile.avatar_url ? (
-                                                    <img
-                                                        src={profile.avatar_url}
-                                                        alt={profile.name}
-                                                        draggable="false"
-                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 select-none pointer-events-none no-touch-menu"
-                                                    />
-                                                ) : (
-                                                    <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />
-                                                )}
-                                                {!isInEditMode && (
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
-                                                        <span className="text-[10px] font-black uppercase text-white tracking-widest">Go</span>
-                                                    </div>
-                                                )}
+                                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-500/20 group-hover:from-primary-500 group-hover:to-secondary-500 transition-all duration-500 shadow-2xl relative">
+                                        <div className="w-full h-full rounded-[1.4rem] glass-strong flex items-center justify-center overflow-hidden relative">
+                                            {profile.avatar_url ? (
+                                                <img
+                                                    src={profile.avatar_url}
+                                                    alt={profile.name}
+                                                    draggable="false"
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 select-none pointer-events-none no-touch-menu"
+                                                />
+                                            ) : (
+                                                <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                                                <span className="text-[10px] font-black uppercase text-white tracking-widest">Go</span>
                                             </div>
                                         </div>
-                                        <span className="text-white/50 text-base font-bold group-hover:text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all select-none">
-                                            {profile.name}
-                                        </span>
-                                    </motion.button>
-                                </motion.div>
-                            );
-                        })}
+                                    </div>
+                                    <span className="text-white/50 text-base font-bold group-hover:text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-all select-none">
+                                        {profile.name}
+                                    </span>
+                                </motion.button>
+                            </motion.div>
+                        ))}
 
                         {/* Add new profile */}
                         <motion.button
@@ -463,12 +314,6 @@ export const ProfileSelection: React.FC = () => {
                 </div>
             )}
 
-            {/* Hint text for long-press */}
-            {profiles.length > 0 && (
-                <p className="mt-8 mb-12 text-white/20 text-[10px] uppercase tracking-widest font-bold select-none text-center px-6">
-                    Hold a profile to edit or delete
-                </p>
-            )}
 
             {/* Add / Edit Modal */}
             <AnimatePresence>
@@ -487,9 +332,9 @@ export const ProfileSelection: React.FC = () => {
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
                             className="relative z-10 w-full max-w-md p-6 sm:p-10 border border-white/5"
                         >
-                            <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tighter select-none">
-                                {modalMode === 'add' ? 'New Profile' : 'Edit Profile'}
-                            </h3>
+                                <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tighter select-none">
+                                    New Profile
+                                </h3>
 
                             <AnimatePresence>
                                 {errorMsg && (
@@ -560,7 +405,7 @@ export const ProfileSelection: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="block text-[10px] uppercase tracking-[0.3em] text-white/30 font-black select-none">
                                             Name
@@ -605,7 +450,7 @@ export const ProfileSelection: React.FC = () => {
                                     >
                                         {submitting
                                             ? 'Saving...'
-                                            : modalMode === 'add' ? 'Initialize Profile' : 'Save Changes'}
+                                            : 'Initialize Profile'}
                                     </motion.button>
                                 </div>
                             </form>
@@ -622,14 +467,14 @@ export const ProfileSelection: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setPasswordPromptProfile(null)}
+                            onClick={closePasswordPrompt}
                             className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl"
                         />
                         <GlassCard
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative z-10 w-full max-w-sm p-8 border border-white/5 text-center"
+                            className="relative z-10 w-full max-w-sm p-8 sm:p-10 border border-white/5 text-center"
                         >
                             <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden border-2 border-primary-500/30">
                                 <img 
@@ -656,35 +501,7 @@ export const ProfileSelection: React.FC = () => {
                                     }}
                                     onKeyDown={async (e) => {
                                         if (e.key === 'Enter') {
-                                            let correct = false;
-                                            let needsMigration = false;
-                                            const stored = passwordPromptProfile.password || '123';
-                                            const isHashed = typeof stored === 'string' && stored.startsWith('$2');
-                                            
-                                            if (isHashed) {
-                                                correct = await bcrypt.compare(enteredPassword, stored);
-                                            } else {
-                                                correct = enteredPassword === stored;
-                                                if (correct) needsMigration = true;
-                                            }
-
-                                            if (correct) {
-                                                setActiveProfile(passwordPromptProfile);
-                                                setPasswordPromptProfile(null);
-
-                                                // Background migration
-                                                if (needsMigration && supabase) {
-                                                    const hashed = await bcrypt.hash(enteredPassword, 10);
-                                                    await supabase
-                                                        .from('profiles')
-                                                        .update({ password: hashed })
-                                                        .eq('id', passwordPromptProfile.id);
-                                                    updateProfile(passwordPromptProfile.id, { password: hashed });
-                                                }
-                                            } else {
-                                                setPasswordError(true);
-                                                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-                                            }
+                                            await unlockProfile();
                                         }
                                     }}
                                     className={clsx(
@@ -704,50 +521,32 @@ export const ProfileSelection: React.FC = () => {
                                     </motion.p>
                                 )}
 
-                                <div className="flex gap-4">
+                                <div className="space-y-4">
+                                    <div className="flex gap-4">
                                     <motion.button
                                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                        onClick={() => setPasswordPromptProfile(null)}
+                                        onClick={closePasswordPrompt}
                                         className="flex-1 py-4 rounded-2xl bg-white/5 text-white/40 font-black uppercase tracking-widest text-[10px]"
                                     >
                                         Cancel
                                     </motion.button>
                                     <motion.button
                                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                        onClick={async () => {
-                                            let correct = false;
-                                            let needsMigration = false;
-                                            const stored = passwordPromptProfile.password || '123';
-                                            const isHashed = typeof stored === 'string' && stored.startsWith('$2');
-                                            
-                                            if (isHashed) {
-                                                correct = await bcrypt.compare(enteredPassword, stored);
-                                            } else {
-                                                correct = enteredPassword === stored;
-                                                if (correct) needsMigration = true;
-                                            }
-
-                                            if (correct) {
-                                                setActiveProfile(passwordPromptProfile);
-                                                setPasswordPromptProfile(null);
-
-                                                // Background migration
-                                                if (needsMigration && supabase) {
-                                                    const hashed = await bcrypt.hash(enteredPassword, 10);
-                                                    await supabase
-                                                        .from('profiles')
-                                                        .update({ password: hashed })
-                                                        .eq('id', passwordPromptProfile.id);
-                                                    updateProfile(passwordPromptProfile.id, { password: hashed });
-                                                }
-                                            } else {
-                                                setPasswordError(true);
-                                            }
-                                        }}
+                                        onClick={unlockProfile}
                                         className="flex-[2] py-4 rounded-2xl accent-gradient text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                                     >
                                         <Check className="w-3.5 h-3.5" />
                                         Unlock
+                                    </motion.button>
+                                    </div>
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={viewAttendance}
+                                        className="w-full py-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        View Attendance
                                     </motion.button>
                                 </div>
                             </div>

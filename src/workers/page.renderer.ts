@@ -9,7 +9,6 @@ self.onmessage = async (e: MessageEvent) => {
         const { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, quality } = resolution;
 
         try {
-            // @ts-ignore
             if (typeof window === 'undefined') self.window = self;
 
             // Use OffscreenCanvas

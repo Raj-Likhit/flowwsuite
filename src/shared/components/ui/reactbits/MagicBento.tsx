@@ -301,13 +301,21 @@ const ParticleCard: React.FC<ParticleCardProps> = ({
     );
 };
 
+interface GlobalSpotlightProps {
+    gridRef: React.RefObject<HTMLDivElement | null>;
+    disableAnimations?: boolean;
+    enabled?: boolean;
+    spotlightRadius?: number;
+    glowColor?: string;
+}
+
 const GlobalSpotlight = ({
     gridRef,
     disableAnimations = false,
     enabled = true,
     spotlightRadius = DEFAULT_SPOTLIGHT_RADIUS,
     glowColor = DEFAULT_GLOW_COLOR
-}: any) => {
+}: GlobalSpotlightProps) => {
     const spotlightRef = useRef<HTMLDivElement>(null);
     const isInsideSection = useRef(false);
 
@@ -351,8 +359,8 @@ const GlobalSpotlight = ({
                     duration: 0.3,
                     ease: 'power2.out'
                 });
-                cards.forEach((card: any) => {
-                    card.style.setProperty('--glow-intensity', '0');
+                cards.forEach((card: Element) => {
+                    (card as HTMLElement).style.setProperty('--glow-intensity', '0');
                 });
                 return;
             }
@@ -360,8 +368,8 @@ const GlobalSpotlight = ({
             const { proximity, fadeDistance } = calculateSpotlightValues(spotlightRadius);
             let minDistance = Infinity;
 
-            cards.forEach((card: any) => {
-                const cardElement = card;
+            cards.forEach((card: Element) => {
+                const cardElement = card as HTMLElement;
                 const cardRect = cardElement.getBoundingClientRect();
                 const centerX = cardRect.left + cardRect.width / 2;
                 const centerY = cardRect.top + cardRect.height / 2;
@@ -378,7 +386,7 @@ const GlobalSpotlight = ({
                     glowIntensity = (fadeDistance - effectiveDistance) / (fadeDistance - proximity);
                 }
 
-                updateCardGlowProperties(cardElement, e.clientX, e.clientY, glowIntensity, spotlightRadius);
+                updateCardGlowProperties(cardElement as HTMLDivElement, e.clientX, e.clientY, glowIntensity, spotlightRadius);
             });
 
             gsap.to(spotlightRef.current, {
@@ -404,8 +412,8 @@ const GlobalSpotlight = ({
 
         const handleMouseLeave = () => {
             isInsideSection.current = false;
-            gridRef.current?.querySelectorAll('.magic-bento-card').forEach((card: any) => {
-                card.style.setProperty('--glow-intensity', '0');
+            gridRef.current?.querySelectorAll('.magic-bento-card').forEach((card: Element) => {
+                (card as HTMLElement).style.setProperty('--glow-intensity', '0');
             });
             if (spotlightRef.current) {
                 gsap.to(spotlightRef.current, {
@@ -429,7 +437,12 @@ const GlobalSpotlight = ({
     return null;
 };
 
-const BentoCardGrid = ({ children, gridRef }: any) => (
+interface BentoCardGridProps {
+    children: React.ReactNode;
+    gridRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const BentoCardGrid = ({ children, gridRef }: BentoCardGridProps) => (
     <div className="card-grid bento-section" ref={gridRef}>
         {children}
     </div>
@@ -496,7 +509,7 @@ const MagicBento: React.FC<MagicBentoProps> = ({
             )}
 
             <BentoCardGrid gridRef={gridRef}>
-                {cards.map((card: any, index: number) => {
+                {cards.map((card: CardData, index: number) => {
                     const baseClassName = `magic-bento-card ${card.className || ''} ${textAutoHide ? 'magic-bento-card--text-autohide' : ''} ${enableBorderGlow ? 'magic-bento-card--border-glow' : ''}`;
                     const cardProps = {
                         className: baseClassName,

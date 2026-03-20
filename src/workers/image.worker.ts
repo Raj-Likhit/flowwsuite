@@ -7,7 +7,6 @@ self.onmessage = async (e: MessageEvent) => {
         if (type === 'PROCESS_FILES') {
             const { files } = payload;
             // Dynamic import heic2any only when needed
-            // @ts-ignore
             if (typeof window === 'undefined') self.window = self;
 
             const heic2any = (await import('heic2any')).default;
@@ -51,8 +50,9 @@ self.onmessage = async (e: MessageEvent) => {
 
             self.postMessage({ type: 'BLANK_CREATED', payload: [file] });
         }
-    } catch (err) {
-        console.error(err);
-        self.postMessage({ type: 'ERROR', payload: (err as Error).message });
+    } catch (err: unknown) {
+        const error = err as Error;
+        console.error(error);
+        self.postMessage({ type: 'ERROR', payload: error.message });
     }
 };

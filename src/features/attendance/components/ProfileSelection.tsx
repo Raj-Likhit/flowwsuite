@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import bcrypt from 'bcryptjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, User, Loader2, AlertTriangle, RefreshCw, Check, Eye } from 'lucide-react';
-import { useAttendanceStore } from '../store/useAttendanceStore';
+import { useAttendanceStore, type Profile } from '../store/useAttendanceStore';
 import { supabase } from '../../../core/lib/supabase';
 import { GlassCard } from '../../../shared/components/GlassCard';
 import { clsx } from 'clsx';
@@ -54,7 +54,7 @@ export const ProfileSelection: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Password Prompt state
-    const [passwordPromptProfile, setPasswordPromptProfile] = useState<any | null>(null);
+    const [passwordPromptProfile, setPasswordPromptProfile] = useState<Profile | null>(null);
     const [enteredPassword, setEnteredPassword] = useState('');
     const [passwordError, setPasswordError] = useState(false);
 
@@ -71,7 +71,7 @@ export const ProfileSelection: React.FC = () => {
             if (error) throw error;
             if (data) setProfiles(data);
             if (isRefresh) toast.success('Profiles refreshed');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching profiles:', err);
             if (isRefresh) toast.error('Failed to refresh profiles');
         } finally {
@@ -82,7 +82,7 @@ export const ProfileSelection: React.FC = () => {
 
     useEffect(() => {
         fetchProfiles();
-    }, []);
+    }, [fetchProfiles]);
 
     const openAddModal = () => {
         setNewName('');
@@ -155,9 +155,10 @@ export const ProfileSelection: React.FC = () => {
             }
 
             closeModal();
-        } catch (err: any) {
-            console.error(err);
-            setErrorMsg(err.message ?? 'Something went wrong. Please try again.');
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error(error);
+            setErrorMsg(error.message ?? 'Something went wrong. Please try again.');
         } finally {
             setSubmitting(false);
         }

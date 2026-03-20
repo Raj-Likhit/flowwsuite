@@ -20,12 +20,10 @@ self.onmessage = async (e: MessageEvent) => {
         const JPG_QUALITY = isLowEnd ? 0.6 : 0.8;
 
         try {
-            // @ts-ignore
             if (typeof window === 'undefined') self.window = self;
 
             const { jsPDF } = await import('jspdf');
 
-            // @ts-ignore
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
             const WIDTH = 210;
             const HEIGHT = 297;

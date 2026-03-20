@@ -44,7 +44,7 @@ export const useAdminDashboard = () => {
             setRecentUsers(recent || []);
             setAllProfiles((all || []).map(p => ({ ...p, avatar_url: null })));
             setModerationProfiles(customPFPs || []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[AdminDashboard Hook Error]:', err);
             toast.error("Failed to load dashboard data");
         } finally {
@@ -81,9 +81,10 @@ export const useAdminDashboard = () => {
             if (error) throw error;
             toast.success(`Announcement ${targetType === 'all' ? 'broadcasted' : 'sent'} successfully!`);
             return true;
-        } catch (err: any) {
-            console.error('[Publish Error]:', err);
-            toast.error("Failed to publish: " + err.message);
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error('[Publish Error]:', error);
+            toast.error("Failed to publish: " + error.message);
             return false;
         } finally {
             setIsPublishing(false);

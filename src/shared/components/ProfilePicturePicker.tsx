@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import Cropper, { type Area } from 'react-easy-crop';
 import { Button } from './ui/Button';
 import GlassSurface from './ui/reactbits/GlassSurface';
 import { X, Upload, Check } from 'lucide-react';
@@ -13,7 +13,7 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
     const [image, setImage] = useState<string | null>(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
     const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -27,7 +27,7 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
         setCrop(crop);
     };
 
-    const onCropCompleteInternal = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    const onCropCompleteInternal = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
 
@@ -42,7 +42,7 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
 
     const getCroppedImg = async (
         imageSrc: string,
-        pixelCrop: any
+        pixelCrop: Area
     ): Promise<Blob> => {
         const image = await createImage(imageSrc);
         const canvas = document.createElement('canvas');

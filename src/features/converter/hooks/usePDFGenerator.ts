@@ -68,7 +68,7 @@ export const usePDFGenerator = () => {
                     const url = URL.createObjectURL(payload);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'ConvertFlow_Doc.pdf';
+                    a.download = 'Flowwsuite_Doc.pdf';
                     a.click();
                     URL.revokeObjectURL(url);
                     setProcessing(false);
@@ -88,10 +88,11 @@ export const usePDFGenerator = () => {
                 }
             }, buffers); // Transfer all buffers to assembler
 
-        } catch (err) {
-            console.error("Pipeline Error:", err);
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error("Pipeline Error:", error);
             setProcessing(false);
-            setError('Generation Failed: ' + (err as Error).message);
+            setError('Generation Failed: ' + error.message);
         }
 
     }, [pages, settings, setProcessing, setError]);

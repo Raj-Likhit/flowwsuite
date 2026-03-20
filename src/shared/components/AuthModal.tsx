@@ -42,8 +42,9 @@ export const AuthModal = ({ onClose }: AuthModalProps) => {
                 if (signUpError) throw signUpError;
             }
             onClose();
-        } catch (err: any) {
-            setError(err.message || 'An authentication error occurred');
+        } catch (err: unknown) {
+            const error = err as Error;
+            setError(error.message || 'An authentication error occurred');
         } finally {
             setLoading(false);
         }

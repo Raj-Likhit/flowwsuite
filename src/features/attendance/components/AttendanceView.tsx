@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
@@ -13,6 +13,13 @@ import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import { AnnouncementModal } from '../../../shared/components/AnnouncementModal';
+
+interface Announcement {
+    id: string;
+    content: string;
+    target_profile_ids: string[] | null;
+    created_at: string;
+}
 
 export const AttendanceView: React.FC = () => {
     const {
@@ -29,21 +36,16 @@ export const AttendanceView: React.FC = () => {
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [activeAnnouncement, setActiveAnnouncement] = useState<any>(null);
+    const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null);
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
 
-    // Fetch announcements on mount with robust error handling
-    React.useEffect(() => {
+    // Fetch announcements on mount
+    useEffect(() => {
         const fetchAnnouncement = async () => {
-            if (isReadOnly) {
-                setActiveAnnouncement(null);
-                return;
-            }
-
-            if (!supabase || !activeProfile) {
-                console.warn("Supabase client or active profile not available - skipping announcements");
+            if (isReadOnly || !supabase || !activeProfile) {
+                if (isReadOnly) setActiveAnnouncement(null);
                 return;
             }
 
@@ -58,7 +60,6 @@ export const AttendanceView: React.FC = () => {
                     .maybeSingle();
 
                 if (data && !error && activeProfile) {
-                    // Per-profile tracking: "seen_announcements_[profileId]"
                     const storageKey = `seen_announcements_${activeProfile.id}`;
                     const seenAnnouncements = JSON.parse(localStorage.getItem(storageKey) || '[]');
                     
@@ -67,7 +68,6 @@ export const AttendanceView: React.FC = () => {
                     }
                 }
             } catch (err) {
-                // Graceful fallback: just log and continue
                 console.error("Graceful Fallback: Failed to fetch announcements:", err);
             }
         };
@@ -77,7 +77,7 @@ export const AttendanceView: React.FC = () => {
         }
     }, [activeProfile, isReadOnly]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isReadOnly) {
             setShowResetConfirm(false);
             setSyncSuccess(false);
@@ -97,12 +97,8 @@ export const AttendanceView: React.FC = () => {
     };
 
     const handleSync = async () => {
-        if (!activeProfile || isSyncing.current || isReadOnly) return;
+        if (!activeProfile || isSyncing.current || isReadOnly || !supabase) return;
         
-        if (!supabase) {
-            toast.error("Sync Unavailable: Database connection failed");
-            return;
-        }
         isSyncing.current = true;
         setLoading(true);
 
@@ -129,7 +125,7 @@ export const AttendanceView: React.FC = () => {
             setSyncSuccess(true);
             toast.success('Successfully synced to cloud');
             setTimeout(() => setSyncSuccess(false), 2000);
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Sync failed:', err);
             setSyncError('Failed to sync. Please try again.');
             toast.error('Failed to sync to cloud');
@@ -138,7 +134,6 @@ export const AttendanceView: React.FC = () => {
             isSyncing.current = false;
         }
     };
-
 
     if (!activeProfile) {
         return <ProfileSelection />;
@@ -165,13 +160,14 @@ export const AttendanceView: React.FC = () => {
             </div>
 
             <div className="text-center mb-8">
-                <h1 className="text-2xl font-black tracking-tight" onClick={() => { }}>
+                <h1 className="text-2xl font-black tracking-tight">
                     Floww<span className="text-primary-500">suite</span>
                 </h1>
                 <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest">
                     Track your 75% attendance requirement
                 </p>
             </div>
+
             <div className="flex justify-center mb-8 max-w-md mx-auto">
                 <div className="w-9 h-9 rounded-lg overflow-hidden ring-1 ring-white/10">
                     {activeProfile.avatar_url ? (
@@ -207,7 +203,6 @@ export const AttendanceView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Input Controls */}
                 <AttendanceControls
                     totalCount={totalCount}
                     attendedCount={attendedCount}
@@ -215,7 +210,6 @@ export const AttendanceView: React.FC = () => {
                     readOnly={isReadOnly}
                 />
 
-                {/* Central Circle - Responsive Size */}
                 <div className="relative flex flex-col items-center justify-center py-2 sm:py-4">
                     <div className="sm:hidden scale-90 origin-center">
                         <ProgressRing percentage={percentage} size={220} strokeWidth={14} />
@@ -225,7 +219,6 @@ export const AttendanceView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Safe / Danger Grid */}
                 <div className="px-2 sm:px-0">
                     <SafeDangerCards
                         percentage={percentage}
@@ -234,12 +227,9 @@ export const AttendanceView: React.FC = () => {
                     />
                 </div>
 
-                {/* Audit Trail / History Logs */}
                 <AuditTrail readOnly={isReadOnly} />
 
-                {/* Action Buttons */}
                 <div className="space-y-4">
-                    {/* Inline Error Message */}
                     <AnimatePresence>
                         {syncError && (
                             <motion.div
@@ -330,8 +320,6 @@ export const AttendanceView: React.FC = () => {
                 </div>
             </div>
 
-            {/* Removed duplicated local bottom navigation */}
-            {/* Floating Plus Button - Responsive Size */}
             <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}

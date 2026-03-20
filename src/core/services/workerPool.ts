@@ -4,10 +4,10 @@ interface RenderTask {
     id: string;
     file: File;
     rotation: number;
-    settings: any;
-    resolution: any;
+    settings: unknown;
+    resolution: unknown;
     resolve: (buffer: ArrayBuffer) => void;
-    reject: (err: any) => void;
+    reject: (err: unknown) => void;
 }
 
 export class WorkerPool {

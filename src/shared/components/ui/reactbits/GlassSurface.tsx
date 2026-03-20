@@ -226,7 +226,7 @@ const GlassSurface: React.FC<GlassSurfaceProps> = ({
         return div.style.backdropFilter !== '';
     };
 
-    const containerStyle: React.CSSProperties & Record<string, any> = {
+    const containerStyle: React.CSSProperties & Record<string, string | number | undefined> = {
         ...style,
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,

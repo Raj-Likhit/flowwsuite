@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect, type ReactNode } from 'react';
+import { motion, useMotionValue, useTransform, type PanInfo, type MotionValue, type Transition } from 'framer-motion';
 // replace icons with your own if needed
 import { Circle, Code, FileText, Layers, Layout } from 'lucide-react';
 
@@ -56,8 +56,8 @@ interface CarouselItemProps {
     itemWidth: number;
     round: boolean;
     trackItemOffset: number;
-    x: any;
-    transition: any;
+    x: MotionValue<number>;
+    transition: Transition;
 }
 
 function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, transition }: CarouselItemProps) {
@@ -149,14 +149,16 @@ export default function Carousel({
         return () => clearInterval(timer);
     }, [autoplay, autoplayDelay, isHovered, pauseOnHover, itemsForRender.length]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const startingPosition = loop ? 1 : 0;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPosition(startingPosition);
         x.set(-startingPosition * trackItemOffset);
     }, [items.length, loop, trackItemOffset, x]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!loop && position > itemsForRender.length - 1) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPosition(Math.max(0, itemsForRender.length - 1));
         }
     }, [itemsForRender.length, loop, position]);
@@ -201,7 +203,7 @@ export default function Carousel({
         setIsAnimating(false);
     };
 
-    const handleDragEnd = (_: any, info: PanInfo) => {
+    const handleDragEnd = (_: unknown, info: PanInfo) => {
         const { offset, velocity } = info;
         const direction =
             offset.x < -DRAG_BUFFER || velocity.x < -VELOCITY_THRESHOLD

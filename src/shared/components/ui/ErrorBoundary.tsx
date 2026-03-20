@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
                                 Reboot System
                             </button>
                             <p className="mt-4 text-[10px] uppercase font-bold tracking-[0.2em] text-white/20">
-                                ConvertFlow Emergency Protocol
+                                Flowwsuite Emergency Protocol
                             </p>
                         </div>
                     </div>

@@ -207,8 +207,9 @@ export const SettingsMenu: React.FC = () => {
                                                                 }
                                                                 updateProfile(activeProfile.id, { name: newName.trim() });
                                                                 toast.success("Name updated!");
-                                                            } catch (err: any) {
-                                                                toast.error("Update failed: " + err.message);
+                                                            } catch (err: unknown) {
+                                                                const error = err as Error;
+                                                                toast.error("Update failed: " + error.message);
                                                             }
                                                         }}
                                                         className="px-4 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[10px] font-black transition-all"
@@ -252,8 +253,9 @@ export const SettingsMenu: React.FC = () => {
                                                                 updateProfile(activeProfile.id, { password: hashedPassword });
                                                                 toast.success("Security updated!", { id: loadingToast });
                                                                 setNewPassword('');
-                                                            } catch (err: any) {
-                                                                toast.error("Update failed: " + err.message, { id: loadingToast });
+                                                            } catch (err: unknown) {
+                                                                const error = err as Error;
+                                                                toast.error("Update failed: " + error.message, { id: loadingToast });
                                                             }
                                                         }}
                                                         className="px-4 py-2 bg-primary-500 hover:bg-primary-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
@@ -314,8 +316,9 @@ export const SettingsMenu: React.FC = () => {
                                     toast.success("Avatar updated!", { id: loadingToast });
                                 }
                                 setShowPicker(false);
-                            } catch (err: any) {
-                                toast.error("Upload failed: " + err.message, { id: loadingToast });
+                            } catch (err: unknown) {
+                                const error = err as Error;
+                                toast.error("Upload failed: " + error.message, { id: loadingToast });
                             }
                         }}
                         onClose={() => setShowPicker(false)}

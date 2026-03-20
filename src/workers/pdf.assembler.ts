@@ -8,12 +8,10 @@ self.onmessage = async (e: MessageEvent) => {
         // pages is Array<{ buffer: ArrayBuffer }> in correct order
 
         try {
-            // @ts-ignore
             if (typeof window === 'undefined') self.window = self;
 
             const { jsPDF } = await import('jspdf');
 
-            // @ts-ignore
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
             const WIDTH = 210;
             const HEIGHT = 297;

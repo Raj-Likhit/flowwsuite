@@ -50,7 +50,7 @@ export const useImageProcessor = () => {
             type: 'PROCESS_FILES',
             payload: { files }
         });
-    }, [setProcessing]);
+    }, [setProcessing, setError]);
 
     const createBlankPage = useCallback(() => {
         setError(null);

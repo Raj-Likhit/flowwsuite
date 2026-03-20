@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence, type MotionValue } from 'framer-motion';
-import { useRef, useState, useEffect, useMemo, Children, cloneElement, type ReactElement, type ReactNode } from 'react';
+import { useRef, useState, useMemo, Children, cloneElement, type ReactElement, type ReactNode } from 'react';
 
 import './Dock.css';
 
@@ -58,17 +58,10 @@ const DockItem = ({
     );
 };
 
-function DockLabel({ children, className = '', ...rest }: { children: ReactNode; className?: string; isHovered?: boolean }) {
-    const { isHovered } = rest;
-    const [isVisible, setIsVisible] = useState(false);
-
-    useEffect(() => {
-        setIsVisible(!!isHovered);
-    }, [isHovered]);
-
+function DockLabel({ children, className = '', isHovered }: { children: ReactNode; className?: string; isHovered?: boolean }) {
     return (
         <AnimatePresence>
-            {isVisible && (
+            {isHovered && (
                 <motion.div
                     initial={{ opacity: 0, y: 0 }}
                     animate={{ opacity: 1, y: -10 }}

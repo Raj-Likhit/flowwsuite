@@ -3,11 +3,14 @@ import { motion } from 'framer-motion';
 import { CheckCircle, Trash2 } from 'lucide-react';
 
 interface ModerationCardProps {
+    id: string;
     src: string;
     name: string;
+    onApprove: (id: string) => void;
+    onReject: (id: string) => void;
 }
 
-export const ModerationCard = React.memo(({ src, name }: ModerationCardProps) => (
+export const ModerationCard = React.memo(({ id, src, name, onApprove, onReject }: ModerationCardProps) => (
     <motion.div 
         whileHover={{ scale: 1.04, y: -3 }}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
@@ -33,10 +36,18 @@ export const ModerationCard = React.memo(({ src, name }: ModerationCardProps) =>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-end p-3 gap-2">
             <span className="text-[9px] font-black text-white uppercase tracking-widest">{name}</span>
             <div className="flex items-center gap-2">
-                <button className="w-8 h-8 flex items-center justify-center bg-green-500/20 hover:bg-green-500 rounded-lg text-green-400 hover:text-black transition-all">
+                <button 
+                    onClick={() => onApprove(id)}
+                    className="w-8 h-8 flex items-center justify-center bg-green-500/20 hover:bg-green-500 rounded-lg text-green-400 hover:text-black transition-all"
+                    title="Approve PFP"
+                >
                     <CheckCircle size={15} />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-red-500/20 hover:bg-red-500 rounded-lg text-red-400 hover:text-white transition-all">
+                <button 
+                    onClick={() => onReject(id)}
+                    className="w-8 h-8 flex items-center justify-center bg-red-500/20 hover:bg-red-500 rounded-lg text-red-400 hover:text-white transition-all"
+                    title="Reject PFP"
+                >
                     <Trash2 size={15} />
                 </button>
             </div>

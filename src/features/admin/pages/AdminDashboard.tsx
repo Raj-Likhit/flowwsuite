@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Image as ImageIcon, Activity, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import type { AdminProfile } from '../types/admin.types';
+import { Users, Image as ImageIcon, RefreshCw, Search } from 'lucide-react';
 
 // Shared design system components (same as main attendance module)
 import { GlassCard } from '../../../shared/components/GlassCard';
@@ -38,14 +39,42 @@ export const AdminDashboard = () => {
         recentUsers, 
         allProfiles, 
         moderationProfiles, 
+        activeAnnouncements,
         isLoading, 
         isPublishing,
+        showAllUsers,
+        setShowAllUsers,
         refresh,
-        publishAnnouncement 
+        publishAnnouncement,
+        deactivateAnnouncement,
+        approvePFP,
+        rejectPFP,
+        suspendUser,
+        terminateUser,
+        moderateAll,
+        updateUser
     } = useAdminDashboard();
 
+    const [editingUser, setEditingUser] = useState<AdminProfile | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editAttended, setEditAttended] = useState(0);
+    const [editTotal, setEditTotal] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        if (editingUser) {
+            setEditName(editingUser.name);
+            setEditAttended(editingUser.attended ?? 0);
+            setEditTotal(editingUser.total ?? 0);
+        }
+    }, [editingUser]);
+
+    const filteredUsers = recentUsers.filter((u) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="space-y-10 pb-24">
+        <div className="space-y-10 pb-24 text-white">
             {/* Header */}
             <motion.div 
                 initial={{ opacity: 0, y: -12 }}
@@ -80,12 +109,10 @@ export const AdminDashboard = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
-                className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                className="grid grid-cols-2 md:grid-cols-2 gap-4"
             >
                 <StatCard label="Total Users"   value={isLoading ? '—' : stats.totalUsers}                       icon={<Users size={18} />}     trend="+12%"           />
-                <StatCard label="PFP Approvals" value={isLoading ? '—' : stats.pendingPFPs}                      icon={<ImageIcon size={18} />} trend={stats.pendingPFPs > 0 ? 'Review' : 'Clear'} warning={stats.pendingPFPs > 0} />
-                <StatCard label="Uptime"         value="99.9%"                                                     icon={<Activity size={18} />}  trend="Stable"         />
-                <StatCard label="Storage"        value="4.2 GB"                                                    icon={<ImageIcon size={18} />} trend="Low"             />
+                <StatCard label="PFP Moderation" value={isLoading ? '—' : stats.pendingPFPs}                      icon={<ImageIcon size={18} />} trend={stats.pendingPFPs > 0 ? 'Action Reqd' : 'Clear'} warning={stats.pendingPFPs > 0} />
             </motion.div>
 
             {/* Main Grid */}
@@ -100,14 +127,57 @@ export const AdminDashboard = () => {
                         />
                     </motion.div>
 
+                    {/* Active Announcements Panel */}
+                    {activeAnnouncements.length > 0 && (
+                        <motion.div variants={itemVariants} initial="hidden" animate="show" className="space-y-3">
+                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Active Announcements</h2>
+                            <GlassCard className="p-4 space-y-3">
+                                {activeAnnouncements.map((ann) => (
+                                    <div key={ann.id} className="flex items-start gap-3 p-3 bg-white/3 rounded-xl border border-white/5">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-white/80 truncate">{ann.content}</p>
+                                            <p className="text-[10px] text-white/30 mt-1">
+                                                {ann.target_profile_ids ? 'Targeted' : 'Broadcast'} · Published {new Date(ann.created_at!).toLocaleDateString()}
+                                                {ann.expires_at && ` · Expires ${new Date(ann.expires_at).toLocaleDateString()}`}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => deactivateAnnouncement(ann.id)}
+                                            className="flex-shrink-0 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                        >
+                                            Deactivate
+                                        </button>
+                                    </div>
+                                ))}
+                            </GlassCard>
+                        </motion.div>
+                    )}
+
                     {/* Recent Users Table */}
                     <motion.div variants={itemVariants} initial="hidden" animate="show" className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Recent Users</h2>
-                            <button className="text-[9px] font-black uppercase tracking-widest text-primary-500 hover:text-primary-400 transition-colors">
-                                View All
+                            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">
+                                {showAllUsers ? 'All Users' : 'Recent Users'}
+                            </h2>
+                            <button 
+                                onClick={() => setShowAllUsers(!showAllUsers)}
+                                className="text-[9px] font-black uppercase tracking-widest text-primary-500 hover:text-primary-400 transition-colors"
+                            >
+                                {showAllUsers ? 'Collapse' : 'View All'}
                             </button>
                         </div>
+
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={showAllUsers ? "Search all profiles..." : "Search recent profiles... (View All to search all)"}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-primary-500/40 transition-all"
+                            />
+                            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/20" />
+                        </div>
+
                         <GlassCard className="overflow-hidden p-0">
                             <table className="w-full text-left">
                                 <thead>
@@ -121,10 +191,25 @@ export const AdminDashboard = () => {
                                     <AnimatePresence mode="popLayout">
                                         {isLoading ? (
                                             <tr><td colSpan={3} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase animate-pulse">Loading...</td></tr>
-                                        ) : recentUsers.length === 0 ? (
-                                            <tr><td colSpan={3} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase">No profiles found.</td></tr>
-                                        ) : recentUsers.map(user => (
-                                            <UserRow key={user.id} name={user.name} email={`uid:${user.id.slice(0,8)}`} status="Active" />
+                                        ) : filteredUsers.length === 0 ? (
+                                            <tr><td colSpan={3} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase">
+                                                {searchQuery ? `No profiles matching "${searchQuery}"` : 'No profiles found.'}
+                                            </td></tr>
+                                        ) : filteredUsers.map(user => (
+                                            <UserRow 
+                                                key={user.id} 
+                                                id={user.id}
+                                                name={user.name} 
+                                                email={`uid:${user.id.slice(0,8)}`} 
+                                                status="Active" 
+                                                flagged={user.is_flagged}
+                                                isSuspended={user.is_suspended}
+                                                attended={user.attended}
+                                                total={user.total}
+                                                onEdit={setEditingUser}
+                                                onSuspend={suspendUser}
+                                                onTerminate={terminateUser}
+                                            />
                                         ))}
                                     </AnimatePresence>
                                 </tbody>
@@ -137,7 +222,7 @@ export const AdminDashboard = () => {
                 <motion.div variants={itemVariants} initial="hidden" animate="show" className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">PFP Moderation</h2>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-orange-400 border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                        <span className={`text-[9px] font-black uppercase tracking-widest border px-2 py-0.5 rounded-full transition-colors ${stats.pendingPFPs > 0 ? 'text-orange-400 border-orange-500/20 bg-orange-500/10' : 'text-green-400 border-green-500/20 bg-green-500/10'}`}>
                             {stats.pendingPFPs} Pending
                         </span>
                     </div>
@@ -152,12 +237,19 @@ export const AdminDashboard = () => {
                                     <p className="text-white/20 text-[9px] uppercase font-black tracking-widest">All clear</p>
                                 </div>
                             ) : moderationProfiles.map((pfp) => (
-                                <ModerationCard key={pfp.id} src={pfp.avatar_url!} name={pfp.name} />
+                                <ModerationCard 
+                                    key={pfp.id} 
+                                    id={pfp.id}
+                                    src={pfp.avatar_url!} 
+                                    name={pfp.name} 
+                                    onApprove={approvePFP}
+                                    onReject={rejectPFP}
+                                />
                             ))}
                         </div>
                         <PremiumButton 
                             variant="primary"
-                            onClick={() => stats.pendingPFPs > 0 && toast.info("Bulk moderation initiated...")}
+                            onClick={moderateAll}
                             disabled={stats.pendingPFPs === 0 || isLoading}
                             className="w-full py-3 text-[9px] tracking-widest uppercase"
                         >
@@ -166,6 +258,68 @@ export const AdminDashboard = () => {
                     </GlassCard>
                 </motion.div>
             </div>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {editingUser && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setEditingUser(null)}
+                            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        />
+                        <GlassCard className="relative z-10 w-full max-w-sm p-8 space-y-6">
+                            <h3 className="text-xl font-black text-white tracking-tight">Edit Profile</h3>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase tracking-widest text-white/40 font-black">Name</label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-primary-500 transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-black">Attended</label>
+                                    <input type="number" value={editAttended}
+                                        onChange={(e) => setEditAttended(Number(e.target.value))}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-primary-500 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase tracking-widest text-white/40 font-black">Total</label>
+                                    <input type="number" value={editTotal}
+                                        onChange={(e) => setEditTotal(Number(e.target.value))}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-primary-500 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => setEditingUser(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        const success = await updateUser(editingUser.id, {
+                                            name: editName.trim(),
+                                            attended: Math.max(0, editAttended),
+                                            total: Math.max(0, editTotal)
+                                        });
+                                        if (success) setEditingUser(null);
+                                    }}
+                                    className="flex-[2] py-3 rounded-xl accent-gradient text-white font-black text-[10px] uppercase tracking-widest"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </GlassCard>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -18,7 +18,8 @@ self.onmessage = async (e: MessageEvent) => {
 
             for (let i = 0; i < pages.length; i++) {
                 if (i > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 60)); // Heartbeat for mobile UI
+                    const delay = pages.length < 5 ? 0 : 60;
+                    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay)); // Heartbeat for mobile UI
                     doc.addPage();
                 }
 

@@ -8,7 +8,7 @@ import type { AdminProfile, TargetType } from '../types/admin.types';
 interface AnnouncerBoxProps {
     allProfiles: AdminProfile[];
     isPublishing: boolean;
-    onPublish: (content: string, type: TargetType, profileId: string) => Promise<boolean>;
+    onPublish: (content: string, type: TargetType, profileId: string, expiresAt: string | null) => Promise<boolean>;
 }
 
 export const AnnouncerBox = React.memo(({ allProfiles, isPublishing, onPublish }: AnnouncerBoxProps) => {
@@ -16,8 +16,13 @@ export const AnnouncerBox = React.memo(({ allProfiles, isPublishing, onPublish }
     const [targetType, setTargetType] = useState<TargetType>('all');
     const [selectedProfileId, setSelectedProfileId] = useState<string>('');
 
+    const [expiryHours, setExpiryHours] = useState<number | null>(48);
+
     const handleExecute = async () => {
-        const success = await onPublish(announcement, targetType, selectedProfileId);
+        const expiresAt = expiryHours
+            ? new Date(Date.now() + expiryHours * 3600 * 1000).toISOString()
+            : null;
+        const success = await onPublish(announcement, targetType, selectedProfileId, expiresAt);
         if (success) {
             setAnnouncement('');
             setSelectedProfileId('');
@@ -84,6 +89,18 @@ export const AnnouncerBox = React.memo(({ allProfiles, isPublishing, onPublish }
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* Expiry Selector */}
+                    <select
+                        value={expiryHours ?? ''}
+                        onChange={(e) => setExpiryHours(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500/40 text-sm cursor-pointer transition-colors"
+                    >
+                        <option value="24" className="bg-zinc-900">Expires in 24 hours</option>
+                        <option value="48" className="bg-zinc-900">Expires in 48 hours</option>
+                        <option value="168" className="bg-zinc-900">Expires in 7 days</option>
+                        <option value="" className="bg-zinc-900">No expiry</option>
+                    </select>
 
                     {/* Textarea */}
                     <textarea

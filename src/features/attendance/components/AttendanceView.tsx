@@ -19,7 +19,16 @@ interface Announcement {
     content: string;
     target_profile_ids: string[] | null;
     created_at: string;
+    seen_by_profile_ids?: string[] | null;
 }
+
+const formatRelativeTime = (ts: number): string => {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.floor(mins / 60)}h ago`;
+};
 
 export const AttendanceView: React.FC = () => {
     const {
@@ -30,7 +39,9 @@ export const AttendanceView: React.FC = () => {
         setLoading,
         updateAttendance,
         deleteLog,
-        hideProfileName
+        hideProfileName,
+        syncFromCloud,
+        lastSyncedAt
     } = useAttendanceStore();
 
     const [syncSuccess, setSyncSuccess] = useState(false);
@@ -40,6 +51,16 @@ export const AttendanceView: React.FC = () => {
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
+
+    // Fetch cloud data on mount
+    useEffect(() => {
+        if (!activeProfile || isReadOnly) return;
+        syncFromCloud(activeProfile.id).then((result) => {
+            if (result === 'updated') {
+                toast.info('Data refreshed from cloud');
+            }
+        });
+    }, [activeProfile?.id, isReadOnly, syncFromCloud]);
 
     // Fetch announcements on mount
     useEffect(() => {
@@ -52,19 +73,17 @@ export const AttendanceView: React.FC = () => {
             try {
                 const { data, error } = await supabase
                     .from('announcements')
-                    .select('id, content, target_profile_ids, created_at')
+                    .select('id, content, target_profile_ids, created_at, seen_by_profile_ids')
                     .eq('is_active', true)
+                    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
                     .or(`target_profile_ids.is.null,target_profile_ids.cs.{${activeProfile.id}}`)
                     .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                    .limit(10); // Fetch top 10 to find first unseen
 
                 if (data && !error && activeProfile) {
-                    const storageKey = `seen_announcements_${activeProfile.id}`;
-                    const seenAnnouncements = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                    
-                    if (!seenAnnouncements.includes(data.id)) {
-                        setActiveAnnouncement(data);
+                    const unread = data.find(a => !a.seen_by_profile_ids?.includes(activeProfile.id));
+                    if (unread) {
+                        setActiveAnnouncement(unread);
                     }
                 }
             } catch (err) {
@@ -86,13 +105,21 @@ export const AttendanceView: React.FC = () => {
         }
     }, [isReadOnly]);
 
-    const handleDismissAnnouncement = () => {
+    const handleDismissAnnouncement = async () => {
         if (activeAnnouncement && activeProfile) {
-            const storageKey = `seen_announcements_${activeProfile.id}`;
-            const seenAnnouncements = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            seenAnnouncements.push(activeAnnouncement.id);
-            localStorage.setItem(storageKey, JSON.stringify(seenAnnouncements));
+            const annId = activeAnnouncement.id;
             setActiveAnnouncement(null);
+            
+            if (supabase) {
+                try {
+                    await supabase.rpc('mark_announcement_seen', {
+                        announcement_id: annId,
+                        p_id: activeProfile.id
+                    });
+                } catch (err) {
+                    console.error("Failed to mark announcement as seen", err);
+                }
+            }
         }
     };
 
@@ -206,7 +233,17 @@ export const AttendanceView: React.FC = () => {
                 <AttendanceControls
                     totalCount={totalCount}
                     attendedCount={attendedCount}
-                    onUpdate={updateAttendance}
+                    onUpdate={(newAttended, newTotal) => {
+                        if (newAttended < 0 || newTotal < 0) {
+                            toast.error("Values cannot be negative");
+                            return;
+                        }
+                        if (newAttended > newTotal) {
+                            toast.error("Attended classes cannot exceed total classes");
+                            return;
+                        }
+                        updateAttendance(newAttended, newTotal);
+                    }}
                     readOnly={isReadOnly}
                 />
 
@@ -265,6 +302,12 @@ export const AttendanceView: React.FC = () => {
                             </>
                         )}
                     </PremiumButton>
+
+                    {lastSyncedAt && (
+                        <p className="text-center text-[10px] text-white/25 font-medium tracking-wider">
+                            Last synced {formatRelativeTime(lastSyncedAt)}
+                        </p>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <PremiumButton

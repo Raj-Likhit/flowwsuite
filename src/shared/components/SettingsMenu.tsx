@@ -13,6 +13,8 @@ export const SettingsMenu: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [showPicker, setShowPicker] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
     const { isHighContrast, toggleHighContrast, theme, setTheme } = useThemeStore();
     const { 
         hideProfileName, 
@@ -20,7 +22,8 @@ export const SettingsMenu: React.FC = () => {
         activeProfile, 
         accessMode, 
         updateProfile,
-        uploadAvatar 
+        uploadAvatar,
+        deleteProfile
     } = useAttendanceStore();
     const isReadOnly = accessMode === 'readOnly';
 
@@ -29,6 +32,8 @@ export const SettingsMenu: React.FC = () => {
         if (isOpen && activeProfile) {
             setNewName(activeProfile.name);
             setNewPassword('');
+            setDeletePassword('');
+            setShowDeleteConfirm(false);
         }
     }, [isOpen, activeProfile]);
 
@@ -269,29 +274,90 @@ export const SettingsMenu: React.FC = () => {
                                 )}
 
                                 {/* Danger Zone */}
-                                <div className="space-y-4 pt-2 border-t border-white/5">
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
-                                        <ShieldAlert className="w-3 h-3" /> Danger Zone
-                                    </h3>
-                                    <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 flex flex-col gap-3">
-                                        <div className="text-sm font-bold text-white/90">Reset App Data</div>
-                                        <div className="text-xs text-white/50 leading-relaxed mb-1">
-                                            This will clear local cache and disconnect your profile stream.
+                                {activeProfile && !isReadOnly && (
+                                    <div className="space-y-4 pt-2 border-t border-white/5">
+                                        <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
+                                            <ShieldAlert className="w-3 h-3" /> Danger Zone
+                                        </h3>
+                                        <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 flex flex-col gap-3">
+                                            <div className="text-sm font-bold text-white/90">Delete Profile</div>
+                                            <div className="text-xs text-white/50 leading-relaxed mb-1">
+                                                This will permanently delete your profile and all associated data. This action cannot be undone.
+                                            </div>
+                                            
+                                            {!showDeleteConfirm ? (
+                                                <button
+                                                    onClick={() => setShowDeleteConfirm(true)}
+                                                    className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-bold transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete Profile
+                                                </button>
+                                            ) : (
+                                                <div className="space-y-2 mt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Lock className="w-3 h-3 text-red-400" />
+                                                        <label className="text-[10px] uppercase tracking-widest text-red-400 font-black">Confirm Password</label>
+                                                    </div>
+                                                    <div className="flex gap-2 items-start">
+                                                        <input
+                                                            type="password"
+                                                            placeholder="Enter password to confirm..."
+                                                            className="flex-1 bg-black/40 border border-red-500/30 rounded-lg px-3 py-2 text-sm text-white focus:border-red-500 outline-none transition-all"
+                                                            value={deletePassword}
+                                                            onChange={(e) => setDeletePassword(e.target.value)}
+                                                        />
+                                                        <div className="flex flex-col items-center">
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!deletePassword.trim()) {
+                                                                        toast.error("Please enter your password");
+                                                                        return;
+                                                                    }
+                                                                    const loadingToast = toast.loading("Deleting profile...");
+                                                                    try {
+                                                                        const isMatch = await bcrypt.compare(deletePassword, activeProfile.password || '');
+                                                                        if (!isMatch) {
+                                                                            toast.error("Incorrect password", { id: loadingToast });
+                                                                            return;
+                                                                        }
+                                                                        
+                                                                        const { supabase: sp } = await import('../../core/lib/supabase');
+                                                                        if (sp) {
+                                                                            const { error } = await sp
+                                                                                .from('profiles')
+                                                                                .delete()
+                                                                                .eq('id', activeProfile.id);
+                                                                            if (error) throw error;
+                                                                        }
+                                                                        deleteProfile(activeProfile.id);
+                                                                        toast.success("Profile deleted successfully", { id: loadingToast });
+                                                                        setIsOpen(false);
+                                                                    } catch (err: unknown) {
+                                                                        const error = err as Error;
+                                                                        toast.error("Deletion failed: " + error.message, { id: loadingToast });
+                                                                    }
+                                                                }}
+                                                                className="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                                                            >
+                                                                Confirm
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setShowDeleteConfirm(false);
+                                                                    setDeletePassword('');
+                                                                }}
+                                                                className="mt-2 text-xs text-white/40 hover:text-white/70 transition-colors text-center"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm("Are you sure? This clears your local browser cache.")) {
-                                                    localStorage.clear();
-                                                    window.location.reload();
-                                                }
-                                            }}
-                                            className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-bold transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            Clear Local Data
-                                        </button>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </GlassCard>
                     </div>
@@ -310,7 +376,7 @@ export const SettingsMenu: React.FC = () => {
                                 if (publicUrl) {
                                     const { supabase: sp } = await import('../../core/lib/supabase');
                                     if (sp) {
-                                        await sp.from('profiles').update({ avatar_url: publicUrl }).eq('id', activeProfile.id);
+                                        await sp.from('profiles').update({ avatar_url: publicUrl, is_flagged: true }).eq('id', activeProfile.id);
                                     }
                                     updateProfile(activeProfile.id, { avatar_url: publicUrl });
                                     toast.success("Avatar updated!", { id: loadingToast });

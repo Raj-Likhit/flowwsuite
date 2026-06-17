@@ -43,6 +43,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          pdf: ['jspdf'],
+          heic: ['heic2any'],
           animations: ['framer-motion'],
           ui: ['lucide-react', 'sonner', 'clsx']
         }

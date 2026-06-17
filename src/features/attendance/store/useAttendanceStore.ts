@@ -20,6 +20,7 @@ export interface Profile {
     avatar_url?: string;
     password?: string;
     created_at?: string;
+    is_suspended?: boolean;
     logs?: AttendanceLog[];
 }
 
@@ -34,8 +35,10 @@ interface AttendanceStore {
     error: string | null;
     hideProfileName: boolean;
     isCloudSyncEnabled: boolean;
+    lastSyncedAt: number | null;
 
     // Actions
+
     setProfiles: (profiles: Profile[]) => void;
     setActiveProfile: (profile: Profile | null, accessMode?: AttendanceAccessMode) => void;
     setLoading: (loading: boolean) => void;
@@ -47,6 +50,7 @@ interface AttendanceStore {
     deleteProfile: (profileId: string) => void;
     updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password'>>) => void;
     uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
+    syncFromCloud: (profileId: string) => Promise<'updated' | 'in-sync' | 'failed' | 'offline'>;
 }
 
 export const useAttendanceStore = create<AttendanceStore>()(
@@ -59,6 +63,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             error: null,
             hideProfileName: false,
             isCloudSyncEnabled: isSupabaseAvailable(),
+            lastSyncedAt: null,
 
             setProfiles: (profiles) => set({ profiles }),
             setActiveProfile: (activeProfile, accessMode = 'editable') => {
@@ -122,13 +127,16 @@ export const useAttendanceStore = create<AttendanceStore>()(
             toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
 
             deleteProfile: (profileId) =>
-                set((state) => ({
-                    profiles: state.profiles.filter((p) => p.id !== profileId),
-                    activeProfile:
-                        state.activeProfile?.id === profileId ? null : state.activeProfile,
-                    accessMode:
-                        state.activeProfile?.id === profileId ? 'editable' : state.accessMode,
-                })),
+                set((state) => {
+                    const profiles = state.profiles.filter((p) => p.id !== profileId);
+                    return {
+                        profiles,
+                        activeProfile:
+                            state.activeProfile?.id === profileId ? null : state.activeProfile,
+                        accessMode:
+                            state.activeProfile?.id === profileId ? 'editable' : state.accessMode,
+                    };
+                }),
 
             updateProfile: (profileId, updates) =>
                 set((state) => {
@@ -190,6 +198,42 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 } catch (error) {
                     console.error('Upload failed:', error);
                     return null;
+                }
+            },
+            
+            syncFromCloud: async (profileId) => {
+                if (!isSupabaseAvailable()) return 'offline';
+                try {
+                    const { data, error } = await supabase!
+                        .from('profiles')
+                        .select('attended, total, name, avatar_url')
+                        .eq('id', profileId)
+                        .single();
+
+                    if (error || !data) return 'failed';
+
+                    const state = useAttendanceStore.getState();
+                    const local = state.activeProfile;
+
+                    const hasChanges =
+                        local?.attended !== data.attended ||
+                        local?.total !== data.total;
+
+                    if (hasChanges && local) {
+                        set((s) => ({
+                            activeProfile: { ...s.activeProfile!, attended: data.attended, total: data.total },
+                            profiles: s.profiles.map((p) =>
+                                p.id === profileId ? { ...p, attended: data.attended, total: data.total } : p
+                            ),
+                            lastSyncedAt: Date.now(),
+                        }));
+                        return 'updated';
+                    }
+
+                    set({ lastSyncedAt: Date.now() });
+                    return 'in-sync';
+                } catch {
+                    return 'failed';
                 }
             },
         }),

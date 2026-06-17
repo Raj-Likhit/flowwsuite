@@ -1,12 +1,23 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useConverterStore } from '../store/useConverterStore';
 import { FileStorage } from '../../../core/services/fileStorage';
 import { WorkerPool } from '../../../core/services/workerPool';
 import PDFAssemblerWorker from '../../../workers/pdf.assembler?worker';
+import PDFWorker from '../../../workers/pdf.worker?worker';
 
 export const usePDFGenerator = () => {
     const assemblerRef = useRef<Worker | null>(null);
     const { pages, settings, setProcessing, setError } = useConverterStore();
+
+    // Pre-warm workers on mount
+    useEffect(() => {
+        if (typeof Worker !== 'undefined') {
+            const tempAssembler = new PDFAssemblerWorker();
+            tempAssembler.terminate();
+            const tempWorker = new PDFWorker();
+            tempWorker.terminate();
+        }
+    }, []);
 
     const generatePDF = useCallback(async () => {
         if (pages.length === 0) return;

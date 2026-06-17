@@ -30,6 +30,33 @@ const AVATARS = [
     'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Frog&backgroundColor=32cd32',
 ];
 
+const ProfileAvatar = ({ profile }: { profile: Profile }) => {
+    const [loaded, setLoaded] = useState(false);
+    
+    if (!profile.avatar_url) {
+        return <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />;
+    }
+
+    return (
+        <>
+            {!loaded && (
+                <div className="absolute inset-0 bg-white/5 animate-pulse" />
+            )}
+            <img
+                src={profile.avatar_url}
+                alt={profile.name}
+                loading="lazy"
+                draggable="false"
+                onLoad={() => setLoaded(true)}
+                className={clsx(
+                    "w-full h-full object-cover group-hover:scale-110 transition-all duration-500 select-none pointer-events-none no-touch-menu",
+                    loaded ? "opacity-100" : "opacity-0"
+                )}
+            />
+        </>
+    );
+};
+
 export const ProfileSelection: React.FC = () => {
     const { 
         profiles, 
@@ -57,6 +84,8 @@ export const ProfileSelection: React.FC = () => {
     const [passwordPromptProfile, setPasswordPromptProfile] = useState<Profile | null>(null);
     const [enteredPassword, setEnteredPassword] = useState('');
     const [passwordError, setPasswordError] = useState(false);
+    const [loginAttempts, setLoginAttempts] = useState(0);
+    const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
 
 
     const fetchProfiles = useCallback(async (isRefresh = false) => {
@@ -146,7 +175,7 @@ export const ProfileSelection: React.FC = () => {
                     // Save the permanent URL to Supabase immediately
                     await supabase
                         .from('profiles')
-                        .update({ avatar_url: publicUrl })
+                        .update({ avatar_url: publicUrl, is_flagged: true })
                         .eq('id', finalId);
                     
                     // Update state locally so UI reflects change immediately
@@ -174,6 +203,17 @@ export const ProfileSelection: React.FC = () => {
     const unlockProfile = async () => {
         if (!passwordPromptProfile) return;
 
+        if (lockoutUntil && Date.now() < lockoutUntil) {
+            toast.error('Too many attempts. Try again later.');
+            setPasswordError(true);
+            return;
+        }
+
+        if (lockoutUntil && Date.now() >= lockoutUntil) {
+            setLockoutUntil(null);
+            setLoginAttempts(0);
+        }
+
         let correct = false;
         let needsMigration = false;
         const stored = passwordPromptProfile.password || '123';
@@ -189,8 +229,18 @@ export const ProfileSelection: React.FC = () => {
         if (!correct) {
             setPasswordError(true);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            
+            const newAttempts = loginAttempts + 1;
+            setLoginAttempts(newAttempts);
+            if (newAttempts >= 5) {
+                setLockoutUntil(Date.now() + 5 * 60 * 1000);
+                toast.error('Too many attempts. Locked out for 5 minutes.');
+            }
             return;
         }
+
+        setLoginAttempts(0);
+        setLockoutUntil(null);
 
         setActiveProfile(passwordPromptProfile, 'editable');
         closePasswordPrompt();
@@ -261,13 +311,17 @@ export const ProfileSelection: React.FC = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                                className="relative flex flex-col items-center gap-5"
+                                className={`relative flex flex-col items-center gap-5 ${profile.is_suspended ? 'opacity-40 grayscale' : ''}`}
                             >
                                 {/* Profile card button */}
                                 <motion.button
-                                    whileHover={{ scale: 1.08, y: -8 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    whileHover={!profile.is_suspended ? { scale: 1.08, y: -8 } : undefined}
+                                    whileTap={!profile.is_suspended ? { scale: 0.95 } : undefined}
                                     onClick={() => {
+                                        if (profile.is_suspended) {
+                                            toast.error('This profile has been suspended. Contact your administrator.');
+                                            return;
+                                        }
                                         setPasswordPromptProfile(profile);
                                         setEnteredPassword('');
                                         setPasswordError(false);
@@ -275,17 +329,13 @@ export const ProfileSelection: React.FC = () => {
                                     className="group flex flex-col items-center gap-5 select-none no-touch-menu"
                                 >
                                     <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl p-1 bg-gradient-to-br from-primary-500/20 via-transparent to-secondary-500/20 group-hover:from-primary-500 group-hover:to-secondary-500 transition-all duration-500 shadow-2xl relative">
+                                        {profile.is_suspended && (
+                                            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-red-500/80 rounded text-[7px] font-black uppercase tracking-widest text-white z-10">
+                                                Suspended
+                                            </div>
+                                        )}
                                         <div className="w-full h-full rounded-[1.4rem] glass-strong flex items-center justify-center overflow-hidden relative">
-                                            {profile.avatar_url ? (
-                                                <img
-                                                    src={profile.avatar_url}
-                                                    alt={profile.name}
-                                                    draggable="false"
-                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 select-none pointer-events-none no-touch-menu"
-                                                />
-                                            ) : (
-                                                <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />
-                                            )}
+                                            <ProfileAvatar profile={profile} />
                                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
                                                 <span className="text-[10px] font-black uppercase text-white tracking-widest">Go</span>
                                             </div>

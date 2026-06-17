@@ -6,10 +6,12 @@ self.onmessage = async (e: MessageEvent) => {
     try {
         if (type === 'PROCESS_FILES') {
             const { files } = payload;
-            // Dynamic import heic2any only when needed
-            if (typeof window === 'undefined') self.window = self;
-
-            const heic2any = (await import('heic2any')).default;
+            const hasHeic = files.some((f: File) => f.name.toLowerCase().endsWith('.heic'));
+            let heic2any: any = null;
+            if (hasHeic) {
+                if (typeof window === 'undefined') self.window = self as any;
+                heic2any = (await import('heic2any')).default;
+            }
 
             const processedFiles: File[] = [];
 

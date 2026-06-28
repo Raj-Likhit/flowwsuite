@@ -16,10 +16,12 @@ We use [GitHub Flow](https://guides.github.com/introduction/flow/index.html), so
 1.  **Fork the repo** and create your branch from `main`.
 2.  **Ensure consistency**:
     -   Use **Conventional Commits** (e.g., `feat: Add support for AVIF`).
-    -   Follow the **Atomic Design** or **Feature-based** folder structure.
+    -   Follow the **Feature-based** folder structure located in `src/features/`. All feature logic (like `admin`, `attendance`, `pdf-engine`) must be isolated.
+    -   **Performance Guidelines**: Flowwsuite is optimized for `<50ms` DOMContentLoaded times. Any new heavy dependencies (e.g. Canvas libraries, PDF utilities) MUST be dynamically imported (`React.lazy`) and separated into dedicated chunks in `vite.config.ts`.
 3.  **Test your changes**:
     -   If you've added code that should be tested, add tests.
     -   Ensure the test suite passes.
+    -   **Performance Test**: Run `node benchmark.js` after adding new dependencies to ensure the SPA initial load remains under 50ms.
 4.  **Lint your code**: Run `npm run lint` before submitting.
 5.  **Submit your Pull Request** (PR) through the GitHub interface.
 

@@ -51,16 +51,17 @@ export const AttendanceView: React.FC = () => {
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
+    const activeProfileId = activeProfile?.id;
 
     // Fetch cloud data on mount
     useEffect(() => {
-        if (!activeProfile || isReadOnly) return;
-        syncFromCloud(activeProfile.id).then((result) => {
+        if (!activeProfileId || isReadOnly) return;
+        syncFromCloud(activeProfileId).then((result) => {
             if (result === 'updated') {
                 toast.info('Data refreshed from cloud');
             }
         });
-    }, [activeProfile?.id, isReadOnly, syncFromCloud]);
+    }, [activeProfileId, isReadOnly, syncFromCloud]);
 
     // Fetch announcements on mount
     useEffect(() => {

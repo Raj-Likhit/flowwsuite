@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Ban, Trash2, Pencil, Check, X } from 'lucide-react';
+import type { AdminProfile } from '../types/admin.types';
 
 interface UserRowProps {
     id: string;
@@ -11,7 +12,7 @@ interface UserRowProps {
     isSuspended?: boolean;
     attended?: number;
     total?: number;
-    onEdit: (profile: any) => void;
+    onEdit: (profile: AdminProfile) => void;
     onSuspend: (id: string, current: boolean) => void;
     onTerminate: (id: string) => void;
 }
@@ -61,7 +62,7 @@ export const UserRow = React.memo(({ id, name, email, status, flagged, isSuspend
         <td className="px-6 py-5 text-right">
             <div className="flex items-center justify-end gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-4 sm:group-hover:translate-x-0">
                 <button 
-                    onClick={() => onEdit({ id, name, avatar_url: email, is_suspended: isSuspended, is_flagged: flagged, attended, total })}
+                    onClick={() => onEdit({ id, name, avatar_url: null, is_suspended: isSuspended, is_flagged: flagged, attended, total })}
                     className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
                     title="Edit"
                 >

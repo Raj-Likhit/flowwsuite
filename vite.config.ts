@@ -1,11 +1,20 @@
-import { defineConfig } from 'vite'
+/// <reference types="vitest" />
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const asyncScriptPlugin = () => ({
+  name: 'async-script',
+  transformIndexHtml(html) {
+    return html.replace(/<script type="module"/g, '<script type="module" async');
+  }
+});
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    asyncScriptPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -41,14 +50,20 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          pdf: ['jspdf'],
-          heic: ['heic2any'],
-          animations: ['framer-motion'],
-          ui: ['lucide-react', 'sonner', 'clsx']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('fabric')) return 'fabric';
+            if (id.includes('pdf-lib') || id.includes('jspdf')) return 'pdf';
+            if (id.includes('html2canvas')) return 'html2canvas';
+            if (id.includes('supabase')) return 'supabase';
+            // Everything else goes to the default vendor/app chunks
+          }
         }
       }
     }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
   }
 })

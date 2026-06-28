@@ -38,24 +38,24 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ announceme
                     <GlassSurface 
                         width="100%" 
                         height="auto" 
-                        className="p-10 border-white/10 shadow-2xl overflow-hidden relative" 
+                        className="p-6 sm:p-10 border-white/10 shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]" 
                         borderRadius={32}
                     >
                         {/* Decorative Background Elements */}
                         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/10 rounded-full blur-[80px]" />
                         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-secondary-500/10 rounded-full blur-[80px]" />
                         
-                        <div className="relative z-10 text-center">
-                            <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-primary-500/20 shadow-lg shadow-primary-500/5">
-                                <Megaphone className="text-primary-500" size={36} />
+                        <div className="relative z-10 text-center flex flex-col h-full">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-primary-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 sm:mb-8 border border-primary-500/20 shadow-lg shadow-primary-500/5">
+                                <Megaphone className="text-primary-500 w-8 h-8 sm:w-10 sm:h-10" />
                             </div>
 
-                            <h2 className="text-3xl font-black text-white tracking-tight italic uppercase">System Update</h2>
+                            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight italic uppercase shrink-0">System Update</h2>
                             
                             {announcement.created_at && (
-                                <div className="mb-6 flex justify-center">
-                                    <div className="px-5 py-1.5 bg-white/5 border border-white/10 rounded-full">
-                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                                <div className="mt-2 mb-4 sm:mb-6 flex justify-center shrink-0">
+                                    <div className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                                        <p className="text-[9px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
                                             Transmission Received: <span className="text-primary-400">
                                                 {new Date(announcement.created_at).toLocaleString('en-US', {
                                                     month: 'short',
@@ -70,19 +70,21 @@ export const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ announceme
                                 </div>
                             )}
                             
-                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-8 text-left">
-                                <p className="text-white/80 text-lg leading-relaxed font-medium">
+                            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 sm:p-6 mb-6 text-left overflow-y-auto max-h-[30vh]">
+                                <p className="text-white/80 text-sm sm:text-lg leading-relaxed font-medium whitespace-pre-wrap">
                                     {announcement.content}
                                 </p>
                             </div>
 
-                            <Button 
-                                onClick={onClose}
-                                className="w-full gap-3 py-6 text-base font-black uppercase tracking-widest shadow-xl shadow-primary-500/10 items-center justify-center"
-                            >
-                                <CheckCircle size={20} className="shrink-0" />
-                                <span>Acknowledged</span>
-                            </Button>
+                            <div className="shrink-0 mt-auto">
+                                <Button 
+                                    onClick={onClose}
+                                    className="w-full gap-3 py-5 sm:py-6 text-sm sm:text-base font-black uppercase tracking-widest shadow-xl shadow-primary-500/10 items-center justify-center"
+                                >
+                                    <CheckCircle size={20} className="shrink-0" />
+                                    <span>Acknowledged</span>
+                                </Button>
+                            </div>
                             
                             <p className="mt-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
                                 Flowwsuite Global Transmission

@@ -5,13 +5,25 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const asyncScriptPlugin = () => ({
   name: 'async-script',
-  transformIndexHtml(html) {
+  transformIndexHtml(html: string) {
     return html.replace(/<script type="module"/g, '<script type="module" async');
   }
 });
 
 // https://vite.dev/config/
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/setupTests.ts'],
+    coverage: {
+      provider: 'v8',
+      // @ts-ignore - 'all' option is valid for v8 coverage provider
+      all: true,
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/main.tsx', 'src/**/*.d.ts', 'src/vite-env.d.ts', 'src/**/*.test.*', 'src/**/*.types.ts']
+    }
+  },
   plugins: [
     react(),
     asyncScriptPlugin(),
@@ -61,9 +73,5 @@ export default defineConfig({
         }
       }
     }
-  },
-  test: {
-    environment: 'jsdom',
-    globals: true,
   }
 })

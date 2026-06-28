@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import type { AdminStats, AdminProfile, Announcement, TargetType } from '../types/admin.types';
+import { supabase } from '../../../core/lib/supabase';
 
 export const useAdminDashboard = () => {
     const [stats, setStats] = useState<AdminStats>({ totalUsers: 0, pendingPFPs: 0 });
@@ -15,7 +16,6 @@ export const useAdminDashboard = () => {
     const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
 
             // Parallel fetching for performance
@@ -62,7 +62,6 @@ export const useAdminDashboard = () => {
 
     const approvePFP = async (id: string) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
             const { error } = await supabase.from('profiles').update({ is_flagged: false }).eq('id', id);
             if (error) throw error;
@@ -76,7 +75,6 @@ export const useAdminDashboard = () => {
 
     const rejectPFP = async (id: string) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
             const { error } = await supabase.from('profiles').update({ avatar_url: null, is_flagged: false }).eq('id', id);
             if (error) throw error;
@@ -90,7 +88,6 @@ export const useAdminDashboard = () => {
 
     const suspendUser = async (id: string, currentStatus: boolean) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
             const { error } = await supabase.from('profiles').update({ is_suspended: !currentStatus }).eq('id', id);
             if (error) throw error;
@@ -104,7 +101,6 @@ export const useAdminDashboard = () => {
 
     const terminateUser = async (id: string) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
             const { error } = await supabase.from('profiles').delete().eq('id', id);
             if (error) throw error;
@@ -118,7 +114,6 @@ export const useAdminDashboard = () => {
 
     const updateUser = async (id: string, updates: { name?: string; attended?: number; total?: number }) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return false;
             const { error } = await supabase.from('profiles').update(updates).eq('id', id);
             if (error) throw error;
@@ -140,7 +135,6 @@ export const useAdminDashboard = () => {
     ) => {
         setIsPublishing(true);
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) throw new Error("Supabase client not initialized");
 
             if (targetType === 'all') {
@@ -180,7 +174,6 @@ export const useAdminDashboard = () => {
 
     const deactivateAnnouncement = async (id: string) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
             if (!supabase) return;
             const { error } = await supabase
                 .from('announcements')
@@ -214,7 +207,6 @@ export const useAdminDashboard = () => {
         updateUser,
         moderateAll: async () => {
             try {
-                const { supabase } = await import('../../../core/lib/supabase');
                 if (!supabase) return;
                 const { error } = await supabase.from('profiles').update({ is_flagged: false }).eq('is_flagged', true);
                 if (error) throw error;

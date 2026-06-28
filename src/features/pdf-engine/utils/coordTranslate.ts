@@ -44,8 +44,6 @@ export interface CanvasObjectMetrics {
 /**
  * Translates a Fabric.js object's position into pdf-lib point coordinates.
  *
- * TODO: Implement this function.
- *
  * Implementation notes:
  *   scaleX = pageWidthPt / canvasWidthPx
  *   scaleY = pageHeightPt / canvasHeightPx

@@ -8,6 +8,7 @@ import { AdminLayout } from './features/admin/AdminLayout';
 import { AdminDashboard } from './features/admin/pages/AdminDashboard';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/react';
+import { ErrorBoundary } from './shared/components/ui/ErrorBoundary';
 
 const AttendanceView = lazy(() => import('./features/attendance/components/AttendanceView').then(module => ({ default: module.AttendanceView })));
 const PdfEngineView = lazy(() => import('./features/pdf-engine/components/PdfEngineView').then(module => ({ default: module.PdfEngineView })));
@@ -87,7 +88,9 @@ function MainApp() {
               animate="animate"
               transition={pageTransition}
             >
-              {activeView}
+              <ErrorBoundary>
+                {activeView}
+              </ErrorBoundary>
             </motion.div>
           )}
         </Suspense>

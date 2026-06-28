@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type TabId = 'attendance' | 'converter';
+export type TabId = 'attendance' | 'pdf';
 
 interface NavigationState {
     activeTab: TabId;

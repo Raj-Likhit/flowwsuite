@@ -8,6 +8,7 @@ import './Dock.css';
 interface DockItemProps {
     children?: ReactNode;
     className?: string;
+    label: string;
     onClick?: () => void;
     mouseX: MotionValue<number>;
     spring: { mass: number; stiffness: number; damping: number };
@@ -19,6 +20,7 @@ interface DockItemProps {
 const DockItem = ({
     children,
     className = '',
+    label,
     onClick,
     mouseX,
     spring,
@@ -26,7 +28,7 @@ const DockItem = ({
     magnification = 80,
     baseItemSize = 48
 }: DockItemProps) => {
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLButtonElement>(null);
 
     const distanceCalc = useTransform(mouseX, (val: number | undefined) => {
         const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
@@ -39,9 +41,10 @@ const DockItem = ({
     const [isHovered, setIsHovered] = useState(false);
 
     return (
-        <motion.div
+        <motion.button
+            type="button"
             ref={ref}
-            role="menuitem"
+            aria-label={label}
             className={`dock-item ${className}`}
             style={{ width: size, height: size }}
             onClick={onClick}
@@ -54,7 +57,7 @@ const DockItem = ({
                 }
                 return child;
             })}
-        </motion.div>
+        </motion.button>
     );
 };
 
@@ -132,6 +135,7 @@ export default function Dock({
                 {items.map((item, index) => (
                     <DockItem
                         key={index}
+                        label={item.label}
                         onClick={item.onClick}
                         className={item.className}
                         mouseX={mouseX}

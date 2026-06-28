@@ -40,7 +40,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, setActiveTab 
                             aria-label={label}
                             aria-pressed={isActive}
                             className={[
-                                'relative flex min-w-28 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-all',
+                                'relative flex min-w-14 sm:min-w-28 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-all',
                                 isActive
                                     ? 'text-primary-300 bg-primary-500/15 ring-1 ring-primary-500/40'
                                     : 'text-white/50 hover:text-white hover:bg-white/5'

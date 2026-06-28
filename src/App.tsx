@@ -4,14 +4,14 @@ import { BrowserRouter, useLocation } from 'react-router-dom';
 import { useAuthStore } from './core/lib/useAuthStore';
 import { BottomTabs, type TabId } from './shared/components/BottomTabs';
 import { SettingsMenu } from './shared/components/SettingsMenu';
-import { AdminLayout } from './features/admin/AdminLayout';
-import { AdminDashboard } from './features/admin/pages/AdminDashboard';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { ErrorBoundary } from './shared/components/ui/ErrorBoundary';
 
 const AttendanceView = lazy(() => import('./features/attendance/components/AttendanceView').then(module => ({ default: module.AttendanceView })));
 const PdfEngineView = lazy(() => import('./features/pdf-engine/components/PdfEngineView').then(module => ({ default: module.PdfEngineView })));
+const AdminLayout = lazy(() => import('./features/admin/AdminLayout').then(module => ({ default: module.AdminLayout })));
+const AdminDashboard = lazy(() => import('./features/admin/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -25,7 +25,7 @@ const pageTransition = {
 };
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<TabId>('pdf');
+  const [activeTab, setActiveTab] = useState<TabId>('attendance');
   const { user, role } = useAuthStore();
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin-portal');

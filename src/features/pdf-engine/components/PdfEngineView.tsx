@@ -17,9 +17,10 @@ import { usePdfDocument } from '../hooks/usePdfDocument';
 import { DropZone } from './workspace/DropZone';
 import { PageGrid } from './workspace/PageGrid';
 import { PageGridToolbar } from './workspace/PageGridToolbar';
-import { CanvasEditor } from './editor/CanvasEditor';
-import { ExportModal } from './export/ExportModal';
-import { MetadataEditor } from './metadata/MetadataEditor';
+
+const CanvasEditor = React.lazy(() => import('./editor/CanvasEditor').then(m => ({ default: m.CanvasEditor })));
+const ExportModal = React.lazy(() => import('./export/ExportModal').then(m => ({ default: m.ExportModal })));
+const MetadataEditor = React.lazy(() => import('./metadata/MetadataEditor').then(m => ({ default: m.MetadataEditor })));
 
 export const PdfEngineView: React.FC = () => {
   const { pages, activeEditorPageId, isLoading, loadingMessage } = usePdfStore();
@@ -93,7 +94,9 @@ export const PdfEngineView: React.FC = () => {
               exit={{ opacity: 0, scale: 0.98 }}
               className="w-full h-full"
             >
-              <CanvasEditor pageId={activeEditorPageId} />
+              <React.Suspense fallback={<div className="flex items-center justify-center w-full h-full text-white/50">Loading Editor...</div>}>
+                <CanvasEditor pageId={activeEditorPageId} />
+              </React.Suspense>
             </motion.div>
           )}
         </AnimatePresence>
@@ -102,20 +105,24 @@ export const PdfEngineView: React.FC = () => {
       {/* Modals */}
       <AnimatePresence>
         {showExportModal && (
-          <ExportModal
-            key="export-modal"
-            onClose={() => setShowExportModal(false)}
-            onOpenMetadata={() => {
-              setShowExportModal(false);
-              setShowMetadataModal(true);
-            }}
-          />
+          <React.Suspense fallback={null}>
+            <ExportModal
+              key="export-modal"
+              onClose={() => setShowExportModal(false)}
+              onOpenMetadata={() => {
+                setShowExportModal(false);
+                setShowMetadataModal(true);
+              }}
+            />
+          </React.Suspense>
         )}
         {showMetadataModal && (
-          <MetadataEditor
-            key="metadata-modal"
-            onClose={() => setShowMetadataModal(false)}
-          />
+          <React.Suspense fallback={null}>
+            <MetadataEditor
+              key="metadata-modal"
+              onClose={() => setShowMetadataModal(false)}
+            />
+          </React.Suspense>
         )}
       </AnimatePresence>
     </div>

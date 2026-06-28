@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import type { AdminStats, AdminProfile, TargetType } from '../types/admin.types';
+import type { AdminStats, AdminProfile, Announcement, TargetType } from '../types/admin.types';
 
 export const useAdminDashboard = () => {
     const [stats, setStats] = useState<AdminStats>({ totalUsers: 0, pendingPFPs: 0 });
     const [recentUsers, setRecentUsers] = useState<AdminProfile[]>([]);
     const [allProfiles, setAllProfiles] = useState<AdminProfile[]>([]);
     const [moderationProfiles, setModerationProfiles] = useState<AdminProfile[]>([]);
-    const [activeAnnouncements, setActiveAnnouncements] = useState<any[]>([]);
+    const [activeAnnouncements, setActiveAnnouncements] = useState<Announcement[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPublishing, setIsPublishing] = useState(false);
     const [showAllUsers, setShowAllUsers] = useState(false);
@@ -33,7 +33,7 @@ export const useAdminDashboard = () => {
                     .eq('is_flagged', true)
                     .order('created_at', { ascending: false }),
                 supabase.from('announcements')
-                    .select('id, content, target_profile_ids, expires_at, created_at')
+                    .select('id, content, is_active, target_profile_ids, expires_at, created_at')
                     .eq('is_active', true)
                     .order('created_at', { ascending: false })
             ]);
@@ -189,7 +189,7 @@ export const useAdminDashboard = () => {
             if (error) throw error;
             toast.success('Announcement deactivated');
             fetchDashboardData();
-        } catch (err) {
+        } catch {
             toast.error('Failed to deactivate');
         }
     };

@@ -1,15 +1,33 @@
 /// <reference lib="webworker" />
 
-self.onmessage = async (e: MessageEvent) => {
-    const { type, payload } = e.data;
+type ProcessFilesMessage = {
+    type: 'PROCESS_FILES';
+    payload: {
+        files: File[];
+    };
+};
+
+type CreateBlankMessage = {
+    type: 'CREATE_BLANK';
+};
+
+type ImageWorkerMessage = ProcessFilesMessage | CreateBlankMessage;
+type HeicConverter = typeof import('heic2any')['default'];
+type WorkerWithWindowAlias = DedicatedWorkerGlobalScope & {
+    window?: DedicatedWorkerGlobalScope;
+};
+
+self.onmessage = async (e: MessageEvent<ImageWorkerMessage>) => {
+    const { type } = e.data;
 
     try {
         if (type === 'PROCESS_FILES') {
-            const { files } = payload;
+            const { files } = e.data.payload;
             const hasHeic = files.some((f: File) => f.name.toLowerCase().endsWith('.heic'));
-            let heic2any: any = null;
+            let heic2any: HeicConverter | null = null;
             if (hasHeic) {
-                if (typeof window === 'undefined') self.window = self as any;
+                const workerGlobal = self as WorkerWithWindowAlias;
+                workerGlobal.window ??= workerGlobal;
                 heic2any = (await import('heic2any')).default;
             }
 
@@ -18,6 +36,7 @@ self.onmessage = async (e: MessageEvent) => {
             for (const file of files) {
                 if (file.name.toLowerCase().endsWith('.heic')) {
                     try {
+                        if (!heic2any) throw new Error('HEIC converter was not initialized');
                         // heic2any returns Blob or Blob[]
                         const blobOrBlobs = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.6 });
                         const blob = Array.isArray(blobOrBlobs) ? blobOrBlobs[0] : blobOrBlobs;

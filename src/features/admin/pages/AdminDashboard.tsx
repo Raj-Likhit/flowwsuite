@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AdminProfile } from '../types/admin.types';
 import { Users, Image as ImageIcon, RefreshCw, Search } from 'lucide-react';
@@ -61,13 +61,12 @@ export const AdminDashboard = () => {
     const [editTotal, setEditTotal] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        if (editingUser) {
-            setEditName(editingUser.name);
-            setEditAttended(editingUser.attended ?? 0);
-            setEditTotal(editingUser.total ?? 0);
-        }
-    }, [editingUser]);
+    const handleEditUser = (user: AdminProfile) => {
+        setEditingUser(user);
+        setEditName(user.name);
+        setEditAttended(user.attended ?? 0);
+        setEditTotal(user.total ?? 0);
+    };
 
     const filteredUsers = recentUsers.filter((u) =>
         u.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -206,7 +205,7 @@ export const AdminDashboard = () => {
                                                 isSuspended={user.is_suspended}
                                                 attended={user.attended}
                                                 total={user.total}
-                                                onEdit={setEditingUser}
+                                                onEdit={handleEditUser}
                                                 onSuspend={suspendUser}
                                                 onTerminate={terminateUser}
                                             />

@@ -29,11 +29,15 @@ export const useAuthStore = create<AuthState>()(
             loading: false,
             error: null,
 
-            setSession: (session) => set({ 
-                session, 
-                user: session?.user ?? null,
-                role: (session?.user?.app_metadata?.role as UserRole) || (session ? 'editor' : 'guest')
-            }),
+            setSession: (session) => {
+                const rawRole = session?.user?.app_metadata?.role;
+                const isValidRole = rawRole === 'admin' || rawRole === 'editor' || rawRole === 'guest';
+                set({ 
+                    session, 
+                    user: session?.user ?? null,
+                    role: isValidRole ? rawRole : (session ? 'editor' : 'guest')
+                });
+            },
 
             setRole: (role) => set({ role }),
 

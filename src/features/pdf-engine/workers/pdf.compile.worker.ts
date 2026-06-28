@@ -274,8 +274,8 @@ self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
 
     self.postMessage({ type: 'COMPILE_DONE', pdfBytes } as CompileWorkerResponse, [pdfBytes.buffer]);
   } catch (err) {
-    const error = err as Error;
-    self.postMessage({ type: 'COMPILE_ERROR', error: error.message } as CompileWorkerResponse);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    self.postMessage({ type: 'COMPILE_ERROR', error: errorMessage } as CompileWorkerResponse);
   }
 };
 

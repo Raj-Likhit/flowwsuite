@@ -8,15 +8,15 @@ describe('usePdfStore', () => {
   });
 
   it('addSource appends a new source', () => {
-    const source: PdfSource = { id: 's1', file: new File([], 'test.pdf'), name: 'test.pdf', size: 0, numPages: 1 };
+    const source: PdfSource = { id: 's1', file: new File([], 'test.pdf'), name: 'test.pdf', type: 'pdf', pageCount: 1, mimeType: 'application/pdf', arrayBuffer: new ArrayBuffer(0), pdfDocument: null };
     usePdfStore.getState().addSource(source);
     expect(usePdfStore.getState().sources).toHaveLength(1);
     expect(usePdfStore.getState().sources[0].id).toBe('s1');
   });
 
   it('removeSource removes the source, its pages, and its overlays', () => {
-    const source: PdfSource = { id: 's1', file: new File([], 'test.pdf'), name: 'test.pdf', size: 0, numPages: 1 };
-    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'file', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: true, thumbnailDataUrl: null };
+    const source: PdfSource = { id: 's1', file: new File([], 'test.pdf'), name: 'test.pdf', type: 'pdf', pageCount: 1, mimeType: 'application/pdf', arrayBuffer: new ArrayBuffer(0), pdfDocument: null };
+    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'pdf', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: true, thumbnailDataUrl: null };
     
     usePdfStore.getState().addSource(source);
     usePdfStore.getState().setPages([page]);
@@ -37,7 +37,7 @@ describe('usePdfStore', () => {
   });
 
   it('rotatePage rotates the page correctly and wraps around 360', () => {
-    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'file', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };
+    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'pdf', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };
     usePdfStore.getState().setPages([page]);
 
     usePdfStore.getState().rotatePage('p1', 'cw');
@@ -51,7 +51,7 @@ describe('usePdfStore', () => {
   });
 
   it('insertBlankPage inserts a blank page at the correct index', () => {
-    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'file', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };
+    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'pdf', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };
     usePdfStore.getState().setPages([page]);
 
     usePdfStore.getState().insertBlankPage(1, 500, 600);

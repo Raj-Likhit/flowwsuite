@@ -139,8 +139,8 @@ describe('usePdfStore', () => {
     expect(usePdfStore.getState().activeEditorPageId).toBe('p1');
     expect(usePdfStore.getState().activeTool).toBe('select');
     
-    usePdfStore.getState().setActiveTool('pen');
-    expect(usePdfStore.getState().activeTool).toBe('pen');
+    usePdfStore.getState().setActiveTool(('draw'));
+    expect(usePdfStore.getState().activeTool).toBe(('draw'));
     
     usePdfStore.getState().closeEditor();
     expect(usePdfStore.getState().activeEditorPageId).toBeNull();

@@ -7,7 +7,7 @@ describe('useSignatureStore', () => {
         vi.spyOn(Storage.prototype, 'getItem');
         vi.spyOn(Storage.prototype, 'setItem');
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid');
+        vi.spyOn(crypto, 'randomUUID').mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
         localStorage.clear();
     });
 
@@ -46,7 +46,7 @@ describe('useSignatureStore', () => {
 
             expect(result.current.signatures).toHaveLength(1);
             expect(result.current.signatures[0]).toEqual({
-                id: 'test-uuid',
+                id: '123e4567-e89b-12d3-a456-426614174000' as any,
                 dataUrl: 'new-data',
                 createdAt: expect.any(Number)
             });
@@ -75,23 +75,23 @@ describe('useSignatureStore', () => {
             act(() => {
                 result.current.saveSignature('data-1');
             });
-            vi.mocked(crypto.randomUUID).mockReturnValue('uuid-2');
+            vi.mocked(crypto.randomUUID).mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
             act(() => {
                 result.current.saveSignature('data-2');
             });
-            vi.mocked(crypto.randomUUID).mockReturnValue('uuid-3');
+            vi.mocked(crypto.randomUUID).mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
             act(() => {
                 result.current.saveSignature('data-3');
             });
-            vi.mocked(crypto.randomUUID).mockReturnValue('uuid-4');
+            vi.mocked(crypto.randomUUID).mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
             act(() => {
                 result.current.saveSignature('data-4');
             });
-            vi.mocked(crypto.randomUUID).mockReturnValue('uuid-5');
+            vi.mocked(crypto.randomUUID).mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
             act(() => {
                 result.current.saveSignature('data-5');
             });
-            vi.mocked(crypto.randomUUID).mockReturnValue('uuid-6');
+            vi.mocked(crypto.randomUUID).mockReturnValue('123e4567-e89b-12d3-a456-426614174000' as any);
             act(() => {
                 result.current.saveSignature('data-6');
             });

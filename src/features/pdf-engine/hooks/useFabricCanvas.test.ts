@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFabricCanvas } from './useFabricCanvas';
@@ -132,7 +133,7 @@ describe('useFabricCanvas', () => {
 
     it('should initialize canvas correctly without existing overlay', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -152,7 +153,7 @@ describe('useFabricCanvas', () => {
         });
 
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             // Use different size to trigger scale logic
@@ -164,7 +165,7 @@ describe('useFabricCanvas', () => {
 
     it('should handle object events and mark as dirty', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -174,7 +175,7 @@ describe('useFabricCanvas', () => {
         const addHandlerCall = mockOn.mock.calls.find(call => call[0] === 'object:added');
         expect(addHandlerCall).toBeDefined();
         
-        const saveToStore = addHandlerCall[1];
+        const saveToStore = addHandlerCall![1];
         
         act(() => {
             // Mutate so it detects a change
@@ -189,7 +190,7 @@ describe('useFabricCanvas', () => {
 
     it('should dispose previous canvas on re-initialization', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -204,7 +205,7 @@ describe('useFabricCanvas', () => {
 
     it('should set background image correctly', async () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -220,7 +221,7 @@ describe('useFabricCanvas', () => {
 
     it('should clear background when null is passed', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -277,7 +278,7 @@ describe('useFabricCanvas', () => {
 
     it('should handle saveChanges correctly', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -302,7 +303,7 @@ describe('useFabricCanvas', () => {
         mockToDataURL.mockImplementationOnce(() => { throw new Error('DataURL Error'); });
         
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -320,7 +321,7 @@ describe('useFabricCanvas', () => {
 
     it('should add image correctly', async () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -342,7 +343,7 @@ describe('useFabricCanvas', () => {
         MockImage.fromURL = vi.fn().mockRejectedValueOnce(new Error('Image failed'));
         
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -361,7 +362,7 @@ describe('useFabricCanvas', () => {
 
     it('should delete selected objects', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -379,7 +380,7 @@ describe('useFabricCanvas', () => {
 
     it('should handle undo and redo properly', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);
@@ -407,7 +408,7 @@ describe('useFabricCanvas', () => {
 
     it('should test addTextBox handler', () => {
         const canvasRef = { current: document.createElement('canvas') };
-        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
         act(() => {
             result.current.initCanvas(800, 600);

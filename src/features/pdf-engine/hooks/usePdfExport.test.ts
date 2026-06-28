@@ -4,7 +4,7 @@ import { usePdfExport } from './usePdfExport';
 import { usePdfStore } from '../store/usePdfStore';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
-import type { Page, PdfSource } from '../types/pdf.types';
+import type { PdfPage, PdfSource } from '../types/pdf.types';
 
 vi.mock('../store/usePdfStore');
 vi.mock('sonner');
@@ -59,7 +59,7 @@ global.FileReader = class {
 
 describe('usePdfExport', () => {
     const mockState = {
-        pages: [] as Page[],
+        pages: [] as PdfPage[],
         overlays: [],
         sources: [] as PdfSource[],
         metadata: { title: 'Test PDF' },
@@ -97,7 +97,7 @@ describe('usePdfExport', () => {
             const { result } = renderHook(() => usePdfExport());
             
             await act(async () => {
-                await result.current.exportPdf({ compression: { enabled: true } });
+                await result.current.exportPdf({ compression: { enabled: true, imageQuality: 0.8, maxDimensionPx: 2000 } });
             });
 
             expect(toast.error).toHaveBeenCalledWith('Some pages are still rendering. Try compressed export again in a moment.');

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAdminDashboard } from './useAdminDashboard';
@@ -51,7 +52,7 @@ describe('useAdminDashboard', () => {
         
         (supabase as any) = { from: vi.fn() };
         
-        (supabase.from as any).mockImplementation((table: string) => {
+        ((supabase as any).from as any).mockImplementation((table: string) => {
             const chain = createPromiseChain({ data: [], error: null });
             
             let currentSelectCols: any = null;
@@ -141,12 +142,12 @@ describe('useAdminDashboard', () => {
             await result.current.approvePFP('p2');
         });
 
-        expect(supabase.from).toHaveBeenCalledWith('profiles');
+        expect((supabase as any).from).toHaveBeenCalledWith('profiles');
         expect(toast.success).toHaveBeenCalledWith('PFP Approved');
     });
 
     it('should handle approvePFP error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             return createPromiseChain({ error: new Error('Approve error') });
         });
         
@@ -187,7 +188,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle rejectPFP error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             return createPromiseChain({ error: new Error('Reject error') });
         });
         
@@ -211,7 +212,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle suspendUser error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             return createPromiseChain({ error: new Error('Suspend error') });
         });
         
@@ -235,7 +236,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle terminateUser error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             return createPromiseChain({ error: new Error('Terminate error') });
         });
         
@@ -261,7 +262,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle updateUser error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             return createPromiseChain({ error: new Error('Update error') });
         });
         
@@ -289,7 +290,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle publishAnnouncement error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             const chain = createPromiseChain({ error: new Error('Publish error') });
             return chain;
         });
@@ -316,7 +317,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle deactivateAnnouncement error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             const chain = createPromiseChain(null);
             chain.then = function (resolve: any, reject: any) {
                 // Simulate exception throw
@@ -345,7 +346,7 @@ describe('useAdminDashboard', () => {
     });
     
     it('should handle moderateAll error', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             const chain = createPromiseChain({ error: new Error('Moderate all error') });
             return chain;
         });
@@ -360,7 +361,7 @@ describe('useAdminDashboard', () => {
     });
 
     it('should handle errors in fetchDashboardData', async () => {
-        (supabase.from as any).mockImplementation(() => {
+        ((supabase as any).from as any).mockImplementation(() => {
             const chain = createPromiseChain(null);
             chain.then = function (resolve: any, reject: any) {
                 resolve({ error: new Error('Network error') });

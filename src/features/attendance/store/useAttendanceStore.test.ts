@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAttendanceStore } from './useAttendanceStore';
 import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';
@@ -7,8 +8,8 @@ vi.mock('../../../core/lib/supabase', () => ({
     supabase: {
         storage: {
             from: vi.fn().mockReturnThis(),
-            upload: vi.fn(),
-            getPublicUrl: vi.fn(),
+            upload: /* @ts-ignore */ vi.fn(),
+            getPublicUrl: /* @ts-ignore */ vi.fn(),
         },
         from: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),

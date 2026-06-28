@@ -45,9 +45,7 @@ class MockOffscreenCanvas {
     });
 }
 const mockFileReader = vi.fn();
-const mockCrypto = {
-    randomUUID: vi.fn(() => 'test-uuid'),
-};
+/*const _mockCrypto = {};*/
 
 describe('usePdfDocument', () => {
     let mockAddSource: any;
@@ -81,7 +79,7 @@ describe('usePdfDocument', () => {
         // Setup global mocks
         global.createImageBitmap = mockCreateImageBitmap as any;
         global.OffscreenCanvas = MockOffscreenCanvas as any;
-        vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid');
+        vi.spyOn(crypto, 'randomUUID').mockReturnValue(('123e4567-e89b-12d3-a456-426614174000' as any));
         global.FileReader = mockFileReader as any;
         
         if (!File.prototype.arrayBuffer) {
@@ -121,7 +119,7 @@ describe('usePdfDocument', () => {
 
         expect(mockSetLoading).toHaveBeenCalledWith(true, 'Importing image...');
         expect(mockAddSource).toHaveBeenCalledWith(expect.objectContaining({
-            id: 'test-uuid',
+            id: ('123e4567-e89b-12d3-a456-426614174000' as any),
             type: 'image',
             name: 'test.png'
         }));
@@ -165,7 +163,7 @@ describe('usePdfDocument', () => {
 
         expect(pdfLoader.initPdfJs).toHaveBeenCalled();
         expect(mockAddSource).toHaveBeenCalledWith(expect.objectContaining({
-            id: 'test-uuid',
+            id: ('123e4567-e89b-12d3-a456-426614174000' as any),
             type: 'pdf',
             pageCount: 2
         }));

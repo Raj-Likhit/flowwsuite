@@ -36,6 +36,7 @@ interface AttendanceStore {
     error: string | null;
     isCloudSyncEnabled: boolean;
     lastSyncedAt: number | null;
+    hideProfileName: boolean;
 
     // Actions
 
@@ -43,6 +44,7 @@ interface AttendanceStore {
     setActiveProfile: (profile: Profile | null, accessMode?: AttendanceAccessMode) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
+    setHideProfileName: (hide: boolean) => void;
 
     updateAttendance: (attended: number, total: number, title?: string) => string | undefined;
     deleteLog: (logId: string) => void;
@@ -63,6 +65,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             error: null,
             isCloudSyncEnabled: isSupabaseAvailable(),
             lastSyncedAt: null,
+            hideProfileName: false,
 
             setProfiles: (profiles) => set({ profiles }),
             setActiveProfile: (activeProfile, accessMode = 'editable') => {
@@ -73,6 +76,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             },
             setLoading: (loading) => set({ loading }),
             setError: (error) => set({ error }),
+            setHideProfileName: (hideProfileName) => set({ hideProfileName }),
 
             updateAttendance: (rawAttended, rawTotal, title) => {
                 let generatedId: string | undefined;

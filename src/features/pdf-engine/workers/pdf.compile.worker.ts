@@ -24,6 +24,7 @@ interface FabricOverlayObject {
   fontSize?: number;
   path?: Array<Array<string | number>>;
   src?: string;
+  pathOffset?: { x: number; y: number };
 }
 
 interface FabricOverlayJson {
@@ -229,8 +230,8 @@ async function applyOverlay(
       // Fabric's toJSON outputs path arrays (which are in canvas absolute coordinates initially, 
       // or normalized around 0,0). However, the SVG string expects to be drawn at its defined viewport.
       // The viewport top-left in canvas coordinates is (left - pathOffset.x, top - pathOffset.y).
-      const canvas_x = obj.left - (obj.pathOffset?.x || 0);
-      const canvas_y = obj.top - (obj.pathOffset?.y || 0);
+      const canvas_x = (obj.left || 0) - (obj.pathOffset?.x || 0);
+      const canvas_y = (obj.top || 0) - (obj.pathOffset?.y || 0);
       
       const pdf_x = canvas_x * pathScale;
       const pdf_y = pageHeightPt - (canvas_y * pathScale);

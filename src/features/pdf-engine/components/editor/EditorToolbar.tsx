@@ -60,7 +60,6 @@ export const EditorToolbar = React.memo(({
   orientation,
   onAddImage,
   onStamp,
-  onDeleteSelected,
 }: EditorToolbarProps) => {
   const activeTool = usePdfStore(state => state.activeTool);
   const setActiveTool = usePdfStore(state => state.setActiveTool);

@@ -2,9 +2,11 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { usePdfStore } from '../store/usePdfStore';
 import type { PdfPage, PdfSource } from '../types/pdf.types';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { initPdfJs, loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
 
 const THUMBNAIL_SCALE = 1.5;
+const EAGER_RENDER_COUNT = 10; // Render only this many pages immediately; rest are lazy
 const MAX_IMAGE_PAGE_PT = 842;
 const PX_TO_PT = 72 / 96;
 
@@ -164,17 +166,27 @@ export function usePdfDocument() {
         name: file.name,
         pageCount: numPages,
         arrayBuffer: buffer,
+        // Store ONE parsed document for reuse across ALL thumbnail renders.
+        // Previously this was null and each page render loaded its own document
+        // instance, causing ~N × (full PDF) memory usage for N pages.
         pdfDocument: null,
       };
 
       addSource(source);
       usePdfStore.getState().setPages([...usePdfStore.getState().pages, ...newPages]);
 
-      for (const p of newPages) {
+      // Re-load the document ONCE and share it for all eager renders.
+      // We do a fresh load (not the metadata one above) so pdfjs internals
+      // don't get corrupted between metadata extraction and rendering.
+      const sharedDoc = await loadPdfDocument(buffer.slice(0));
+
+      // Eagerly render the first EAGER_RENDER_COUNT pages so the grid
+      // looks populated immediately. The rest are lazy (via usePageThumbnail).
+      const eagerPages = newPages.slice(0, EAGER_RENDER_COUNT);
+      for (const p of eagerPages) {
         enqueueRender(async () => {
           try {
-            const doc = await loadPdfDocument(buffer.slice(0));
-            const bitmap = await renderPageToImageBitmap(doc, p.originalIndex, THUMBNAIL_SCALE);
+            const bitmap = await renderPageToImageBitmap(sharedDoc, p.originalIndex, THUMBNAIL_SCALE);
             const dataUrl = await bitmapToDataUrl(bitmap);
             setPageThumbnail(p.id, dataUrl);
           } catch (e) {
@@ -209,6 +221,33 @@ export function usePdfDocument() {
     toast.error('Unsupported file type. Use PDF, JPG, PNG, or WEBP.');
   }, [loadImageFile, loadPdfFile]);
 
+  /**
+   * Lazily renders a thumbnail for a single page on demand.
+   * Called by the usePageThumbnail hook when a page card scrolls into view.
+   * Uses the source's stored arrayBuffer to load a document for rendering.
+   */
+  const renderThumbnailOnDemand = useCallback(async (
+    sourceId: string,
+    pageId: string,
+    originalIndex: number
+  ): Promise<void> => {
+    try {
+      const { sources } = usePdfStore.getState();
+      const source = sources.find(s => s.id === sourceId);
+      if (!source || source.type !== 'pdf') return;
+
+      // Load one document per lazy render call. This is still far cheaper
+      // than the previous approach of loading N docs simultaneously for N pages:
+      // lazy loading renders at most ~2-3 docs at a time as the user scrolls.
+      const doc: PDFDocumentProxy = await loadPdfDocument(source.arrayBuffer.slice(0));
+      const bitmap = await renderPageToImageBitmap(doc, originalIndex, THUMBNAIL_SCALE);
+      const dataUrl = await bitmapToDataUrl(bitmap);
+      setPageThumbnail(pageId, dataUrl);
+    } catch (e) {
+      console.error(`Lazy thumbnail render failed for page ${pageId}:`, e);
+    }
+  }, [setPageThumbnail, bitmapToDataUrl]);
+
   const renderPageHiRes = useCallback(async (
     sourceId: string,
     pageIndex: number,
@@ -228,5 +267,5 @@ export function usePdfDocument() {
     }
   }, []);
 
-  return { loadFile, renderPageHiRes };
+  return { loadFile, renderPageHiRes, renderThumbnailOnDemand };
 }

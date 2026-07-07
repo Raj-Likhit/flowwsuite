@@ -223,13 +223,24 @@ async function applyOverlay(
     } else if (objectType === 'path' && obj.path) {
       const stroke = obj.stroke ? hexToRgb(obj.stroke) : null;
       const fill = obj.fill ? hexToRgb(obj.fill) : null;
+      // Fabric.js stores path data in ABSOLUTE canvas-pixel coordinates (not relative
+      // to obj.left/obj.top). pdf-lib's drawSvgPath adds its own (x,y) translation on top,
+      // so we must NOT use canvasToPdfCoords here — that would double-count the offset and
+      // shift every stroke to the wrong position (the "bottom-right" bug).
+      //
+      // Instead: anchor at (0, pageHeightPt) which maps the canvas top-left corner to the
+      // PDF top-left corner. Use a single uniform scale = pageWidthPt/canvasWidthPx.
+      // Since the editor enforces aspect-ratio-preserving sizing:
+      //   canvasWidthPx/canvasHeightPx == pageWidthPt/pageHeightPt
+      // so one scale factor handles both axes correctly.
+      const pathScale = pageWidthPt / canvasWidthPx;
       page.drawSvgPath(fabricPathToSvgString(obj.path), {
-        x: coords.x,
-        y: coords.y + coords.height,
-        scale: (pageWidthPt / canvasWidthPx) * (obj.scaleX || 1),
+        x: 0,
+        y: pageHeightPt,
+        scale: pathScale,
         color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
         borderColor: stroke ? rgb(stroke.r, stroke.g, stroke.b) : undefined,
-        borderWidth: pxToPt(obj.strokeWidth || 1, canvasWidthPx, pageWidthPt),
+        borderWidth: pxToPt((obj.strokeWidth || 1) * (obj.scaleX || 1), canvasWidthPx, pageWidthPt),
       });
     } else if (objectType === 'image' && obj.src) {
       const image = await embedCanvasImage(outDoc, obj.src);

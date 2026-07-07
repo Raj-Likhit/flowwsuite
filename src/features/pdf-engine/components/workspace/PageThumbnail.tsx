@@ -18,11 +18,12 @@
 //   - Page number badge: bottom-center, text-[10px] font-black
 // =============================================================================
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { RotateCw, RotateCcw, Trash2, Pencil } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PdfPage } from '../../types/pdf.types';
+import { usePageThumbnail } from '../../hooks/usePageThumbnail';
 
 interface PageThumbnailProps {
   page: PdfPage;
@@ -47,14 +48,6 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
   onDelete,
   onEdit,
 }) => {
-  /**
-   * @dnd-kit sortable setup.
-   * TODO: Wire attributes, listeners, setNodeRef, transform, transition
-   * into the root div to enable drag-to-reorder.
-   *
-   * const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
-   * const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-   */
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -62,9 +55,21 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Lazy thumbnail loading: renders only when the card enters the viewport.
+  const { cardRef, isRendering } = usePageThumbnail(page);
+
+  // Merge the dnd-kit node ref and the IntersectionObserver ref.
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      (cardRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    },
+    [setNodeRef, cardRef]
+  );
+
   return (
     <div
-      ref={setNodeRef}
+      ref={mergedRef}
       style={style}
       {...attributes}
       className={[
@@ -88,8 +93,17 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
             draggable={false}
           />
         ) : (
-          // Loading skeleton
-          <div className="w-full h-full animate-pulse bg-white/5" />
+          // Loading skeleton — shown while thumbnail hasn't rendered yet.
+          // isRendering = actively rendering now; otherwise waiting for scroll-into-view.
+          <div className={`w-full h-full bg-white/5 ${isRendering ? 'animate-pulse' : ''}`}>
+            {isRendering && (
+              <div className="absolute inset-0 flex items-end justify-center pb-2">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                  Rendering…
+                </span>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Hover Action Overlay */}

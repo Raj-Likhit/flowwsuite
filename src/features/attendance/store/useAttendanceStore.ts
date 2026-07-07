@@ -22,6 +22,7 @@ export interface Profile {
     created_at?: string;
     is_suspended?: boolean;
     logs?: AttendanceLog[];
+    targetGoal?: number;
 }
 
 export type AttendanceAccessMode = 'editable' | 'readOnly';
@@ -33,7 +34,6 @@ interface AttendanceStore {
     accessMode: AttendanceAccessMode;
     loading: boolean;
     error: string | null;
-    hideProfileName: boolean;
     isCloudSyncEnabled: boolean;
     lastSyncedAt: number | null;
 
@@ -46,7 +46,7 @@ interface AttendanceStore {
 
     updateAttendance: (attended: number, total: number, title?: string) => string | undefined;
     deleteLog: (logId: string) => void;
-    toggleHideProfileName: () => void;
+    updateTargetGoal: (profileId: string, goal: number) => void;
     deleteProfile: (profileId: string) => void;
     updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password'>>) => void;
     uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
@@ -61,7 +61,6 @@ export const useAttendanceStore = create<AttendanceStore>()(
             accessMode: 'editable',
             loading: false,
             error: null,
-            hideProfileName: false,
             isCloudSyncEnabled: isSupabaseAvailable(),
             lastSyncedAt: null,
 
@@ -124,7 +123,10 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 return generatedId;
             },
 
-            toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
+            updateTargetGoal: (profileId, goal) => set((state) => ({
+                profiles: state.profiles.map((p) => p.id === profileId ? { ...p, targetGoal: goal } : p),
+                activeProfile: state.activeProfile?.id === profileId ? { ...state.activeProfile, targetGoal: goal } : state.activeProfile
+            })),
 
             deleteProfile: (profileId) =>
                 set((state) => {

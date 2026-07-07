@@ -11,6 +11,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { Download } from 'lucide-react';
 import { usePdfStore } from '../store/usePdfStore';
 import { usePdfDocument } from '../hooks/usePdfDocument';
@@ -36,9 +37,19 @@ export const PdfEngineView: React.FC = () => {
   }, [loadFile]);
 
   return (
-    <div className="flex flex-col min-h-screen pb-24 relative">
-      <header className="sticky top-0 z-10 px-4 py-4 border-b border-white/5 bg-[var(--bg-base)]/80 backdrop-blur-md flex items-center justify-between">
-        <h1 className="text-lg font-black tracking-tight text-white">PDF Studio</h1>
+    <>
+      <Helmet>
+        <title>PDF Studio | Flowwsuite</title>
+        <meta name="description" content="Merge, sign, and convert images to PDF right in your browser. Complete privacy with no server uploads." />
+        <meta property="og:title" content="PDF Studio | Flowwsuite" />
+        <meta property="og:description" content="Merge, sign, and convert images to PDF right in your browser. Complete privacy with no server uploads." />
+      </Helmet>
+      <div className="flex flex-col min-h-screen pb-24 relative">
+        <h1 className="sr-only">
+          Free Client-Side PDF Editor: Merge, convert, and sign PDF documents directly in your browser.
+        </h1>
+        <header className="sticky top-0 z-10 px-4 py-4 border-b border-white/5 bg-[var(--bg-base)]/80 backdrop-blur-md flex items-center justify-between">
+        <div className="text-lg font-black tracking-tight text-white" aria-hidden="true">PDF Studio</div>
         {pages.length > 0 && (
           <button
             onClick={() => setShowExportModal(true)}
@@ -126,5 +137,6 @@ export const PdfEngineView: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };

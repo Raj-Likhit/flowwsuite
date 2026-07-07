@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { ProgressRing } from '../../../shared/components/ProgressRing';
 import { PremiumButton } from '../../../shared/components/PremiumButton';
@@ -31,18 +32,16 @@ const formatRelativeTime = (ts: number): string => {
 };
 
 export const AttendanceView: React.FC = () => {
-    const {
-        activeProfile,
-        setActiveProfile,
-        accessMode,
-        loading,
-        setLoading,
-        updateAttendance,
-        deleteLog,
-        hideProfileName,
-        syncFromCloud,
-        lastSyncedAt
-    } = useAttendanceStore();
+    const activeProfile = useAttendanceStore(state => state.activeProfile);
+    const setActiveProfile = useAttendanceStore(state => state.setActiveProfile);
+    const accessMode = useAttendanceStore(state => state.accessMode);
+    const loading = useAttendanceStore(state => state.loading);
+    const setLoading = useAttendanceStore(state => state.setLoading);
+    const updateAttendance = useAttendanceStore(state => state.updateAttendance);
+    const deleteLog = useAttendanceStore(state => state.deleteLog);
+    const hideProfileName = useAttendanceStore(state => state.hideProfileName);
+    const syncFromCloud = useAttendanceStore(state => state.syncFromCloud);
+    const lastSyncedAt = useAttendanceStore(state => state.lastSyncedAt);
 
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
@@ -173,6 +172,12 @@ export const AttendanceView: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative overflow-x-hidden select-none">
+            <Helmet>
+                <title>Attendance Tracker | Flowwsuite</title>
+                <meta name="description" content="Calculate the exact minimum days needed to maintain your 75% college attendance. Secure, fast, and entirely client-side." />
+                <meta property="og:title" content="Attendance Tracker | Flowwsuite" />
+                <meta property="og:description" content="Calculate the exact minimum days needed to maintain your 75% college attendance. Secure, fast, and entirely client-side." />
+            </Helmet>
             {/* Header Area */}
             <div className="flex items-center mb-8 max-w-md mx-auto">
                 <motion.button
@@ -187,10 +192,13 @@ export const AttendanceView: React.FC = () => {
                 </motion.button>
             </div>
 
-            <div className="text-center mb-8">
-                <h1 className="text-2xl font-black tracking-tight">
+            <h1 className="sr-only">
+                Attendance Tracker: Calculate the minimum classes required to maintain a 75% attendance rule.
+            </h1>
+            <div className="text-center mb-8" aria-hidden="true">
+                <div className="text-2xl font-black tracking-tight">
                     Floww<span className="text-primary-500">suite</span>
-                </h1>
+                </div>
                 <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest">
                     Track your 75% attendance requirement
                 </p>

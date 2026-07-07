@@ -37,7 +37,7 @@ interface PageThumbnailProps {
   onEdit: (id: string) => void;
 }
 
-export const PageThumbnail: React.FC<PageThumbnailProps> = ({
+export const PageThumbnail = React.memo(({
   page,
   pageNumber,
   isSelected,
@@ -47,7 +47,7 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
   onRotateCcw,
   onDelete,
   onEdit,
-}) => {
+}: PageThumbnailProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -157,4 +157,4 @@ export const PageThumbnail: React.FC<PageThumbnailProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -31,27 +31,24 @@ import { DEFAULT_PAGE_SIZE } from '../../hooks/usePdfDocument';
 import { toast } from 'sonner';
 
 export const PageGridToolbar: React.FC = () => {
-  const {
-    pages,
-    selectedPageIds,
-    selectAllPages,
-    clearSelection,
-    deleteSelectedPages,
-    insertBlankPage,
-    clearAll,
-  } = usePdfStore();
+  const pagesLength = usePdfStore(state => state.pages.length);
+  const selectedPageIds = usePdfStore(state => state.selectedPageIds);
+  const selectAllPages = usePdfStore(state => state.selectAllPages);
+  const clearSelection = usePdfStore(state => state.clearSelection);
+  const deleteSelectedPages = usePdfStore(state => state.deleteSelectedPages);
+  const insertBlankPage = usePdfStore(state => state.insertBlankPage);
+  const clearAll = usePdfStore(state => state.clearAll);
 
   const { loadFile } = usePdfDocument();
   const { exportPdf, isExporting } = usePdfExport();
 
   const mergeInputRef = useRef<HTMLInputElement>(null);
   const hasSelection = selectedPageIds.size > 0;
-  const allSelected = selectedPageIds.size === pages.length && pages.length > 0;
+  const allSelected = selectedPageIds.size === pagesLength && pagesLength > 0;
 
   /**
    * Extracts selected pages as a standalone PDF.
    *
-   * TODO: Implement.
    * This is a specialized export — build a CompileWorkerRequest that
    * only includes selected pages (by their originalIndex order).
    * Reuse the usePdfExport hook or build a direct export utility.
@@ -73,7 +70,7 @@ export const PageGridToolbar: React.FC = () => {
   };
 
   const handleInsertBlankPage = () => {
-    insertBlankPage(pages.length, DEFAULT_PAGE_SIZE.widthPt, DEFAULT_PAGE_SIZE.heightPt);
+    insertBlankPage(pagesLength, DEFAULT_PAGE_SIZE.widthPt, DEFAULT_PAGE_SIZE.heightPt);
     toast.success('Blank page added');
   };
 

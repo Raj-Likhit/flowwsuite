@@ -10,7 +10,8 @@ interface AuditTrailProps {
 }
 
 export const AuditTrail: React.FC<AuditTrailProps> = ({ readOnly = false }) => {
-    const { activeProfile, deleteLog } = useAttendanceStore();
+    const activeProfile = useAttendanceStore(state => state.activeProfile);
+    const deleteLog = useAttendanceStore(state => state.deleteLog);
 
     if (!activeProfile || !activeProfile.logs || activeProfile.logs.length === 0) {
         return null;

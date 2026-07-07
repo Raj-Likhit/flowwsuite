@@ -11,7 +11,7 @@
 //   - DnD: vertical + horizontal strategy using rectSortingStrategy
 // =============================================================================
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -62,6 +62,19 @@ export const PageGrid: React.FC = () => {
     }
   }, [pages, reorderPages]);
 
+  const sortableItems = useMemo(() => pages.map(p => p.id), [pages]);
+
+  const previewMap = useMemo(() => {
+    const map = new Map<string, string>();
+    overlays.forEach(o => {
+      if (o.previewDataUrl) map.set(o.pageId, o.previewDataUrl);
+    });
+    return map;
+  }, [overlays]);
+
+  const handleRotateCw = useCallback((id: string) => rotatePage(id, 'cw'), [rotatePage]);
+  const handleRotateCcw = useCallback((id: string) => rotatePage(id, 'ccw'), [rotatePage]);
+
   return (
     <DndContext
       sensors={sensors}
@@ -69,7 +82,7 @@ export const PageGrid: React.FC = () => {
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={pages.map(p => p.id)}
+        items={sortableItems}
         strategy={rectSortingStrategy}
       >
         <div
@@ -83,10 +96,10 @@ export const PageGrid: React.FC = () => {
               page={page}
               pageNumber={index + 1}
               isSelected={selectedPageIds.has(page.id)}
-              previewDataUrl={overlays.find((overlay) => overlay.pageId === page.id)?.previewDataUrl}
+              previewDataUrl={previewMap.get(page.id)}
               onSelect={togglePageSelection}
-              onRotateCw={(id) => rotatePage(id, 'cw')}
-              onRotateCcw={(id) => rotatePage(id, 'ccw')}
+              onRotateCw={handleRotateCw}
+              onRotateCcw={handleRotateCcw}
               onDelete={deletePage}
               onEdit={openEditor}
             />

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { usePdfStore } from '../store/usePdfStore';
 import type { PdfPage, PdfSource } from '../types/pdf.types';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { initPdfJs, loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
+import { loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
 
 const THUMBNAIL_SCALE = 1.5;
 const EAGER_RENDER_COUNT = 10; // Render only this many pages immediately; rest are lazy
@@ -133,7 +133,6 @@ export function usePdfDocument() {
     try {
       const buffer = await file.arrayBuffer();
 
-      initPdfJs();
       const pdfDoc = await loadPdfDocument(buffer.slice(0));
 
       const numPages = pdfDoc.numPages;

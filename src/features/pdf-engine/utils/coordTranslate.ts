@@ -58,11 +58,18 @@ export function canvasToPdfCoords(metrics: CanvasObjectMetrics): PdfCoords {
   const scaleX = metrics.pageWidthPt / metrics.canvasWidthPx;
   const scaleY = metrics.pageHeightPt / metrics.canvasHeightPx;
   
-  const pdf_x = metrics.left * scaleX;
-  const pdf_height = metrics.scaledHeight * scaleY;
-  // Note: PDF origin is bottom-left, fabric is top-left
-  const pdf_y = metrics.pageHeightPt - (metrics.top * scaleY) - pdf_height;
+  const pdf_left = metrics.left * scaleX;
+  const pdf_top = metrics.pageHeightPt - (metrics.top * scaleY);
+  
   const pdf_width = metrics.scaledWidth * scaleX;
+  const pdf_height = metrics.scaledHeight * scaleY;
+  
+  // Fabric rotates around the top-left (left, top) because we enforce originX='left', originY='top'
+  // pdf-lib rotates around the bottom-left (x, y) that we pass to drawImage/drawText.
+  // We must calculate the correct (x, y) so that the local top-left ends up exactly at (pdf_left, pdf_top).
+  const rad = (-metrics.angle * Math.PI) / 180;
+  const pdf_x = pdf_left + pdf_height * Math.sin(rad);
+  const pdf_y = pdf_top - pdf_height * Math.cos(rad);
   
   return {
     x: pdf_x,

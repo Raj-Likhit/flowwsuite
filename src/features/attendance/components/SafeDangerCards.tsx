@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, TrendingDown, AlertTriangle, TrendingUp } from 'lucide-react';
 import SpotlightCard from '../../../shared/components/ui/reactbits/SpotlightCard';
+import { useAttendanceStore } from '../store/useAttendanceStore';
 
 interface SafeDangerCardsProps {
     percentage: number;
@@ -8,10 +9,14 @@ interface SafeDangerCardsProps {
     totalCount: number;
 }
 
-export const SafeDangerCards: React.FC<SafeDangerCardsProps> = ({ percentage, attendedCount, totalCount }) => {
-    const isSafe = percentage >= 75;
-    const safeToSkip = Math.max(0, Math.floor(attendedCount / 0.75 - totalCount));
-    const classesNeeded = Math.max(0, Math.ceil((0.75 * totalCount - attendedCount) / 0.25));
+export const SafeDangerCards = React.memo(({ percentage, attendedCount, totalCount }: SafeDangerCardsProps) => {
+    const activeProfile = useAttendanceStore(state => state.activeProfile);
+    const targetGoal = activeProfile?.targetGoal ?? 75;
+    const targetFraction = targetGoal / 100;
+    
+    const isSafe = percentage >= targetGoal;
+    const safeToSkip = Math.max(0, Math.floor(attendedCount / targetFraction - totalCount));
+    const classesNeeded = Math.max(0, Math.ceil((targetFraction * totalCount - attendedCount) / (1 - targetFraction)));
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-live="polite">
@@ -23,7 +28,7 @@ export const SafeDangerCards: React.FC<SafeDangerCardsProps> = ({ percentage, at
                             <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400">Safe Zone</span>
                         </div>
                         <p className="text-sm font-medium text-white/60 leading-relaxed">
-                            You're above the 75% threshold.<br />Keep it up!
+                            You're above the {targetGoal}% threshold.<br />Keep it up!
                         </p>
                     </SpotlightCard>
                     <SpotlightCard className="bg-[#111] p-5 rounded-2xl border border-white/5 flex flex-col justify-center" spotlightColor="rgba(255, 255, 255, 0.1)">
@@ -43,7 +48,7 @@ export const SafeDangerCards: React.FC<SafeDangerCardsProps> = ({ percentage, at
                             <span className="text-[10px] uppercase font-black tracking-widest text-red-400">Danger Zone</span>
                         </div>
                         <p className="text-sm font-medium text-white/60 leading-relaxed">
-                            You're below 75%. Focus on attending consecutive classes.
+                            You're below {targetGoal}%. Focus on attending consecutive classes.
                         </p>
                     </SpotlightCard>
                     <SpotlightCard className="bg-[#111] p-5 rounded-2xl border border-white/5 flex flex-col justify-center" spotlightColor="rgba(255, 255, 255, 0.1)">
@@ -52,10 +57,10 @@ export const SafeDangerCards: React.FC<SafeDangerCardsProps> = ({ percentage, at
                             <span className="text-[10px] uppercase font-black tracking-widest text-primary-400">Recovery Mode</span>
                         </div>
                         <div className="text-4xl font-black text-white">{classesNeeded}</div>
-                        <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider" aria-hidden="true">consecutive classes needed to reach 75%</p>
+                        <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider" aria-hidden="true">consecutive classes needed to reach {targetGoal}%</p>
                     </SpotlightCard>
                 </>
             )}
         </div>
     );
-};
+});

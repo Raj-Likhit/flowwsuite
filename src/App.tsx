@@ -1,9 +1,9 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy } from 'react';
 import { motion, MotionConfig } from 'framer-motion';
-import { BrowserRouter, useLocation } from 'react-router-dom';
+import { BrowserRouter, useLocation, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { useAuthStore } from './core/lib/useAuthStore';
-import { BottomTabs, type TabId } from './shared/components/BottomTabs';
-import { SettingsMenu } from './shared/components/SettingsMenu';
+import { BottomTabs } from './shared/components/BottomTabs';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { ErrorBoundary } from './shared/components/ui/ErrorBoundary';
@@ -12,6 +12,7 @@ const AttendanceView = lazy(() => import('./features/attendance/components/Atten
 const PdfEngineView = lazy(() => import('./features/pdf-engine/components/PdfEngineView').then(module => ({ default: module.PdfEngineView })));
 const AdminLayout = lazy(() => import('./features/admin/AdminLayout').then(module => ({ default: module.AdminLayout })));
 const AdminDashboard = lazy(() => import('./features/admin/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const SettingsMenu = lazy(() => import('./shared/components/SettingsMenu').then(module => ({ default: module.SettingsMenu })));
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -25,11 +26,9 @@ const pageTransition = {
 };
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState<TabId>('attendance');
   const { user, role } = useAuthStore();
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin-portal');
-  const activeView = activeTab === 'attendance' ? <AttendanceView /> : <PdfEngineView />;
 
   return (
     <div className="min-h-screen text-white selection:bg-primary-500/30 overflow-x-hidden pb-[env(safe-area-inset-bottom,24px)]" style={{ background: 'var(--bg-base)' }}>
@@ -81,24 +80,26 @@ function MainApp() {
               <AdminDashboard />
             </AdminLayout>
           ) : (
-            <motion.div
-              key={activeTab}
-              variants={pageVariants}
-              initial="initial"
-              animate="animate"
-              transition={pageTransition}
-            >
-              <ErrorBoundary>
-                {activeView}
-              </ErrorBoundary>
-            </motion.div>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<Navigate to="/attendance" replace />} />
+              <Route path="/attendance" element={
+                <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
+                  <ErrorBoundary><AttendanceView /></ErrorBoundary>
+                </motion.div>
+              } />
+              <Route path="/pdf-engine" element={
+                <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
+                  <ErrorBoundary><PdfEngineView /></ErrorBoundary>
+                </motion.div>
+              } />
+            </Routes>
           )}
         </Suspense>
         <Toaster theme="dark" position="top-center" />
       </div>
 
       {/* Bottom Navigation */}
-      {!isAdminPage && <BottomTabs activeTab={activeTab} setActiveTab={setActiveTab} />}
+      {!isAdminPage && <BottomTabs />}
       <Analytics />
     </div>
   );
@@ -106,11 +107,13 @@ function MainApp() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <MotionConfig reducedMotion="user">
-        <MainApp />
-      </MotionConfig>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <MotionConfig reducedMotion="user">
+          <MainApp />
+        </MotionConfig>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 

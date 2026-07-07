@@ -96,8 +96,6 @@ const initialMetadata: PdfMetadata = {
 
 // -----------------------------------------------------------------------------
 // Store Definition
-// TODO: Implement each action body using Zustand's `set` and `get` pattern.
-// Follow the existing useAttendanceStore.ts patterns in this codebase.
 // -----------------------------------------------------------------------------
 
 export const usePdfStore = create<PdfEngineState & PdfEngineActions>()((set) => ({

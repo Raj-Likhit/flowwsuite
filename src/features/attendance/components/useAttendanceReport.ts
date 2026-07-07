@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 
 export const useAttendanceReport = () => {
-    const { activeProfile } = useAttendanceStore();
+    const activeProfile = useAttendanceStore(state => state.activeProfile);
 
     const generateReport = async () => {
         if (!activeProfile) return;
@@ -28,6 +28,8 @@ export const useAttendanceReport = () => {
             doc.setFontSize(16);
             doc.text(`Student: ${name}`, 20, 60);
 
+            const targetGoal = activeProfile.targetGoal ?? 75;
+
             // Main Stats (Summary)
             autoTable(doc, {
                 startY: 70,
@@ -36,7 +38,7 @@ export const useAttendanceReport = () => {
                     ['Total Sessions', total.toString()],
                     ['Attended', attended.toString()],
                     ['Attendance Percentage', `${percentage.toFixed(1)}%`],
-                    ['Status', percentage >= 75 ? 'On Track' : 'Needs Improvement'],
+                    ['Status', percentage >= targetGoal ? 'On Track' : 'Needs Improvement'],
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [79, 70, 229] },

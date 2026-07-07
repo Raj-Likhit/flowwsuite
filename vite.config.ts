@@ -2,6 +2,7 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import viteCompression from 'vite-plugin-compression'
 
 const asyncScriptPlugin = () => ({
   name: 'async-script',
@@ -27,6 +28,7 @@ export default defineConfig({
   plugins: [
     react(),
     asyncScriptPlugin(),
+    viteCompression(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -66,7 +68,12 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             if (id.includes('fabric')) return 'fabric';
             if (id.includes('pdf-lib') || id.includes('jspdf')) return 'pdf';
-            if (id.includes('html2canvas')) return 'html2canvas';
+            if (id.includes('pdfjs-dist')) return 'pdfjs';
+            if (id.includes('jszip')) return 'jszip';
+            if (id.includes('@dnd-kit')) return 'dnd-kit';
+            if (id.includes('@radix-ui')) return 'radix-ui';
+            if (id.includes('date-fns')) return 'date-fns';
+            if (id.includes('framer-motion')) return 'framer-motion';
             if (id.includes('supabase')) return 'supabase';
             // Everything else goes to the default vendor/app chunks
           }

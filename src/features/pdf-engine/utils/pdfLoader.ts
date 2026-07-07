@@ -4,32 +4,37 @@
 // Call initPdfJs() once before any rendering operation.
 // =============================================================================
 
-import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+let pdfjsLibInstance: any = null;
 
 /**
  * Initializes the pdfjs-dist GlobalWorkerOptions.
  * Must be called once at the module level or in app bootstrap.
  */
-export function initPdfJs(): void {
-  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+export async function initPdfJs(): Promise<any> {
+  if (!pdfjsLibInstance) {
+    pdfjsLibInstance = await import('pdfjs-dist');
+    if (!pdfjsLibInstance.GlobalWorkerOptions.workerSrc) {
+      pdfjsLibInstance.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+    }
   }
+  return pdfjsLibInstance;
 }
 
 /**
  * Loads a PDF from an ArrayBuffer and returns the pdfjs document proxy.
  */
 export async function loadPdfDocument(buffer: ArrayBuffer): Promise<PDFDocumentProxy> {
-  initPdfJs();
+  const lib = await initPdfJs();
   try {
-    const loadingTask = pdfjsLib.getDocument({
+    const loadingTask = lib.getDocument({
       data: buffer,
-      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/cmaps/`,
       cMapPacked: true,
-      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`,
+      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/standard_fonts/`,
       enableHWA: true,
     });
     return await loadingTask.promise;

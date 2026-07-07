@@ -263,35 +263,49 @@ export function useFabricCanvas(
     });
   }, []);
 
-  const addTextBox = useCallback((opt: fabric.TPointerEventInfo) => {
-    if (!fabricRef.current) return;
+  const addTextBox = useCallback((opt: fabric.IEvent) => {
     const canvas = fabricRef.current;
-    const pointer = canvas.getScenePoint(opt.e);
-    
-    const text = new fabric.IText('Click to edit', {
-      left: pointer.x,
-      top: pointer.y,
-      fontFamily: 'Inter',
+    if (!canvas) return;
+
+    // Only add if clicking on empty space
+    if (opt.target && opt.target.type !== 'path') return;
+
+    const text = new fabric.IText('Double click to edit', {
+      left: opt.pointer?.x || 50,
+      top: opt.pointer?.y || 50,
+      fontFamily: 'Helvetica',
       fontSize: 24,
       fill: '#000000',
-      editable: true,
     });
-    
+
     canvas.add(text);
     canvas.setActiveObject(text);
-    text.enterEditing();
-    text.selectAll();
+    saveToStore();
     
-    // Switch back to select mode after placing text
-    // Note: To avoid dependency cycle with setTool, we just dispatch via store
+    // Switch back to select tool after adding text
     usePdfStore.getState().setActiveTool('select');
-  }, []);
+  }, [saveToStore]);
+
+  const handleErase = useCallback((opt: fabric.IEvent) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    // We only erase paths (pencil drawings) or text/images if the user clicks them in eraser mode.
+    // The user requested "only erases the pencil drawings" like MS Paint, so we target paths.
+    if (opt.target && opt.target.type === 'path') {
+      canvas.remove(opt.target);
+      saveToStore();
+    }
+  }, [saveToStore]);
 
   const setTool = useCallback((tool: EditorTool): void => {
     if (!fabricRef.current) return;
     const canvas = fabricRef.current;
 
     canvas.off('mouse:down', addTextBox);
+    canvas.off('mouse:down', handleErase);
+    // Remove mouse:over listener by recreating it or clearing all mouse:over
+    canvas.off('mouse:over');
     canvas.isDrawingMode = false;
     canvas.selection = false;
     canvas.defaultCursor = 'default';
@@ -320,12 +334,25 @@ export function useFabricCanvas(
         canvas.freeDrawingBrush.width = 2;
         break;
       case 'image':
+        canvas.defaultCursor = 'crosshair';
+        break;
       case 'eraser':
         canvas.defaultCursor = 'crosshair';
+        // Enable evented for paths so we can click them to erase
+        canvas.getObjects().forEach((obj) => {
+          if (obj.type === 'path') {
+            obj.evented = true;
+          }
+        });
+        canvas.on('mouse:down', handleErase);
+        // Also support click-and-drag erasing
+        canvas.on('mouse:over', (opt) => {
+          if (opt.e.buttons === 1) handleErase(opt);
+        });
         break;
     }
     canvas.renderAll();
-  }, [addTextBox]);
+  }, [addTextBox, handleErase]);
 
   const addImage = useCallback(async (dataUrl: string): Promise<void> => {
     if (!fabricRef.current) return;

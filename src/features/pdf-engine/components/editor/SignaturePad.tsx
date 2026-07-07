@@ -44,8 +44,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onClose, onStamp }) 
   /**
    * Sets up the drawing canvas 2D context and pointer event listeners.
    *
-   * TODO: Implement.
-   *
    * Events to handle on the draw canvas:
    *   - pointerdown: set isDrawing=true, ctx.beginPath(), ctx.moveTo(x, y)
    *   - pointermove: if isDrawing, ctx.lineTo(x, y), ctx.stroke(), setIsEmpty(false)

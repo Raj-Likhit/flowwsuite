@@ -1,44 +1,41 @@
 import React from 'react';
 import { CalendarCheck, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
 
 export type TabId = 'attendance' | 'pdf';
 
-interface BottomTabsProps {
-    activeTab: TabId;
-    setActiveTab: (tab: TabId) => void;
-}
-
-export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, setActiveTab }) => {
+export const BottomTabs: React.FC = () => {
+    const location = useLocation();
+    const activeTab = location.pathname.includes('/pdf-engine') ? 'pdf' : 'attendance';
 
     const items = [
         {
             id: 'attendance' as const,
             icon: CalendarCheck,
             label: 'Attendance',
-            onClick: () => setActiveTab('attendance')
+            to: '/attendance'
         },
         {
             id: 'pdf' as const,
             icon: FileText,
             label: 'PDF Studio',
-            onClick: () => setActiveTab('pdf')
+            to: '/pdf-engine'
         },
     ];
 
     return (
         <div className="fixed bottom-0 inset-x-0 z-[60] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none flex justify-center">
             <div className="pointer-events-auto relative flex items-center gap-2 rounded-2xl glass-strong border border-white/10 p-2 shadow-2xl">
-                {items.map(({ id, icon: Icon, label, onClick }) => {
+                {items.map(({ id, icon: Icon, label, to }) => {
                     const isActive = activeTab === id;
 
                     return (
-                        <button
+                        <Link
                             key={id}
-                            type="button"
-                            onClick={onClick}
+                            to={to}
                             aria-label={label}
-                            aria-pressed={isActive}
+                            aria-current={isActive ? 'page' : undefined}
                             className={[
                                 'relative flex min-w-14 sm:min-w-28 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-all',
                                 isActive
@@ -55,7 +52,7 @@ export const BottomTabs: React.FC<BottomTabsProps> = ({ activeTab, setActiveTab 
                             )}
                             <Icon size={18} className="relative" />
                             <span className="relative hidden sm:inline">{label}</span>
-                        </button>
+                        </Link>
                     );
                 })}
             </div>

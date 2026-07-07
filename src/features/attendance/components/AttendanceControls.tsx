@@ -9,12 +9,12 @@ interface AttendanceControlsProps {
     readOnly?: boolean;
 }
 
-export const AttendanceControls: React.FC<AttendanceControlsProps> = ({
+export const AttendanceControls = React.memo(({
     totalCount,
     attendedCount,
     onUpdate,
     readOnly = false,
-}) => {
+}: AttendanceControlsProps) => {
     const isInvalid = attendedCount > totalCount;
 
     return (
@@ -100,4 +100,4 @@ export const AttendanceControls: React.FC<AttendanceControlsProps> = ({
         )}
         </div>
     );
-};
+});

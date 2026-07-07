@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import bcrypt from 'bcryptjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, User, Loader2, AlertTriangle, RefreshCw, Check, Eye } from 'lucide-react';
 import { useAttendanceStore, type Profile } from '../store/useAttendanceStore';
@@ -58,14 +57,12 @@ const ProfileAvatar = ({ profile }: { profile: Profile }) => {
 };
 
 export const ProfileSelection: React.FC = () => {
-    const { 
-        profiles, 
-        loading, 
-        setActiveProfile, 
-        setProfiles,
-        setLoading,
-        updateProfile
-    } = useAttendanceStore();
+    const profiles = useAttendanceStore(state => state.profiles);
+    const loading = useAttendanceStore(state => state.loading);
+    const setActiveProfile = useAttendanceStore(state => state.setActiveProfile);
+    const setProfiles = useAttendanceStore(state => state.setProfiles);
+    const setLoading = useAttendanceStore(state => state.setLoading);
+    const updateProfile = useAttendanceStore(state => state.updateProfile);
 
     // Modal state
     const [modalOpen, setModalOpen] = useState(false);
@@ -145,6 +142,7 @@ export const ProfileSelection: React.FC = () => {
             if (!supabase) throw new Error('Supabase not initialized');
             
             // Hash the new password
+            const bcrypt = (await import('bcryptjs')).default;
             const hashedPassword = await bcrypt.hash(newPassword || '123', 10);
 
             const { data, error } = await supabase
@@ -217,9 +215,9 @@ export const ProfileSelection: React.FC = () => {
         let correct = false;
         let needsMigration = false;
         const stored = passwordPromptProfile.password || '123';
-        const isHashed = typeof stored === 'string' && stored.startsWith('$2');
-
-        if (isHashed) {
+        
+        if (typeof stored === 'string' && stored.startsWith('$2')) {
+            const bcrypt = (await import('bcryptjs')).default;
             correct = await bcrypt.compare(enteredPassword, stored);
         } else {
             correct = enteredPassword === stored;
@@ -246,6 +244,7 @@ export const ProfileSelection: React.FC = () => {
         closePasswordPrompt();
 
         if (needsMigration && supabase) {
+            const bcrypt = (await import('bcryptjs')).default;
             const hashed = await bcrypt.hash(enteredPassword, 10);
             await supabase
                 .from('profiles')

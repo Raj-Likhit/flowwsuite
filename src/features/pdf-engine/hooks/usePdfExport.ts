@@ -13,7 +13,6 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import JSZip from 'jszip';
 import { usePdfStore } from '../store/usePdfStore';
 import type { CompileWorkerSource, ExportOptions } from '../types/pdf.types';
 import type { CompileWorkerRequest, CompileWorkerResponse } from '../types/pdf.types';
@@ -173,7 +172,9 @@ export function usePdfExport() {
     const loadingToast = toast.loading('Preparing JPEG ZIP...');
 
     try {
-      const zip = new JSZip();
+      const JSZipModule = await import('jszip');
+      const JSZip = JSZipModule.default || JSZipModule;
+      const zip = new (JSZip as any)();
 
       for (const [index, page] of pages.entries()) {
         const dataUrl = page.thumbnailDataUrl || await createBlankPageDataUrl(page.widthPt, page.heightPt);

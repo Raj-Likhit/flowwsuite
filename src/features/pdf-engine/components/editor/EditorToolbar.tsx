@@ -56,23 +56,18 @@ const TOOLS: ToolItem[] = [
   { id: 'eraser', icon: <Eraser className="w-5 h-5" />, label: 'Eraser' },
 ];
 
-export const EditorToolbar: React.FC<EditorToolbarProps> = ({
+export const EditorToolbar = React.memo(({
   orientation,
   onAddImage,
   onStamp,
   onDeleteSelected,
-}) => {
-  const { activeTool, setActiveTool } = usePdfStore();
+}: EditorToolbarProps) => {
+  const activeTool = usePdfStore(state => state.activeTool);
+  const setActiveTool = usePdfStore(state => state.setActiveTool);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [showImageOverlay, setShowImageOverlay] = useState(false);
 
   const handleToolClick = (tool: ToolItem) => {
-    if (tool.id === 'eraser') {
-      onDeleteSelected?.();
-      setActiveTool('select');
-      return;
-    }
-
     setActiveTool(tool.id);
     if (tool.id === 'image') setShowImageOverlay(true);
   };
@@ -144,4 +139,4 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
       )}
     </>
   );
-};
+});

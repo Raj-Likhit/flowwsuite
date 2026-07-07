@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Eye, EyeOff, Trash2, ShieldAlert, Palette, X, Lock, User, Plus } from 'lucide-react';
-import bcrypt from 'bcryptjs';
 import { useThemeStore } from '../store/useThemeStore';
 import { useAttendanceStore } from '../../features/attendance/store/useAttendanceStore';
 import { GlassCard } from './GlassCard';
@@ -17,8 +16,7 @@ export const SettingsMenu: React.FC = () => {
     const [deletePassword, setDeletePassword] = useState('');
     const { isHighContrast, toggleHighContrast, theme, setTheme } = useThemeStore();
     const { 
-        hideProfileName, 
-        toggleHideProfileName, 
+        updateTargetGoal,
         activeProfile, 
         accessMode, 
         updateProfile,
@@ -108,24 +106,24 @@ export const SettingsMenu: React.FC = () => {
                                             )}
                                         </button>
                                     </div>
-                                    <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex items-center justify-between mt-3">
-                                        <div>
-                                            <div className="text-sm font-bold text-white/90">Stream Mode (Hide Name)</div>
-                                            <div className="text-xs text-white/40 mt-1">Blur your profile name in the main view</div>
+                                    {activeProfile && (
+                                        <div className="bg-black/20 rounded-xl p-4 border border-white/5 mt-3 space-y-3">
+                                            <div>
+                                                <div className="text-sm font-bold text-white/90 flex justify-between">
+                                                    <span>Target Goal</span>
+                                                    <span className="text-primary-400">{activeProfile.targetGoal ?? 75}%</span>
+                                                </div>
+                                                <div className="text-xs text-white/40 mt-1">Set your custom attendance target requirement</div>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="1" max="100" 
+                                                value={activeProfile.targetGoal ?? 75}
+                                                onChange={(e) => updateTargetGoal(activeProfile.id, parseInt(e.target.value))}
+                                                className="w-full accent-primary-500 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
                                         </div>
-                                        <button
-                                            onClick={toggleHideProfileName}
-                                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors relative group"
-                                            aria-pressed={hideProfileName}
-                                            aria-label="Toggle Hide Profile Name"
-                                        >
-                                            {hideProfileName ? (
-                                                <EyeOff className="w-5 h-5 text-emerald-400" />
-                                            ) : (
-                                                <Eye className="w-5 h-5 text-white/40 group-hover:text-white" />
-                                            )}
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
 
                                 {/* Themes */}
@@ -246,6 +244,7 @@ export const SettingsMenu: React.FC = () => {
                                                             }
                                                             const loadingToast = toast.loading("Hashing & saving...");
                                                             try {
+                                                                const bcrypt = (await import('bcryptjs')).default;
                                                                 const hashedPassword = await bcrypt.hash(newPassword.trim(), 10);
                                                                 const { supabase: sp } = await import('../../core/lib/supabase');
                                                                 if (sp) {
@@ -316,6 +315,7 @@ export const SettingsMenu: React.FC = () => {
                                                                     }
                                                                     const loadingToast = toast.loading("Deleting profile...");
                                                                     try {
+                                                                        const bcrypt = (await import('bcryptjs')).default;
                                                                         const isMatch = await bcrypt.compare(deletePassword, activeProfile.password || '');
                                                                         if (!isMatch) {
                                                                             toast.error("Incorrect password", { id: loadingToast });

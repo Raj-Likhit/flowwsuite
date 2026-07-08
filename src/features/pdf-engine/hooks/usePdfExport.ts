@@ -174,7 +174,7 @@ export function usePdfExport() {
     try {
       const JSZipModule = await import('jszip');
       const JSZip = JSZipModule.default || JSZipModule;
-      const zip = new (JSZip as any)();
+      const zip = new (JSZip as new () => import('jszip'))();
 
       for (const [index, page] of pages.entries()) {
         const dataUrl = page.thumbnailDataUrl || await createBlankPageDataUrl(page.widthPt, page.heightPt);

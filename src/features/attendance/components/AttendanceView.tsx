@@ -9,6 +9,7 @@ import { AttendanceControls } from './AttendanceControls';
 import { useAttendanceReport } from './useAttendanceReport';
 import { ProfileSelection } from './ProfileSelection';
 import { SafeDangerCards } from './SafeDangerCards';
+import { CustomGoalSection } from './CustomGoalSection';
 import { AuditTrail } from './AuditTrail';
 import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
@@ -270,6 +271,15 @@ export const AttendanceView: React.FC = () => {
                         percentage={percentage}
                         attendedCount={attendedCount}
                         totalCount={totalCount}
+                    />
+                </div>
+
+                <div className="px-2 sm:px-0">
+                    <CustomGoalSection
+                        percentage={percentage}
+                        attendedCount={attendedCount}
+                        totalCount={totalCount}
+                        readOnly={isReadOnly}
                     />
                 </div>
 

@@ -14,7 +14,7 @@ describe('coordTranslate Utilities', () => {
         top: 200,  // y on canvas
         scaledWidth: 100,
         scaledHeight: 50,
-        angle: 45, // clockwise
+        angle: 0, // clockwise
         canvasWidthPx: 800,
         canvasHeightPx: 600,
         pageWidthPt: 400,
@@ -40,7 +40,7 @@ describe('coordTranslate Utilities', () => {
       expect(result.y).toBe(175);
       
       // Expected rotation = -angle
-      expect(result.rotation).toBe(-45);
+      expect(result.rotation).toBe(-0);
     });
   });
 

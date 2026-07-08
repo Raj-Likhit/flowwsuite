@@ -44,15 +44,15 @@ describe('pdfLoader utilities', () => {
     });
 
     describe('initPdfJs', () => {
-        it('should set workerSrc if not already set', () => {
-            initPdfJs();
-            expect(pdfjsLib.GlobalWorkerOptions.workerSrc).toBe('mocked-worker-url');
+        it('should set workerSrc if not already set', async () => {
+            const lib = await initPdfJs();
+            expect(lib.GlobalWorkerOptions.workerSrc).toBe('mocked-worker-url');
         });
 
-        it('should not override workerSrc if already set', () => {
+        it('should not override workerSrc if already set', async () => {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'custom-url';
-            initPdfJs();
-            expect(pdfjsLib.GlobalWorkerOptions.workerSrc).toBe('custom-url');
+            const lib = await initPdfJs();
+            expect(lib.GlobalWorkerOptions.workerSrc).toBe('custom-url');
         });
     });
 

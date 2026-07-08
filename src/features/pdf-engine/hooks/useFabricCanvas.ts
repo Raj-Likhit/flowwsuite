@@ -263,7 +263,7 @@ export function useFabricCanvas(
     });
   }, []);
 
-  const addTextBox = useCallback((opt: any) => {
+  const addTextBox = useCallback((opt: fabric.IEvent) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -286,7 +286,7 @@ export function useFabricCanvas(
     usePdfStore.getState().setActiveTool('select');
   }, [saveToStore]);
 
-  const handleErase = useCallback((opt: any) => {
+  const handleErase = useCallback((opt: fabric.IEvent) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
@@ -346,7 +346,7 @@ export function useFabricCanvas(
         });
         canvas.on('mouse:down', handleErase);
         // Also support click-and-drag erasing
-        canvas.on('mouse:over', (opt: any) => {
+        canvas.on('mouse:over', (opt: fabric.IEvent) => {
           if (opt.e.buttons === 1) handleErase(opt);
         });
         break;

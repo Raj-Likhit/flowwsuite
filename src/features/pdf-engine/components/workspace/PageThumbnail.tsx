@@ -62,6 +62,7 @@ export const PageThumbnail = React.memo(({
   const mergedRef = useCallback(
     (node: HTMLDivElement | null) => {
       setNodeRef(node);
+      // eslint-disable-next-line react-hooks/immutability
       (cardRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     },
     [setNodeRef, cardRef]

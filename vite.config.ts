@@ -19,7 +19,7 @@ export default defineConfig({
     setupFiles: ['./src/setupTests.ts'],
     coverage: {
       provider: 'v8',
-      // @ts-ignore - 'all' option is valid for v8 coverage provider
+      // @ts-expect-error - 'all' option is valid for v8 coverage provider
       all: true,
       include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/main.tsx', 'src/**/*.d.ts', 'src/vite-env.d.ts', 'src/**/*.test.*', 'src/**/*.types.ts']

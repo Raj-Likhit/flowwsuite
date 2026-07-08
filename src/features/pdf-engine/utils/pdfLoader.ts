@@ -8,13 +8,13 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-let pdfjsLibInstance: any = null;
+let pdfjsLibInstance: typeof import('pdfjs-dist') | null = null;
 
 /**
  * Initializes the pdfjs-dist GlobalWorkerOptions.
  * Must be called once at the module level or in app bootstrap.
  */
-export async function initPdfJs(): Promise<any> {
+export async function initPdfJs(): Promise<typeof import('pdfjs-dist')> {
   if (!pdfjsLibInstance) {
     pdfjsLibInstance = await import('pdfjs-dist');
     if (!pdfjsLibInstance.GlobalWorkerOptions.workerSrc) {

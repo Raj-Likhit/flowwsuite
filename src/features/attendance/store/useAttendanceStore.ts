@@ -45,6 +45,7 @@ interface AttendanceStore {
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
     setHideProfileName: (hide: boolean) => void;
+    toggleHideProfileName: () => void;
 
     updateAttendance: (attended: number, total: number, title?: string) => string | undefined;
     deleteLog: (logId: string) => void;
@@ -77,6 +78,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             setLoading: (loading) => set({ loading }),
             setError: (error) => set({ error }),
             setHideProfileName: (hideProfileName) => set({ hideProfileName }),
+            toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
 
             updateAttendance: (rawAttended, rawTotal, title) => {
                 let generatedId: string | undefined;

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Shield, TrendingDown, AlertTriangle, TrendingUp } from 'lucide-react';
 import SpotlightCard from '../../../shared/components/ui/reactbits/SpotlightCard';
-import { useAttendanceStore } from '../store/useAttendanceStore';
 
 interface SafeDangerCardsProps {
     percentage: number;
@@ -10,13 +9,18 @@ interface SafeDangerCardsProps {
 }
 
 export const SafeDangerCards = React.memo(({ percentage, attendedCount, totalCount }: SafeDangerCardsProps) => {
-    const activeProfile = useAttendanceStore(state => state.activeProfile);
-    const targetGoal = activeProfile?.targetGoal ?? 75;
+    // Hardcoded to 75% — the mandatory institutional attendance rule.
+    // Custom goals are handled separately by CustomGoalSection.
+    const targetGoal = 75;
     const targetFraction = targetGoal / 100;
     
     const isSafe = percentage >= targetGoal;
     const safeToSkip = Math.max(0, Math.floor(attendedCount / targetFraction - totalCount));
     const classesNeeded = Math.max(0, Math.ceil((targetFraction * totalCount - attendedCount) / (1 - targetFraction)));
+
+    // Hard cap: if total + recovery > 400, it's not realistic
+    const RECOVERY_CAP = 400;
+    const recoveryImpossible = !isSafe && (totalCount + classesNeeded > RECOVERY_CAP);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-live="polite">
@@ -56,8 +60,10 @@ export const SafeDangerCards = React.memo(({ percentage, attendedCount, totalCou
                             <TrendingUp className="w-4 h-4 text-primary-400" aria-hidden="true" />
                             <span className="text-[10px] uppercase font-black tracking-widest text-primary-400">Recovery Mode</span>
                         </div>
-                        <div className="text-4xl font-black text-white">{classesNeeded}</div>
-                        <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider" aria-hidden="true">consecutive classes needed to reach {targetGoal}%</p>
+                        <div className="text-4xl font-black text-white">{recoveryImpossible ? '—' : classesNeeded}</div>
+                        <p className="text-[11px] font-semibold text-white/40 mt-1 uppercase tracking-wider" aria-hidden="true">
+                            {recoveryImpossible ? `Not realistic — would need ${classesNeeded} more classes` : `consecutive classes needed to reach ${targetGoal}%`}
+                        </p>
                     </SpotlightCard>
                 </>
             )}

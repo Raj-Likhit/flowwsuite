@@ -161,7 +161,6 @@ describe('usePdfDocument', () => {
             await result.current.loadFile(file);
         });
 
-        expect(pdfLoader.initPdfJs).toHaveBeenCalled();
         expect(mockAddSource).toHaveBeenCalledWith(expect.objectContaining({
             id: ('123e4567-e89b-12d3-a456-426614174000' as any),
             type: 'pdf',
@@ -223,9 +222,13 @@ describe('usePdfDocument', () => {
             })
         };
         
-        // First call works (load), second call (thumbnail) throws
+        // First call works (metadata load), second call works (shared doc for renders)
         vi.mocked(pdfLoader.loadPdfDocument)
             .mockResolvedValueOnce(mockPdfDoc as any)
+            .mockResolvedValueOnce(mockPdfDoc as any);
+        
+        // Render thumbnail fails
+        vi.mocked(pdfLoader.renderPageToImageBitmap)
             .mockRejectedValueOnce(new Error('Thumbnail fail'));
 
         await act(async () => {

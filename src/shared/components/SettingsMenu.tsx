@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Eye, EyeOff, Trash2, ShieldAlert, Palette, X, Lock, User, Plus } from 'lucide-react';
+import { Settings, Eye, EyeOff, Trash2, ShieldAlert, Palette, X, Lock, User, Plus, Bell, BellOff } from 'lucide-react';
 import { useThemeStore } from '../store/useThemeStore';
 import { useAttendanceStore } from '../../features/attendance/store/useAttendanceStore';
 import { GlassCard } from './GlassCard';
 import { toast } from 'sonner';
 import { ProfilePicturePicker } from './ProfilePicturePicker';
+import { usePushNotifications } from '../../features/attendance/hooks/usePushNotifications';
 
 export const SettingsMenu: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -24,6 +25,7 @@ export const SettingsMenu: React.FC = () => {
         deleteProfile
     } = useAttendanceStore();
     const isReadOnly = accessMode === 'readOnly';
+    const { isSupported, isSubscribed, subscribeToPush, unsubscribeFromPush } = usePushNotifications(activeProfile?.id);
 
     // Initialize state when menu opens
     React.useEffect(() => {
@@ -106,6 +108,27 @@ export const SettingsMenu: React.FC = () => {
                                             )}
                                         </button>
                                     </div>
+                                    {activeProfile && isSupported && (
+                                        <div className="bg-black/20 rounded-xl p-4 border border-white/5 flex items-center justify-between mt-3">
+                                            <div>
+                                                <div className="text-sm font-bold text-white/90">Push Notifications</div>
+                                                <div className="text-xs text-white/40 mt-1">Receive lock-screen alerts for announcements</div>
+                                            </div>
+                                            <button
+                                                onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
+                                                disabled={isReadOnly}
+                                                className={`p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors relative group ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                aria-pressed={isSubscribed}
+                                                aria-label="Toggle Push Notifications"
+                                            >
+                                                {isSubscribed ? (
+                                                    <Bell className="w-5 h-5 text-emerald-400" />
+                                                ) : (
+                                                    <BellOff className="w-5 h-5 text-white/40 group-hover:text-white" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                     {activeProfile && (
                                         <div className="bg-black/20 rounded-xl p-4 border border-white/5 mt-3 space-y-3">
                                             <div>

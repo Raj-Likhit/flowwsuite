@@ -51,10 +51,30 @@ export function usePdfExport() {
     return compileWorkerRef.current;
   }, []);
 
-  const triggerDownload = useCallback((pdfBytes: Uint8Array, filename: string): void => {
+  const triggerDownload = useCallback(async (pdfBytes: Uint8Array, filename: string): Promise<void> => {
     const pdfBuffer = new ArrayBuffer(pdfBytes.byteLength);
     new Uint8Array(pdfBuffer).set(pdfBytes);
     const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+    
+    // Attempt Web Share API first
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: filename,
+            files: [file],
+          });
+          return; // Successfully shared, skip standard download
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            console.error('Share failed:', error);
+          }
+          // If aborted or failed, fall through to standard download fallback
+        }
+      }
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -143,7 +163,7 @@ export function usePdfExport() {
         worker.postMessage(request, workerSources.map((source) => source.arrayBuffer));
       });
 
-      triggerDownload(
+      await triggerDownload(
         compiledBytes,
         options.filename || getExportFilename(metadata.title, options)
       );

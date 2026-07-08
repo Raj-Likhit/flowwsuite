@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye, Bell, BellOff } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { ProgressRing } from '../../../shared/components/ProgressRing';
@@ -15,6 +15,7 @@ import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import { AnnouncementModal } from '../../../shared/components/AnnouncementModal';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 interface Announcement {
     id: string;
@@ -49,6 +50,7 @@ export const AttendanceView: React.FC = () => {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null);
     const { generateReport } = useAttendanceReport();
+    const { isSupported, isSubscribed, subscribeToPush, unsubscribeFromPush } = usePushNotifications(activeProfile?.id);
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
     const activeProfileId = activeProfile?.id;
@@ -236,6 +238,29 @@ export const AttendanceView: React.FC = () => {
                                     Read Only
                                 </span>
                             </div>
+                        )}
+                        {!isReadOnly && isSupported && (
+                            <button
+                                onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
+                                className={clsx(
+                                    "px-3 py-1.5 rounded-full border flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
+                                    isSubscribed 
+                                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/25" 
+                                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                                )}
+                            >
+                                {isSubscribed ? (
+                                    <>
+                                        <Bell className="w-3.5 h-3.5" />
+                                        Alerts On
+                                    </>
+                                ) : (
+                                    <>
+                                        <BellOff className="w-3.5 h-3.5" />
+                                        Alerts Off
+                                    </>
+                                )}
+                            </button>
                         )}
                     </div>
                 </div>

@@ -51,6 +51,9 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        importScripts: ['/sw-custom.js']
       }
     })
   ],

@@ -155,6 +155,22 @@ export const useAdminDashboard = () => {
                 }]);
 
             if (error) throw error;
+
+            // Trigger Web Push Notification via Edge Function
+            try {
+                const { error: invokeError } = await supabase.functions.invoke('send-push', {
+                    body: {
+                        content: content.trim(),
+                        targetProfileIds: targetType === 'single' ? [selectedProfileId] : null
+                    }
+                });
+                if (invokeError) {
+                    console.error("[Push Notification Failed]:", invokeError);
+                }
+            } catch (invokeErr) {
+                console.error("[Push Notification Error]:", invokeErr);
+            }
+
             toast.success(`Announcement ${targetType === 'all' ? 'broadcasted' : 'sent'} successfully!`);
             fetchDashboardData();
             return true;

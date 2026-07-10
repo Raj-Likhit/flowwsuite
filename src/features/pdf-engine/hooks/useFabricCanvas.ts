@@ -52,6 +52,7 @@ function serializeCanvas(canvas: fabric.Canvas): string {
     'stroke',
     'strokeWidth',
     'path',
+    'pathOffset',
   ]);
 
   return JSON.stringify({

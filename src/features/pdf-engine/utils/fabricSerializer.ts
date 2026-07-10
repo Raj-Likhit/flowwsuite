@@ -13,7 +13,7 @@ export function serializeFabricCanvas(canvas: Canvas): object {
   const json = canvas.toObject([
     'type', 'left', 'top', 'scaleX', 'scaleY', 'angle',
     'fill', 'stroke', 'strokeWidth', 'text', 'fontFamily', 'fontSize',
-    'fontWeight', 'fontStyle', 'src', 'path'
+    'fontWeight', 'fontStyle', 'src', 'path', 'pathOffset'
   ]);
   
   return {

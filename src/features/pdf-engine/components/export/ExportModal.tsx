@@ -17,7 +17,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileArchive, Minimize2 } from 'lucide-react';
+import { X, Download, FileArchive, Minimize2, Share } from 'lucide-react';
 import { usePdfExport } from '../../hooks/usePdfExport';
 import { createCompressedExportOptions } from '../../config/exportConfig';
 
@@ -28,14 +28,20 @@ interface ExportModalProps {
 
 export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onOpenMetadata }) => {
   const { exportPdf, exportAsJpegZip, isExporting } = usePdfExport();
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare;
 
   const handleExport = async () => {
-    await exportPdf();
+    await exportPdf({ intent: 'download' });
+    if (!isExporting) onClose();
+  };
+
+  const handleShare = async () => {
+    await exportPdf({ intent: 'share' });
     if (!isExporting) onClose();
   };
 
   const handleCompressedExport = async () => {
-    await exportPdf(createCompressedExportOptions());
+    await exportPdf({ ...createCompressedExportOptions(), intent: 'download' });
     if (!isExporting) onClose();
   };
 
@@ -77,6 +83,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onOpenMetadat
           <Download className="w-4 h-4" />
           {isExporting ? 'Compiling...' : 'Download PDF'}
         </button>
+
+        {/* Share Action */}
+        {canShare && (
+          <button
+            onClick={handleShare}
+            disabled={isExporting}
+            className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 ring-1 ring-blue-400/25 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-black text-sm uppercase tracking-widest"
+            aria-label="Share Document"
+          >
+            <Share className="w-4 h-4" />
+            {isExporting ? 'Compiling...' : 'Share Document'}
+          </button>
+        )}
 
         {/* Compressed PDF Export */}
         <button

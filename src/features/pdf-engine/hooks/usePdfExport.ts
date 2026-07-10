@@ -51,13 +51,13 @@ export function usePdfExport() {
     return compileWorkerRef.current;
   }, []);
 
-  const triggerDownload = useCallback(async (pdfBytes: Uint8Array, filename: string): Promise<void> => {
+  const triggerDownload = useCallback(async (pdfBytes: Uint8Array, filename: string, intent?: 'download' | 'share'): Promise<void> => {
     const pdfBuffer = new ArrayBuffer(pdfBytes.byteLength);
     new Uint8Array(pdfBuffer).set(pdfBytes);
     const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
     
-    // Attempt Web Share API first
-    if (navigator.share && navigator.canShare) {
+    // Attempt Web Share API if explicitly requested
+    if (intent === 'share' && navigator.share && navigator.canShare) {
       const file = new File([blob], filename, { type: 'application/pdf' });
       if (navigator.canShare({ files: [file] })) {
         try {
@@ -165,7 +165,8 @@ export function usePdfExport() {
 
       await triggerDownload(
         compiledBytes,
-        options.filename || getExportFilename(metadata.title, options)
+        options.filename || getExportFilename(metadata.title, options),
+        options.intent
       );
       toast.success(options.compression?.enabled ? 'Compressed export successful!' : 'Export successful!', { id: loadingToast });
     } catch (err) {

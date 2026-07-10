@@ -51,6 +51,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
     undo,
     redo,
     deleteSelected,
+    fabricRef,
   } = useFabricCanvas(canvasRef, pageId);
 
   // Canvas dimensions state — computed from page size + available viewport
@@ -227,7 +228,15 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
         />
 
         {/* Canvas Area */}
-        <div ref={canvasAreaRef} className="flex-1 overflow-auto bg-[#141414]">
+        <div 
+          ref={canvasAreaRef} 
+          className="flex-1 overflow-auto bg-[#141414]"
+          onScroll={() => {
+            if (fabricRef.current) {
+              fabricRef.current.calcOffset();
+            }
+          }}
+        >
           <div className="flex min-h-full min-w-full items-start justify-center p-4">
             {/* Shadow wrapper for canvas depth illusion */}
             <div

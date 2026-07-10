@@ -114,6 +114,8 @@ export interface ExportOptions {
     imageQuality: number;
     maxDimensionPx: number;
   };
+  /** Explicit intent to download or share the generated file */
+  intent?: 'download' | 'share';
 }
 
 export interface PdfMetadata {

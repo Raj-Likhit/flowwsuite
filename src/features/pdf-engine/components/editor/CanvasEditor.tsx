@@ -90,9 +90,14 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
       const scale = Math.min(availW / currentPage.widthPt, availH / currentPage.heightPt, 1.25);
 
       setCanvasSize({
-        width: Math.max(1, Math.floor(currentPage.widthPt * scale)),
-        height: Math.max(1, Math.floor(currentPage.heightPt * scale)),
+        width: Math.max(1, Math.round(currentPage.widthPt * scale)),
+        height: Math.max(1, Math.round(currentPage.heightPt * scale)),
       });
+
+      // Recalculate Fabric.js internal offset cache after layout changes
+      if (fabricRef.current) {
+        fabricRef.current.calcOffset();
+      }
     };
 
     compute();
@@ -100,7 +105,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
     const observer = new ResizeObserver(compute);
     if (canvasAreaRef.current) observer.observe(canvasAreaRef.current);
     return () => observer.disconnect();
-  }, [currentPage]);
+  }, [currentPage, fabricRef]);
 
   useEffect(() => {
     if (!canvasRef.current || !currentPage) return;
@@ -240,7 +245,7 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
           <div className="flex min-h-full min-w-full items-start justify-center p-4">
             {/* Shadow wrapper for canvas depth illusion */}
             <div
-              className="shrink-0 shadow-2xl shadow-black/70 rounded-sm overflow-hidden"
+              className="shrink-0 shadow-2xl shadow-black/70 rounded-sm overflow-hidden touch-none"
               style={{ width: canvasSize.width, height: canvasSize.height }}
             >
               <canvas

@@ -25,6 +25,8 @@ interface FabricOverlayObject {
   path?: Array<Array<string | number>>;
   src?: string;
   pathOffset?: { x: number; y: number };
+  originX?: string;
+  originY?: string;
 }
 
 interface FabricOverlayJson {
@@ -205,6 +207,8 @@ async function applyOverlay(
       canvasHeightPx,
       pageWidthPt,
       pageHeightPt,
+      originX: obj.originX || 'left',
+      originY: obj.originY || 'top',
     };
 
     const coords = canvasToPdfCoords(metrics);
@@ -213,10 +217,12 @@ async function applyOverlay(
 
     if (objectType === 'i-text' || objectType === 'itext' || objectType === 'textbox' || objectType === 'text') {
       const fill = obj.fill ? hexToRgb(obj.fill) : null;
+      // Use height ratio for font size since fontSize is a vertical measurement
+      const fontScaleRatio = pageHeightPt / canvasHeightPx;
       page.drawText(obj.text || '', {
         x: coords.x,
         y: coords.y,
-        size: pxToPt((obj.fontSize || 24) * (obj.scaleY || 1), canvasWidthPx, pageWidthPt),
+        size: (obj.fontSize || 24) * (obj.scaleY || 1) * fontScaleRatio,
         font: helveticaFont,
         color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
         rotate: degrees(coords.rotation),
@@ -225,24 +231,29 @@ async function applyOverlay(
       const stroke = obj.stroke ? hexToRgb(obj.stroke) : null;
       const fill = obj.fill ? hexToRgb(obj.fill) : null;
       
-      const pathScale = pageWidthPt / canvasWidthPx;
+      const baseScaleX = pageWidthPt / canvasWidthPx;
+      const baseScaleY = pageHeightPt / canvasHeightPx;
       
-      // Fabric's toJSON outputs path arrays (which are in canvas absolute coordinates initially, 
-      // or normalized around 0,0). However, the SVG string expects to be drawn at its defined viewport.
-      // The viewport top-left in canvas coordinates is (left - pathOffset.x, top - pathOffset.y).
-      const canvas_x = (obj.left || 0) - (obj.pathOffset?.x || 0);
-      const canvas_y = (obj.top || 0) - (obj.pathOffset?.y || 0);
+      // Fabric path objects store path data in their local coordinate space.
+      // The path's position on the canvas is determined by (left, top) and pathOffset.
+      // pathOffset is the center of the path's bounding box in path-local coordinates.
+      // scaleX/scaleY must be applied to the path rendering to handle user resizing.
+      const objScaleX = obj.scaleX || 1;
+      const objScaleY = obj.scaleY || 1;
+
+      const canvas_x = (obj.left || 0) - (obj.pathOffset?.x || 0) * objScaleX;
+      const canvas_y = (obj.top || 0) - (obj.pathOffset?.y || 0) * objScaleY;
       
-      const pdf_x = canvas_x * pathScale;
-      const pdf_y = pageHeightPt - (canvas_y * pathScale);
+      const pdf_x = canvas_x * baseScaleX;
+      const pdf_y = pageHeightPt - (canvas_y * baseScaleY);
 
       page.drawSvgPath(fabricPathToSvgString(obj.path), {
         x: pdf_x,
         y: pdf_y,
-        scale: pathScale,
+        scale: baseScaleX * objScaleX,
         color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
         borderColor: stroke ? rgb(stroke.r, stroke.g, stroke.b) : undefined,
-        borderWidth: pxToPt((obj.strokeWidth || 1) * (obj.scaleX || 1), canvasWidthPx, pageWidthPt),
+        borderWidth: pxToPt((obj.strokeWidth || 1) * objScaleX, canvasWidthPx, pageWidthPt),
       });
     } else if (objectType === 'image' && obj.src) {
       const image = await embedCanvasImage(outDoc, obj.src);

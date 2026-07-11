@@ -53,6 +53,10 @@ function serializeCanvas(canvas: fabric.Canvas): string {
     'strokeWidth',
     'path',
     'pathOffset',
+    'originX',
+    'originY',
+    'width',
+    'height',
   ]);
 
   return JSON.stringify({
@@ -378,6 +382,28 @@ export function useFabricCanvas(
     }
   }, []);
 
+  const rescaleLoadedObjects = useCallback((canvas: fabric.Canvas, stateJson: string): void => {
+    const parsed = JSON.parse(stateJson) as SerializedFabricCanvas;
+    const storedW = parsed.canvasWidth || canvas.width || 1;
+    const storedH = parsed.canvasHeight || canvas.height || 1;
+    const currentW = canvas.width || 1;
+    const currentH = canvas.height || 1;
+    const sx = currentW / storedW;
+    const sy = currentH / storedH;
+
+    if (Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001) {
+      canvas.getObjects().forEach((obj) => {
+        obj.set({
+          left: (obj.left ?? 0) * sx,
+          top: (obj.top ?? 0) * sy,
+          scaleX: (obj.scaleX ?? 1) * sx,
+          scaleY: (obj.scaleY ?? 1) * sy,
+        });
+        obj.setCoords();
+      });
+    }
+  }, []);
+
   const undo = useCallback((): void => {
     if (!fabricRef.current || undoStackRef.current.length <= 1) return;
     
@@ -392,12 +418,13 @@ export function useFabricCanvas(
     
     isRestoringRef.current = true;
     canvas.loadFromJSON(prevState, () => {
+      rescaleLoadedObjects(canvas, prevState);
       canvas.renderAll();
       isRestoringRef.current = false;
       setOverlay(pageId, JSON.parse(prevState));
       setIsDirty(true);
     });
-  }, [pageId, setOverlay]);
+  }, [pageId, setOverlay, rescaleLoadedObjects]);
 
   const redo = useCallback((): void => {
     if (!fabricRef.current || redoStackRef.current.length === 0) return;
@@ -410,12 +437,13 @@ export function useFabricCanvas(
     
     isRestoringRef.current = true;
     canvas.loadFromJSON(nextState, () => {
+      rescaleLoadedObjects(canvas, nextState);
       canvas.renderAll();
       isRestoringRef.current = false;
       setOverlay(pageId, JSON.parse(nextState));
       setIsDirty(true);
     });
-  }, [pageId, setOverlay]);
+  }, [pageId, setOverlay, rescaleLoadedObjects]);
 
   const deleteSelected = useCallback((): void => {
     if (!fabricRef.current) return;

@@ -21,9 +21,9 @@ export interface PdfCoords {
 
 /** Input from a Fabric.js object */
 export interface CanvasObjectMetrics {
-  /** Fabric.js left (x of object's top-left corner in canvas px) */
+  /** Fabric.js left (x position in canvas px — meaning depends on originX) */
   left: number;
-  /** Fabric.js top (y of object's top-left corner in canvas px) */
+  /** Fabric.js top (y position in canvas px — meaning depends on originY) */
   top: number;
   /** Scaled width of the object in canvas px */
   scaledWidth: number;
@@ -39,27 +39,72 @@ export interface CanvasObjectMetrics {
   pageWidthPt: number;
   /** The PDF page's height in points */
   pageHeightPt: number;
+  /** Fabric.js originX — 'left' | 'center' | 'right'. Defaults to 'left'. */
+  originX?: string;
+  /** Fabric.js originY — 'top' | 'center' | 'bottom'. Defaults to 'top'. */
+  originY?: string;
+}
+
+/**
+ * Converts a Fabric.js origin-relative position to the object's top-left corner.
+ * Fabric.js stores (left, top) relative to the origin point, so we need to
+ * resolve to top-left before translating to PDF space.
+ */
+function resolveToTopLeft(
+  left: number,
+  top: number,
+  scaledWidth: number,
+  scaledHeight: number,
+  originX: string,
+  originY: string
+): { tlLeft: number; tlTop: number } {
+  let tlLeft = left;
+  let tlTop = top;
+
+  if (originX === 'center') {
+    tlLeft = left - scaledWidth / 2;
+  } else if (originX === 'right') {
+    tlLeft = left - scaledWidth;
+  }
+
+  if (originY === 'center') {
+    tlTop = top - scaledHeight / 2;
+  } else if (originY === 'bottom') {
+    tlTop = top - scaledHeight;
+  }
+
+  return { tlLeft, tlTop };
 }
 
 /**
  * Translates a Fabric.js object's position into pdf-lib point coordinates.
  *
  * Implementation notes:
- *   scaleX = pageWidthPt / canvasWidthPx
- *   scaleY = pageHeightPt / canvasHeightPx
- *   pdf_x = left * scaleX
- *   pdf_y = pageHeightPt - (top * scaleY) - (scaledHeight * scaleY)
- *     ↑ This flips the y-axis from canvas-space to PDF-space
- *   pdf_width = scaledWidth * scaleX
- *   pdf_height = scaledHeight * scaleY
- *   rotation = -angle  (pdf-lib uses counter-clockwise, fabric uses clockwise)
+ *   1. Resolve origin to top-left corner
+ *   2. Scale from canvas-px to PDF-pt:
+ *        scaleX = pageWidthPt / canvasWidthPx
+ *        scaleY = pageHeightPt / canvasHeightPx
+ *   3. Flip y-axis (canvas: y↓, PDF: y↑):
+ *        pdf_y = pageHeightPt - (top * scaleY) - (scaledHeight * scaleY)
+ *   4. Rotation pivot adjustment:
+ *        pdf-lib rotates around bottom-left, Fabric around top-left
+ *        rotation = -angle (counter-clockwise vs clockwise)
  */
 export function canvasToPdfCoords(metrics: CanvasObjectMetrics): PdfCoords {
   const scaleX = metrics.pageWidthPt / metrics.canvasWidthPx;
   const scaleY = metrics.pageHeightPt / metrics.canvasHeightPx;
-  
-  const pdf_left = metrics.left * scaleX;
-  const pdf_top = metrics.pageHeightPt - (metrics.top * scaleY);
+
+  const { tlLeft, tlTop } = resolveToTopLeft(
+    metrics.left,
+    metrics.top,
+    metrics.scaledWidth,
+    metrics.scaledHeight,
+    metrics.originX || 'left',
+    metrics.originY || 'top'
+  );
+
+  const pdf_left = tlLeft * scaleX;
+  const pdf_top = metrics.pageHeightPt - (tlTop * scaleY);
   
   const pdf_width = metrics.scaledWidth * scaleX;
   const pdf_height = metrics.scaledHeight * scaleY;

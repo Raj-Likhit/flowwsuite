@@ -4,7 +4,7 @@ import { supabase } from '../../../core/lib/supabase';
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
     for (let i = 0; i < rawData.length; ++i) {
@@ -15,14 +15,9 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export const usePushNotifications = (profileId?: string) => {
     const [isSubscribed, setIsSubscribed] = useState(false);
-    const [isSupported, setIsSupported] = useState(false);
-
-    useEffect(() => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            setIsSupported(true);
-            checkSubscription();
-        }
-    }, []);
+    const [isSupported] = useState(() => 
+        typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
+    );
 
     const checkSubscription = async () => {
         try {
@@ -33,6 +28,13 @@ export const usePushNotifications = (profileId?: string) => {
             console.error('Error checking subscription', error);
         }
     };
+
+    useEffect(() => {
+        if (isSupported) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            checkSubscription();
+        }
+    }, [isSupported]);
 
     const subscribeToPush = useCallback(async () => {
         if (!profileId) {
@@ -76,9 +78,10 @@ export const usePushNotifications = (profileId?: string) => {
 
             setIsSubscribed(true);
             toast.success("Successfully subscribed to notifications!");
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to subscribe', error);
-            toast.error("Subscription failed: " + (error.message || "Unknown error"));
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            toast.error("Subscription failed: " + errorMessage);
         }
     }, [profileId]);
 

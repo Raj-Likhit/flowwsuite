@@ -15,8 +15,9 @@ describe('fabricSerializer', () => {
 
             expect(mockCanvas.toObject).toHaveBeenCalledWith([
                 'type', 'left', 'top', 'scaleX', 'scaleY', 'angle',
-                'fill', 'stroke', 'strokeWidth', 'text', 'fontFamily', 'fontSize',
-                'fontWeight', 'fontStyle', 'src', 'path'
+                'fill', 'stroke', 'strokeWidth', 'text', 'fontFamily',
+                'fontSize', 'fontWeight', 'fontStyle', 'src', 'path',
+                'pathOffset', 'originX', 'originY', 'width', 'height'
             ]);
             expect(result).toEqual({
                 objects: [],

@@ -66,8 +66,8 @@ export function usePdfExport() {
             files: [file],
           });
           return; // Successfully shared, skip standard download
-        } catch (error: any) {
-          if (error.name !== 'AbortError') {
+        } catch (error: unknown) {
+          if (error instanceof Error && error.name !== 'AbortError') {
             console.error('Share failed:', error);
           }
           // If aborted or failed, fall through to standard download fallback

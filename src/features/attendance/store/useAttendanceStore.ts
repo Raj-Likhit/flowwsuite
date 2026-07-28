@@ -214,7 +214,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 try {
                     const { data, error } = await supabase!
                         .from('profiles')
-                        .select('attended, total, name, avatar_url')
+                        .select('attended, total, name, avatar_url, target_goal, logs')
                         .eq('id', profileId)
                         .single();
 
@@ -223,15 +223,28 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     const state = useAttendanceStore.getState();
                     const local = state.activeProfile;
 
+                    // Determine which data source wins (cloud is truth on fresh mount)
+                    const cloudTargetGoal = (data as Record<string, unknown>).target_goal as number | undefined;
+                    const cloudLogs = (data as Record<string, unknown>).logs as AttendanceLog[] | undefined;
+
                     const hasChanges =
                         local?.attended !== data.attended ||
-                        local?.total !== data.total;
+                        local?.total !== data.total ||
+                        (cloudTargetGoal !== undefined && local?.targetGoal !== cloudTargetGoal) ||
+                        (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs));
 
                     if (hasChanges && local) {
+                        const mergedProfile = {
+                            ...local,
+                            attended: data.attended,
+                            total: data.total,
+                            ...(cloudTargetGoal !== undefined ? { targetGoal: cloudTargetGoal } : {}),
+                            ...(cloudLogs !== undefined ? { logs: cloudLogs } : {}),
+                        };
                         set((s) => ({
-                            activeProfile: { ...s.activeProfile!, attended: data.attended, total: data.total },
+                            activeProfile: mergedProfile,
                             profiles: s.profiles.map((p) =>
-                                p.id === profileId ? { ...p, attended: data.attended, total: data.total } : p
+                                p.id === profileId ? mergedProfile : p
                             ),
                             lastSyncedAt: Date.now(),
                         }));

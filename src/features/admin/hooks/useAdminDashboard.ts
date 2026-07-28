@@ -27,7 +27,7 @@ export const useAdminDashboard = () => {
                 { data: announcements, error: annError }
             ] = await Promise.all([
                 supabase.from('profiles').select('*', { count: 'exact', head: true }),
-                supabase.from('profiles').select('id, name, avatar_url, is_flagged, is_suspended, attended, total, created_at').order('created_at', { ascending: false }).limit(showAllUsers ? 100 : 6),
+                supabase.from('profiles').select('id, name, avatar_url, is_flagged, is_suspended, attended, total, created_at').order('created_at', { ascending: false }).limit(showAllUsers ? 1000 : 20),
                 supabase.from('profiles').select('id, name').order('name'),
                 supabase.from('profiles').select('id, name, avatar_url, is_flagged')
                     .eq('is_flagged', true)

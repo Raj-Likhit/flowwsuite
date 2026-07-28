@@ -135,7 +135,9 @@ export const AttendanceView: React.FC = () => {
                 .from('profiles')
                 .update({
                     attended: activeProfile.attended,
-                    total: activeProfile.total
+                    total: activeProfile.total,
+                    target_goal: activeProfile.targetGoal ?? 75,
+                    logs: activeProfile.logs ?? [],
                 })
                 .eq('id', activeProfile.id);
 
@@ -244,14 +246,6 @@ export const AttendanceView: React.FC = () => {
                     totalCount={totalCount}
                     attendedCount={attendedCount}
                     onUpdate={(newAttended, newTotal) => {
-                        if (newAttended < 0 || newTotal < 0) {
-                            toast.error("Values cannot be negative");
-                            return;
-                        }
-                        if (newAttended > newTotal) {
-                            toast.error("Attended classes cannot exceed total classes");
-                            return;
-                        }
                         updateAttendance(newAttended, newTotal);
                     }}
                     readOnly={isReadOnly}

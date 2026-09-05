@@ -11,15 +11,22 @@ interface ProfilePicturePickerProps {
 
 export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicturePickerProps) => {
     const [image, setImage] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isGif, setIsGif] = useState(false);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
     const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            setSelectedFile(file);
+            const isGifFile = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+            setIsGif(isGifFile);
+
             const reader = new FileReader();
             reader.addEventListener('load', () => setImage(reader.result as string));
-            reader.readAsDataURL(e.target.files[0]);
+            reader.readAsDataURL(file);
         }
     };
 
@@ -74,7 +81,15 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
     };
 
     const handleConfirm = async () => {
-        if (image && croppedAreaPixels) {
+        if (!image) return;
+
+        if (isGif && selectedFile) {
+            // For animated GIFs, pass the original file directly to preserve multi-frame animation
+            onCropComplete(selectedFile);
+            return;
+        }
+
+        if (croppedAreaPixels) {
             try {
                 const croppedImage = await getCroppedImg(image, croppedAreaPixels);
                 onCropComplete(croppedImage);
@@ -92,38 +107,56 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
                 width="100%"
                 height="auto"
             >
-                <div className="w-full flex-1 flex flex-col min-h-0 min-w-[500px]">
+                <div className="w-full flex-1 flex flex-col min-h-0 min-w-[320px] sm:min-w-[500px]">
                     <div className="p-6 flex items-center justify-between border-b border-white/10 shrink-0">
-                        <h3 className="text-xl font-bold text-white">Adjust Photo</h3>
-                        <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors">
+                        <h3 className="text-xl font-bold text-white">
+                            {isGif ? 'Animated GIF Photo' : 'Adjust Photo'}
+                        </h3>
+                        <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors" aria-label="Close">
                             <X size={24} />
                         </button>
                     </div>
 
-                    <div className="relative h-96 bg-black/20">
+                    <div className="relative h-96 bg-black/20 flex flex-col items-center justify-center overflow-hidden">
                         {image ? (
-                            <Cropper
-                                image={image}
-                                crop={crop}
-                                zoom={zoom}
-                                aspect={1}
-                                cropShape="round"
-                                showGrid={false}
-                                onCropChange={onCropChange}
-                                onCropComplete={onCropCompleteInternal}
-                                onZoomChange={setZoom}
-                            />
+                            isGif ? (
+                                <div className="flex flex-col items-center justify-center gap-4 p-4 text-center">
+                                    <div className="w-44 h-44 rounded-full overflow-hidden border-4 border-primary-500/50 shadow-2xl bg-black/40 flex items-center justify-center">
+                                        <img 
+                                            src={image} 
+                                            alt="Animated GIF Preview" 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    </div>
+                                    <div className="px-3 py-1 rounded-full bg-primary-500/20 border border-primary-500/30 text-primary-300 text-xs font-bold uppercase tracking-wider animate-pulse">
+                                        ✨ Animated GIF Active
+                                    </div>
+                                </div>
+                            ) : (
+                                <Cropper
+                                    image={image}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    cropShape="round"
+                                    showGrid={false}
+                                    onCropChange={onCropChange}
+                                    onCropComplete={onCropCompleteInternal}
+                                    onZoomChange={setZoom}
+                                />
+                            )
                         ) : (
                             <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors">
                                 <Upload size={48} className="text-primary-500 mb-4" />
-                                <span className="text-white font-medium">Select an image</span>
+                                <span className="text-white font-medium">Select an image or GIF</span>
+                                <span className="text-white/40 text-xs mt-1">Supports JPG, PNG & Animated GIF</span>
                                 <input type="file" className="hidden" accept="image/*" onChange={onSelectFile} />
                             </label>
                         )}
                     </div>
 
                     <div className="p-6 flex items-center justify-between bg-white/5 shrink-0">
-                        {image && (
+                        {image && !isGif && (
                             <div className="flex-1 mr-6">
                                 <input
                                     type="range"
@@ -139,13 +172,13 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
                         )}
                         <div className="flex gap-3 ml-auto">
                             {image && (
-                                <Button variant="ghost" onClick={() => setImage(null)}>
+                                <Button variant="ghost" onClick={() => { setImage(null); setSelectedFile(null); setIsGif(false); }}>
                                     Change
                                 </Button>
                             )}
                             <Button variant="primary" onClick={handleConfirm} disabled={!image}>
                                 <Check size={18} className="mr-2" />
-                                Save Picture
+                                {isGif ? 'Use Animated GIF' : 'Save Picture'}
                             </Button>
                         </div>
                     </div>

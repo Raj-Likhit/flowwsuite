@@ -11,6 +11,7 @@ import { ProfileSelection } from './ProfileSelection';
 import { SafeDangerCards } from './SafeDangerCards';
 import { CustomGoalSection } from './CustomGoalSection';
 import { AuditTrail } from './AuditTrail';
+import { ProfileNotes } from './ProfileNotes';
 import { supabase } from '../../../core/lib/supabase';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
@@ -138,6 +139,7 @@ export const AttendanceView: React.FC = () => {
                     total: activeProfile.total,
                     target_goal: activeProfile.targetGoal ?? 75,
                     logs: activeProfile.logs ?? [],
+                    notes: activeProfile.notes ?? '',
                 })
                 .eq('id', activeProfile.id);
 
@@ -275,6 +277,10 @@ export const AttendanceView: React.FC = () => {
                         totalCount={totalCount}
                         readOnly={isReadOnly}
                     />
+                </div>
+
+                <div className="px-2 sm:px-0">
+                    <ProfileNotes readOnly={isReadOnly} />
                 </div>
 
                 <AuditTrail readOnly={isReadOnly} />

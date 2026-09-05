@@ -23,6 +23,7 @@ export interface Profile {
     is_suspended?: boolean;
     logs?: AttendanceLog[];
     targetGoal?: number;
+    notes?: string;
 }
 
 export type AttendanceAccessMode = 'editable' | 'readOnly';
@@ -51,7 +52,7 @@ interface AttendanceStore {
     deleteLog: (logId: string) => void;
     updateTargetGoal: (profileId: string, goal: number) => void;
     deleteProfile: (profileId: string) => void;
-    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password'>>) => void;
+    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password' | 'notes'>>) => void;
     uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
     syncFromCloud: (profileId: string) => Promise<'updated' | 'in-sync' | 'failed' | 'offline'>;
 }
@@ -190,10 +191,12 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 if (!sp) return null;
 
                 try {
-                    const fileName = `${profileId}-${Date.now()}.jpg`;
+                    const ext = file.type === 'image/gif' ? 'gif' : file.type === 'image/png' ? 'png' : 'jpg';
+                    const contentType = file.type || 'image/jpeg';
+                    const fileName = `${profileId}-${Date.now()}.${ext}`;
                     const { data, error } = await sp.storage
                         .from('avatars')
-                        .upload(fileName, file, { contentType: 'image/jpeg', upsert: true });
+                        .upload(fileName, file, { contentType, upsert: true });
 
                     if (error) throw error;
 
@@ -214,7 +217,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 try {
                     const { data, error } = await supabase!
                         .from('profiles')
-                        .select('attended, total, name, avatar_url, target_goal, logs')
+                        .select('attended, total, name, avatar_url, target_goal, logs, notes')
                         .eq('id', profileId)
                         .single();
 
@@ -226,12 +229,14 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     // Determine which data source wins (cloud is truth on fresh mount)
                     const cloudTargetGoal = (data as Record<string, unknown>).target_goal as number | undefined;
                     const cloudLogs = (data as Record<string, unknown>).logs as AttendanceLog[] | undefined;
+                    const cloudNotes = (data as Record<string, unknown>).notes as string | undefined;
 
                     const hasChanges =
                         local?.attended !== data.attended ||
                         local?.total !== data.total ||
                         (cloudTargetGoal !== undefined && local?.targetGoal !== cloudTargetGoal) ||
-                        (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs));
+                        (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs)) ||
+                        (cloudNotes !== undefined && local?.notes !== cloudNotes);
 
                     if (hasChanges && local) {
                         const mergedProfile = {
@@ -240,6 +245,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                             total: data.total,
                             ...(cloudTargetGoal !== undefined ? { targetGoal: cloudTargetGoal } : {}),
                             ...(cloudLogs !== undefined ? { logs: cloudLogs } : {}),
+                            ...(cloudNotes !== undefined ? { notes: cloudNotes } : {}),
                         };
                         set((s) => ({
                             activeProfile: mergedProfile,

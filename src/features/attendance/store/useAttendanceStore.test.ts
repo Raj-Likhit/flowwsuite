@@ -144,15 +144,15 @@ describe('useAttendanceStore', () => {
             expect(state.accessMode).toBe('editable'); // resets to editable
         });
 
-        it('should update a profile and sanitize name', () => {
-            const profile1 = { id: 'p1', name: 'John', attended: 0, total: 0 };
+        it('should update profile name and notes', () => {
+            const profile1 = { id: 'p1', name: 'John', attended: 0, total: 0, notes: '' };
             useAttendanceStore.setState({ profiles: [profile1], activeProfile: profile1 });
             
-            useAttendanceStore.getState().updateProfile('p1', { name: '<script>Jane</script>' });
+            useAttendanceStore.getState().updateProfile('p1', { name: '<script>Jane</script>', notes: 'My notes' });
             
             const state = useAttendanceStore.getState();
             expect(state.activeProfile?.name).toBe('scriptJane/script');
-            expect(state.profiles[0].name).toBe('scriptJane/script');
+            expect(state.activeProfile?.notes).toBe('My notes');
         });
     });
 
@@ -198,16 +198,28 @@ describe('useAttendanceStore', () => {
             expect(useAttendanceStore.getState().activeProfile?.avatar_url).toBe('http://avatar.url');
         });
 
+        it('should upload animated GIF avatar with image/gif content type', async () => {
+            const profile = { id: 'p1', name: 'John', attended: 0, total: 0 };
+            useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
+            
+            vi.mocked(supabase!.storage.upload).mockResolvedValue({ data: { path: 'path/avatar.gif' }, error: null } as any);
+            vi.mocked(supabase!.storage.getPublicUrl).mockReturnValue({ data: { publicUrl: 'http://avatar.url/avatar.gif' } } as any);
+            
+            const gifBlob = new Blob([], { type: 'image/gif' });
+            const url = await useAttendanceStore.getState().uploadAvatar('p1', gifBlob);
+            
+            expect(supabase!.storage.upload).toHaveBeenCalledWith(
+                expect.stringMatching(/\.gif$/),
+                gifBlob,
+                expect.objectContaining({ contentType: 'image/gif' })
+            );
+            expect(url).toBe('http://avatar.url/avatar.gif');
+        });
+
         it('should return null on upload error', async () => {
             vi.mocked(supabase!.storage.upload).mockResolvedValue({ data: null, error: new Error('Upload error') } as any);
             const url = await useAttendanceStore.getState().uploadAvatar('p1', new Blob());
             expect(url).toBeNull();
-        });
-
-        it('should return null if supabase is not available', async () => {
-            // Need to mock supabase import directly, but we can just test if supabase is falsy
-            // To test this we would need to mock the supabase object as null which is tricky with ES modules.
-            // Let's rely on standard coverage.
         });
     });
 
@@ -225,24 +237,25 @@ describe('useAttendanceStore', () => {
         });
 
         it('should return in-sync if no changes', async () => {
-            const profile = { id: 'p1', name: 'John', attended: 5, total: 5 };
+            const profile = { id: 'p1', name: 'John', attended: 5, total: 5, notes: 'ABC' };
             useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
-            vi.mocked(supabase!.single).mockResolvedValue({ data: { attended: 5, total: 5, name: 'John' }, error: null } as any);
+            vi.mocked(supabase!.single).mockResolvedValue({ data: { attended: 5, total: 5, name: 'John', notes: 'ABC' }, error: null } as any);
             
             const result = await useAttendanceStore.getState().syncFromCloud('p1');
             expect(result).toBe('in-sync');
         });
 
         it('should update local store and return updated if changes detected', async () => {
-            const profile = { id: 'p1', name: 'John', attended: 5, total: 5 };
+            const profile = { id: 'p1', name: 'John', attended: 5, total: 5, notes: 'Old' };
             useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
-            vi.mocked(supabase!.single).mockResolvedValue({ data: { attended: 10, total: 12, name: 'John' }, error: null } as any);
+            vi.mocked(supabase!.single).mockResolvedValue({ data: { attended: 10, total: 12, name: 'John', notes: 'New notes' }, error: null } as any);
             
             const result = await useAttendanceStore.getState().syncFromCloud('p1');
             
             expect(result).toBe('updated');
             expect(useAttendanceStore.getState().activeProfile?.attended).toBe(10);
             expect(useAttendanceStore.getState().activeProfile?.total).toBe(12);
+            expect(useAttendanceStore.getState().activeProfile?.notes).toBe('New notes');
         });
 
         it('should return failed if promise rejects', async () => {

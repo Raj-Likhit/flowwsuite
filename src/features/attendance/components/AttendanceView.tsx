@@ -280,9 +280,11 @@ export const AttendanceView: React.FC = () => {
                     />
                 </div>
 
-                <div className="px-2 sm:px-0">
-                    <ProfileNotes readOnly={isReadOnly} />
-                </div>
+                {!isReadOnly && (
+                    <div className="px-2 sm:px-0">
+                        <ProfileNotes readOnly={isReadOnly} />
+                    </div>
+                )}
 
                 <AuditTrail readOnly={isReadOnly} />
 

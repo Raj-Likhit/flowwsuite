@@ -87,7 +87,7 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
         });
     };
 
-    if (!activeProfile) return null;
+    if (!activeProfile || readOnly) return null;
 
     return (
         <section aria-labelledby="profile-notes-heading" className="w-full">

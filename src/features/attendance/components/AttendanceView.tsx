@@ -144,23 +144,24 @@ export const AttendanceView: React.FC = () => {
                 .eq('id', activeProfile.id);
 
             if (error) {
-                if (error.code === '42703') {
-                    setSyncError('Database Column Missing. Please add attended/total columns.');
-                    toast.error('Database configuration error.');
-                } else {
-                    setSyncError(error.message);
-                    toast.error(error.message);
-                }
-                throw error;
+                console.error('Sync failed:', error);
+                const msg = error.code === '42703'
+                    ? 'Database schema out of date. Please refresh or contact support.'
+                    : error.message || 'Failed to sync to cloud';
+                setSyncError(msg);
+                toast.error(msg);
+                return;
             }
 
             setSyncSuccess(true);
+            setSyncError(null);
             toast.success('Successfully synced to cloud');
             setTimeout(() => setSyncSuccess(false), 2000);
         } catch (err: unknown) {
             console.error('Sync failed:', err);
-            setSyncError('Failed to sync. Please try again.');
-            toast.error('Failed to sync to cloud');
+            const msg = err instanceof Error ? err.message : 'Failed to sync to cloud';
+            setSyncError(msg);
+            toast.error(msg);
         } finally {
             setLoading(false);
             isSyncing.current = false;

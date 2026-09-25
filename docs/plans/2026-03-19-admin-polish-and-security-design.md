@@ -31,7 +31,7 @@ This design covers the visual polish of the Admin Portal login page, performance
     - **Registration**: Hash the user's password before calling `supabase.from('profiles').insert()`.
     - **Login**: Use `bcrypt.compare()` to verify the entered password against the stored hash.
     - **Legacy Compatibility**: Implement a "Check & Upgrade" logic. If `storedPassword === inputPassword` (plain match) and the stored password does *not* look like a bcrypt hash, allow login and immediately trigger a background update to replace the plain-text password with its hash.
-  - **Admin Unlock**: The 'AdminUnlock' hardcoded string will be replaced with a more robust (though still local for now) hashed check if possible, or left as is if the user prefers simple utility access.
+  - **Admin Unlock**: The 'AdminUnlock' hardcoded string has been completely removed in favor of pure RBAC checking.
 
 ### 4. MOBILE VIEW OPTIMIZATION
 - **Issues**: Clipping titles, dock overlapping cards, large headers.

@@ -183,15 +183,16 @@ export const AdminDashboard = () => {
                                     <tr className="border-b border-white/5">
                                         <th className="px-5 py-4 text-[9px] font-black uppercase text-white/25 tracking-[0.2em]">User</th>
                                         <th className="px-5 py-4 text-[9px] font-black uppercase text-white/25 tracking-[0.2em]">Status</th>
+                                        <th className="px-5 py-4 text-[9px] font-black uppercase text-white/25 tracking-[0.2em]">Last Active</th>
                                         <th className="px-5 py-4 text-[9px] font-black uppercase text-white/25 tracking-[0.2em] text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     <AnimatePresence mode="popLayout">
                                         {isLoading ? (
-                                            <tr><td colSpan={3} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase animate-pulse">Loading...</td></tr>
+                                            <tr><td colSpan={4} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase animate-pulse">Loading...</td></tr>
                                         ) : filteredUsers.length === 0 ? (
-                                            <tr><td colSpan={3} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase">
+                                            <tr><td colSpan={4} className="px-5 py-10 text-center text-white/20 text-[9px] font-black tracking-widest uppercase">
                                                 {searchQuery ? `No profiles matching "${searchQuery}"` : 'No profiles found.'}
                                             </td></tr>
                                         ) : filteredUsers.map(user => (
@@ -205,6 +206,7 @@ export const AdminDashboard = () => {
                                                 isSuspended={user.is_suspended}
                                                 attended={user.attended}
                                                 total={user.total}
+                                                lastActiveAt={user.last_active_at}
                                                 onEdit={handleEditUser}
                                                 onSuspend={suspendUser}
                                                 onTerminate={terminateUser}
@@ -303,10 +305,13 @@ export const AdminDashboard = () => {
                                 </button>
                                 <button
                                     onClick={async () => {
+                                        const safeTotal = Math.max(0, editTotal);
+                                        const safeAttended = Math.max(0, Math.min(editAttended, safeTotal));
+                                        
                                         const success = await updateUser(editingUser.id, {
                                             name: editName.trim(),
-                                            attended: Math.max(0, editAttended),
-                                            total: Math.max(0, editTotal)
+                                            attended: safeAttended,
+                                            total: safeTotal
                                         });
                                         if (success) setEditingUser(null);
                                     }}

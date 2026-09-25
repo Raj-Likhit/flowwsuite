@@ -60,6 +60,23 @@ export const AttendanceView: React.FC = () => {
         syncFromCloud(activeProfileId).then((result) => {
             if (result === 'updated') {
                 toast.info('Data refreshed from cloud');
+            } else if (result === 'conflict') {
+                toast.warning('Unsynced local changes detected', {
+                    description: 'Keep your local changes, or overwrite with cloud data?',
+                    duration: 10000,
+                    action: {
+                        label: 'Use Cloud',
+                        onClick: () => {
+                            syncFromCloud(activeProfileId, true).then(res => {
+                                if (res === 'updated') toast.success('Overwritten with cloud data');
+                            });
+                        }
+                    },
+                    cancel: {
+                        label: 'Keep Local',
+                        onClick: () => toast.info('Keeping local changes. Sync manually to upload.')
+                    }
+                });
             }
         });
     }, [activeProfileId, isReadOnly, syncFromCloud]);

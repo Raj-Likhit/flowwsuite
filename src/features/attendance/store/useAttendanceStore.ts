@@ -20,6 +20,7 @@ export interface Profile {
     avatar_url?: string;
     password?: string;
     created_at?: string;
+    updated_at?: number;
     is_suspended?: boolean;
     logs?: AttendanceLog[];
     targetGoal?: number;
@@ -54,7 +55,7 @@ interface AttendanceStore {
     deleteProfile: (profileId: string) => void;
     updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password' | 'notes'>>) => void;
     uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
-    syncFromCloud: (profileId: string) => Promise<'updated' | 'in-sync' | 'failed' | 'offline'>;
+    syncFromCloud: (profileId: string, force?: boolean) => Promise<'updated' | 'in-sync' | 'failed' | 'offline' | 'conflict'>;
 }
 
 export const useAttendanceStore = create<AttendanceStore>()(
@@ -118,6 +119,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                         ...state.activeProfile,
                         attended,
                         total,
+                        updated_at: Date.now(),
                         logs: [newLog, ...(state.activeProfile.logs || [])].slice(0, 50) // keep last 50 logs
                     };
                     return {
@@ -131,8 +133,8 @@ export const useAttendanceStore = create<AttendanceStore>()(
             },
 
             updateTargetGoal: (profileId, goal) => set((state) => ({
-                profiles: state.profiles.map((p) => p.id === profileId ? { ...p, targetGoal: goal } : p),
-                activeProfile: state.activeProfile?.id === profileId ? { ...state.activeProfile, targetGoal: goal } : state.activeProfile
+                profiles: state.profiles.map((p) => p.id === profileId ? { ...p, targetGoal: goal, updated_at: Date.now() } : p),
+                activeProfile: state.activeProfile?.id === profileId ? { ...state.activeProfile, targetGoal: goal, updated_at: Date.now() } : state.activeProfile
             })),
 
             deleteProfile: (profileId) =>
@@ -149,7 +151,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
             updateProfile: (profileId, updates) =>
                 set((state) => {
-                    const sanitizedUpdates = { ...updates };
+                    const sanitizedUpdates: Partial<Profile> = { ...updates, updated_at: Date.now() };
                     if (updates.name) sanitizedUpdates.name = sanitize(updates.name);
 
                     const updatedProfiles = state.profiles.map((p) =>
@@ -175,6 +177,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                         ...state.activeProfile,
                         attended: newAttended,
                         total: newTotal,
+                        updated_at: Date.now(),
                         logs: state.activeProfile.logs.filter((l) => l.id !== logId),
                     };
 
@@ -212,7 +215,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 }
             },
             
-            syncFromCloud: async (profileId) => {
+            syncFromCloud: async (profileId, force = false) => {
                 if (!isSupabaseAvailable()) return 'offline';
                 try {
                     const { data, error } = await supabase!
@@ -237,6 +240,12 @@ export const useAttendanceStore = create<AttendanceStore>()(
                         (cloudTargetGoal !== undefined && local?.targetGoal !== cloudTargetGoal) ||
                         (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs)) ||
                         (cloudNotes !== undefined && local?.notes !== cloudNotes);
+
+                    const hasLocalChanges = local?.updated_at && state.lastSyncedAt && local.updated_at > state.lastSyncedAt;
+
+                    if (hasChanges && hasLocalChanges && !force) {
+                        return 'conflict';
+                    }
 
                     if (hasChanges && local) {
                         const mergedProfile = {

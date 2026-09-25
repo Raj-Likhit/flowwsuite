@@ -12,6 +12,7 @@ export interface AdminProfile {
     attended?: number;
     total?: number;
     created_at?: string;
+    last_active_at?: string | null;
 }
 
 export interface Announcement {

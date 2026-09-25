@@ -258,6 +258,49 @@ describe('useAttendanceStore', () => {
             expect(useAttendanceStore.getState().activeProfile?.notes).toBe('New notes');
         });
 
+        it('should detect conflict when local changes are newer than lastSyncedAt and not force overwrite', async () => {
+            const now = Date.now();
+            const profile = { id: 'p1', name: 'John', attended: 8, total: 8, notes: 'Offline bus edits', updated_at: now + 5000 };
+            useAttendanceStore.setState({
+                profiles: [profile],
+                activeProfile: profile,
+                lastSyncedAt: now,
+            });
+
+            vi.mocked(supabase!.single).mockResolvedValue({
+                data: { attended: 5, total: 5, name: 'John', notes: 'Old cloud note' },
+                error: null,
+            } as any);
+
+            const result = await useAttendanceStore.getState().syncFromCloud('p1');
+
+            expect(result).toBe('conflict');
+            // Local data should remain untouched
+            expect(useAttendanceStore.getState().activeProfile?.attended).toBe(8);
+            expect(useAttendanceStore.getState().activeProfile?.notes).toBe('Offline bus edits');
+        });
+
+        it('should force overwrite local changes if force parameter is true during conflict', async () => {
+            const now = Date.now();
+            const profile = { id: 'p1', name: 'John', attended: 8, total: 8, notes: 'Offline bus edits', updated_at: now + 5000 };
+            useAttendanceStore.setState({
+                profiles: [profile],
+                activeProfile: profile,
+                lastSyncedAt: now,
+            });
+
+            vi.mocked(supabase!.single).mockResolvedValue({
+                data: { attended: 5, total: 5, name: 'John', notes: 'Cloud source of truth' },
+                error: null,
+            } as any);
+
+            const result = await useAttendanceStore.getState().syncFromCloud('p1', true);
+
+            expect(result).toBe('updated');
+            expect(useAttendanceStore.getState().activeProfile?.attended).toBe(5);
+            expect(useAttendanceStore.getState().activeProfile?.notes).toBe('Cloud source of truth');
+        });
+
         it('should return failed if promise rejects', async () => {
             vi.mocked(supabase!.single).mockRejectedValue(new Error('Network error'));
             const result = await useAttendanceStore.getState().syncFromCloud('p1');

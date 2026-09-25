@@ -41,15 +41,20 @@ export const AttendanceControls = React.memo(({
     const handleTotalBlur = () => {
         const t = isNaN(parsedTotal) ? 0 : Math.max(0, parsedTotal);
         const a = isNaN(parsedAttended) ? 0 : Math.max(0, parsedAttended);
+        const clampedA = Math.min(a, t); // if total drops below attended, attended must drop
         setLocalTotal(t > 0 ? String(t) : '');
-        commitValues(a, t);
+        if (a !== clampedA) {
+            setLocalAttended(clampedA > 0 ? String(clampedA) : '');
+        }
+        commitValues(clampedA, t);
     };
 
     const handleAttendedBlur = () => {
         const t = isNaN(parsedTotal) ? 0 : Math.max(0, parsedTotal);
         const a = isNaN(parsedAttended) ? 0 : Math.max(0, parsedAttended);
-        setLocalAttended(a > 0 ? String(a) : '');
-        commitValues(a, t);
+        const clampedA = Math.min(a, t); // attended cannot exceed total
+        setLocalAttended(clampedA > 0 ? String(clampedA) : '');
+        commitValues(clampedA, t);
     };
 
     return (
@@ -64,8 +69,13 @@ export const AttendanceControls = React.memo(({
                         whileTap={{ scale: 0.9 }}
                         onClick={() => {
                             const newTotal = Math.max(0, (isNaN(parsedTotal) ? 0 : parsedTotal) - 1);
+                            const curAttended = isNaN(parsedAttended) ? 0 : parsedAttended;
+                            const clampedAttended = Math.min(curAttended, newTotal);
                             setLocalTotal(newTotal > 0 ? String(newTotal) : '');
-                            commitValues(isNaN(parsedAttended) ? 0 : parsedAttended, newTotal);
+                            if (curAttended !== clampedAttended) {
+                                setLocalAttended(clampedAttended > 0 ? String(clampedAttended) : '');
+                            }
+                            commitValues(clampedAttended, newTotal);
                         }}
                         disabled={readOnly}
                         className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

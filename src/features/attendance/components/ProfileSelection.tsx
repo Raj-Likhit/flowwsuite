@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, User, Loader2, AlertTriangle, RefreshCw, Check, Eye } from 'lucide-react';
 import { useAttendanceStore, type Profile } from '../store/useAttendanceStore';
 import { supabase } from '../../../core/lib/supabase';
+import { createProfileRepository, ProfileRepository } from '../repository/profileRepository';
 import { GlassCard } from '../../../shared/components/GlassCard';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
@@ -88,14 +89,17 @@ export const ProfileSelection: React.FC = () => {
     const fetchProfiles = useCallback(async (isRefresh = false) => {
         if (isRefresh) setIsRefreshing(true);
         else setLoading(true);
-        if (!supabase) return;
+
+        const repo = createProfileRepository(supabase);
+        if (!repo) {
+            if (isRefresh) setIsRefreshing(false);
+            else setLoading(false);
+            return;
+        }
+
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: true });
-            if (error) throw error;
-            if (data) setProfiles(data);
+            const data = await repo.fetchAll();
+            setProfiles(data);
             if (isRefresh) toast.success('Profiles refreshed');
         } catch (err: unknown) {
             console.error('Error fetching profiles:', err);
@@ -139,42 +143,32 @@ export const ProfileSelection: React.FC = () => {
             const isCustom = selectedAvatar.startsWith('blob:');
             const initialAvatarUrl = isCustom ? '' : selectedAvatar;
 
-            if (!supabase) throw new Error('Supabase not initialized');
+            const repo = createProfileRepository(supabase);
+            if (!repo) throw new Error('Supabase not initialized');
             
-            // Hash the new password
-            const bcrypt = (await import('bcryptjs')).default;
-            const hashedPassword = await bcrypt.hash(newPassword || '123', 10);
+            // Hash the new password via repository
+            const hashedPassword = await ProfileRepository.hashPassword(newPassword || '123');
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .insert([{ 
-                    name: newName.trim(), 
-                    avatar_url: initialAvatarUrl, 
-                    password: hashedPassword,
-                    attended: 0, 
-                    total: 0 
-                }])
-                .select()
-                .single();
+            const newProfile = await repo.create({ 
+                name: newName.trim(), 
+                avatar_url: initialAvatarUrl, 
+                password: hashedPassword,
+                attended: 0, 
+                total: 0 
+            });
             
-            if (error) throw error;
-            
-            let finalId = '';
-            if (data) {
-                finalId = data.id;
-                setProfiles([...profiles, data]);
+            const finalId = newProfile?.id || '';
+            if (newProfile) {
+                setProfiles([...profiles, newProfile]);
             }
             toast.success('Profile created!');
 
             // Handle custom avatar upload if selected
             if (customAvatarBlob && finalId) {
                 const publicUrl = await uploadAvatar(finalId, customAvatarBlob);
-                if (publicUrl && supabase) {
-                    // Save the permanent URL to Supabase immediately
-                    await supabase
-                        .from('profiles')
-                        .update({ avatar_url: publicUrl, is_flagged: true })
-                        .eq('id', finalId);
+                if (publicUrl) {
+                    // Save the permanent URL to Supabase immediately via repository
+                    await repo.update(finalId, { avatar_url: publicUrl, is_flagged: true });
                     
                     // Update state locally so UI reflects change immediately
                     updateProfile(finalId, { avatar_url: publicUrl });
@@ -212,17 +206,8 @@ export const ProfileSelection: React.FC = () => {
             setLoginAttempts(0);
         }
 
-        let correct = false;
-        let needsMigration = false;
         const stored = passwordPromptProfile.password || '123';
-        
-        if (typeof stored === 'string' && stored.startsWith('$2')) {
-            const bcrypt = (await import('bcryptjs')).default;
-            correct = await bcrypt.compare(enteredPassword, stored);
-        } else {
-            correct = enteredPassword === stored;
-            if (correct) needsMigration = true;
-        }
+        const { correct, needsMigration } = await ProfileRepository.verifyPassword(enteredPassword, stored);
 
         if (!correct) {
             setPasswordError(true);
@@ -243,14 +228,17 @@ export const ProfileSelection: React.FC = () => {
         setActiveProfile(passwordPromptProfile, 'editable');
         closePasswordPrompt();
 
-        if (needsMigration && supabase) {
-            const bcrypt = (await import('bcryptjs')).default;
-            const hashed = await bcrypt.hash(enteredPassword, 10);
-            await supabase
-                .from('profiles')
-                .update({ password: hashed })
-                .eq('id', passwordPromptProfile.id);
-            updateProfile(passwordPromptProfile.id, { password: hashed });
+        if (needsMigration) {
+            const repo = createProfileRepository(supabase);
+            if (repo) {
+                try {
+                    const hashed = await ProfileRepository.hashPassword(enteredPassword);
+                    await repo.update(passwordPromptProfile.id, { password: hashed });
+                    updateProfile(passwordPromptProfile.id, { password: hashed });
+                } catch (err) {
+                    console.error('Password migration failed:', err);
+                }
+            }
         }
     };
 

@@ -39,7 +39,11 @@ export interface AvatarUploadResult {
 // ─── Repository ──────────────────────────────────────────────────────────────
 
 export class ProfileRepository {
-  constructor(private readonly db: SupabaseClient) {}
+  private readonly db: SupabaseClient;
+
+  constructor(db: SupabaseClient) {
+    this.db = db;
+  }
 
   /** Fetch all profiles ordered by creation date (ascending). */
   async fetchAll(): Promise<Profile[]> {

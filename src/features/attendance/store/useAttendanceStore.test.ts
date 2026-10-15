@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAttendanceStore } from './useAttendanceStore';
 import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';

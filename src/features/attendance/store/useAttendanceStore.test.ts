@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAttendanceStore } from './useAttendanceStore';
 import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';
+import { ProfileRepository } from '../repository/profileRepository';
 
 // Mock supabase and crypto
 vi.mock('../../../core/lib/supabase', () => ({
@@ -220,6 +220,21 @@ describe('useAttendanceStore', () => {
             vi.mocked(supabase!.storage.upload).mockResolvedValue({ data: null, error: new Error('Upload error') } as any);
             const url = await useAttendanceStore.getState().uploadAvatar('p1', new Blob());
             expect(url).toBeNull();
+        });
+
+        it('should delegate to ProfileRepository.prototype.uploadAvatar', async () => {
+            const profile = { id: 'p1', name: 'Alice', attended: 0, total: 0 };
+            useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
+
+            const uploadSpy = vi.spyOn(ProfileRepository.prototype, 'uploadAvatar')
+                .mockResolvedValueOnce({ publicUrl: 'https://example.com/avatar.jpg' });
+
+            const file = new Blob(['data'], { type: 'image/jpeg' });
+            const url = await useAttendanceStore.getState().uploadAvatar('p1', file);
+
+            expect(uploadSpy).toHaveBeenCalledWith('p1', file);
+            expect(url).toBe('https://example.com/avatar.jpg');
+            expect(useAttendanceStore.getState().activeProfile?.avatar_url).toBe('https://example.com/avatar.jpg');
         });
     });
 

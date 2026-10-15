@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';
+import { createProfileRepository } from '../repository/profileRepository';
 
 const sanitize = (str: string) => str.replace(/[<>]/g, '').slice(0, 100).trim();
 
@@ -190,24 +191,12 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 }),
 
             uploadAvatar: async (profileId, file) => {
-                const sp = supabase;
-                if (!sp) return null;
+                const repo = createProfileRepository(supabase);
+                if (!repo) return null;
 
                 try {
-                    const ext = file.type === 'image/gif' ? 'gif' : file.type === 'image/png' ? 'png' : 'jpg';
-                    const contentType = file.type || 'image/jpeg';
-                    const fileName = `${profileId}-${Date.now()}.${ext}`;
-                    const { data, error } = await sp.storage
-                        .from('avatars')
-                        .upload(fileName, file, { contentType, upsert: true });
-
-                    if (error) throw error;
-
-                    const { data: { publicUrl } } = sp.storage.from('avatars').getPublicUrl(data.path);
-
-                    // Update profile with new avatar URL
+                    const { publicUrl } = await repo.uploadAvatar(profileId, file);
                     useAttendanceStore.getState().updateProfile(profileId, { avatar_url: publicUrl });
-
                     return publicUrl;
                 } catch (error) {
                     console.error('Upload failed:', error);
@@ -217,26 +206,24 @@ export const useAttendanceStore = create<AttendanceStore>()(
             
             syncFromCloud: async (profileId, force = false) => {
                 if (!isSupabaseAvailable()) return 'offline';
-                try {
-                    const { data, error } = await supabase!
-                        .from('profiles')
-                        .select('attended, total, name, avatar_url, target_goal, logs, notes')
-                        .eq('id', profileId)
-                        .single();
+                const repo = createProfileRepository(supabase);
+                if (!repo) return 'offline';
 
-                    if (error || !data) return 'failed';
+                try {
+                    const cloudData = await repo.fetchOne(profileId);
+                    if (!cloudData) return 'failed';
 
                     const state = useAttendanceStore.getState();
                     const local = state.activeProfile;
 
                     // Determine which data source wins (cloud is truth on fresh mount)
-                    const cloudTargetGoal = (data as Record<string, unknown>).target_goal as number | undefined;
-                    const cloudLogs = (data as Record<string, unknown>).logs as AttendanceLog[] | undefined;
-                    const cloudNotes = (data as Record<string, unknown>).notes as string | undefined;
+                    const cloudTargetGoal = cloudData.target_goal;
+                    const cloudLogs = cloudData.logs;
+                    const cloudNotes = cloudData.notes;
 
                     const hasChanges =
-                        local?.attended !== data.attended ||
-                        local?.total !== data.total ||
+                        local?.attended !== cloudData.attended ||
+                        local?.total !== cloudData.total ||
                         (cloudTargetGoal !== undefined && local?.targetGoal !== cloudTargetGoal) ||
                         (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs)) ||
                         (cloudNotes !== undefined && local?.notes !== cloudNotes);
@@ -250,8 +237,8 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     if (hasChanges && local) {
                         const mergedProfile = {
                             ...local,
-                            attended: data.attended,
-                            total: data.total,
+                            attended: cloudData.attended,
+                            total: cloudData.total,
                             ...(cloudTargetGoal !== undefined ? { targetGoal: cloudTargetGoal } : {}),
                             ...(cloudLogs !== undefined ? { logs: cloudLogs } : {}),
                             ...(cloudNotes !== undefined ? { notes: cloudNotes } : {}),

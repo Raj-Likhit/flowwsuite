@@ -12,7 +12,7 @@
 | Step | Description | Status |
 | --- | --- | --- |
 | Task 1 | SPA navigation with `useNavigate` in `App.tsx` & clean up `src/store/` | Completed |
-| Task 2 | Extract Announcement Service & `useAnnouncement` hook from `AttendanceView` | Pending |
+| Task 2 | Extract Announcement Service & `useAnnouncement` hook from `AttendanceView` | Completed |
 | Task 3 | Split `SettingsMenu.tsx` into modular panels & `useSettingsActions` hook | Pending |
 | Task 4 | Decompose `ProfileSelection.tsx` into `ProfileCard`, `AddProfileModal`, `PasswordUnlockModal` | Pending |
 

@@ -17,14 +17,7 @@ import { createProfileRepository } from '../repository/profileRepository';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import { AnnouncementModal } from '../../../shared/components/AnnouncementModal';
-
-interface Announcement {
-    id: string;
-    content: string;
-    target_profile_ids: string[] | null;
-    created_at: string;
-    seen_by_profile_ids?: string[] | null;
-}
+import { useAnnouncement } from '../hooks/useAnnouncement';
 
 const formatRelativeTime = (ts: number): string => {
     const diff = Date.now() - ts;
@@ -49,11 +42,11 @@ export const AttendanceView: React.FC = () => {
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [activeAnnouncement, setActiveAnnouncement] = useState<Announcement | null>(null);
     const { generateReport } = useAttendanceReport();
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
     const activeProfileId = activeProfile?.id;
+    const { activeAnnouncement, dismiss: handleDismissAnnouncement } = useAnnouncement(activeProfileId, isReadOnly);
 
     // Fetch cloud data on mount
     useEffect(() => {
@@ -82,66 +75,13 @@ export const AttendanceView: React.FC = () => {
         });
     }, [activeProfileId, isReadOnly, syncFromCloud]);
 
-    // Fetch announcements on mount
-    useEffect(() => {
-        const fetchAnnouncement = async () => {
-            if (isReadOnly || !supabase || !activeProfile) {
-                if (isReadOnly) setActiveAnnouncement(null);
-                return;
-            }
-
-            try {
-                const { data, error } = await supabase
-                    .from('announcements')
-                    .select('id, content, target_profile_ids, created_at, seen_by_profile_ids')
-                    .eq('is_active', true)
-                    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-                    .or(`target_profile_ids.is.null,target_profile_ids.cs.{${activeProfile.id}}`)
-                    .order('created_at', { ascending: false })
-                    .limit(10); // Fetch top 10 to find first unseen
-
-                if (data && !error && activeProfile) {
-                    const unread = data.find(a => !a.seen_by_profile_ids?.includes(activeProfile.id));
-                    if (unread) {
-                        setActiveAnnouncement(unread);
-                    }
-                }
-            } catch (err) {
-                console.error("Graceful Fallback: Failed to fetch announcements:", err);
-            }
-        };
-
-        if (activeProfile && !isReadOnly) {
-            fetchAnnouncement();
-        }
-    }, [activeProfile, isReadOnly]);
-
     useEffect(() => {
         if (isReadOnly) {
             setShowResetConfirm(false);
             setSyncSuccess(false);
             setSyncError(null);
-            setActiveAnnouncement(null);
         }
     }, [isReadOnly]);
-
-    const handleDismissAnnouncement = async () => {
-        if (activeAnnouncement && activeProfile) {
-            const annId = activeAnnouncement.id;
-            setActiveAnnouncement(null);
-            
-            if (supabase) {
-                try {
-                    await supabase.rpc('mark_announcement_seen', {
-                        announcement_id: annId,
-                        p_id: activeProfile.id
-                    });
-                } catch (err) {
-                    console.error("Failed to mark announcement as seen", err);
-                }
-            }
-        }
-    };
 
     const handleSync = async () => {
         if (!activeProfile || isSyncing.current || isReadOnly) return;

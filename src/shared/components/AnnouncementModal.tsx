@@ -3,12 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Megaphone, CheckCircle } from 'lucide-react';
 import GlassSurface from './ui/reactbits/GlassSurface';
 import { Button } from './ui/Button';
-
-interface Announcement {
-    id: string;
-    content: string;
-    created_at?: string;
-}
+import type { Announcement } from '../types/announcement.types';
 
 interface AnnouncementModalProps {
     announcement: Announcement | null;

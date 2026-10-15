@@ -7,6 +7,8 @@ import { GlassCard } from './GlassCard';
 import { toast } from 'sonner';
 import { ProfilePicturePicker } from './ProfilePicturePicker';
 import { usePushNotifications } from '../../features/attendance/hooks/usePushNotifications';
+import { supabase } from '../../core/lib/supabase';
+import { createProfileRepository, ProfileRepository } from '../../features/attendance/repository/profileRepository';
 
 export const SettingsMenu: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -223,13 +225,9 @@ export const SettingsMenu: React.FC = () => {
                                                                 return;
                                                             }
                                                             try {
-                                                                const { supabase: sp } = await import('../../core/lib/supabase');
-                                                                if (sp) {
-                                                                    const { error } = await sp
-                                                                        .from('profiles')
-                                                                        .update({ name: newName.trim() })
-                                                                        .eq('id', activeProfile.id);
-                                                                    if (error) throw error;
+                                                                const repo = createProfileRepository(supabase);
+                                                                if (repo) {
+                                                                    await repo.update(activeProfile.id, { name: newName.trim() });
                                                                 }
                                                                 updateProfile(activeProfile.id, { name: newName.trim() });
                                                                 toast.success("Name updated!");
@@ -267,15 +265,10 @@ export const SettingsMenu: React.FC = () => {
                                                             }
                                                             const loadingToast = toast.loading("Hashing & saving...");
                                                             try {
-                                                                const bcrypt = (await import('bcryptjs')).default;
-                                                                const hashedPassword = await bcrypt.hash(newPassword.trim(), 10);
-                                                                const { supabase: sp } = await import('../../core/lib/supabase');
-                                                                if (sp) {
-                                                                    const { error } = await sp
-                                                                        .from('profiles')
-                                                                        .update({ password: hashedPassword })
-                                                                        .eq('id', activeProfile.id);
-                                                                    if (error) throw error;
+                                                                const hashedPassword = await ProfileRepository.hashPassword(newPassword.trim());
+                                                                const repo = createProfileRepository(supabase);
+                                                                if (repo) {
+                                                                    await repo.update(activeProfile.id, { password: hashedPassword });
                                                                 }
                                                                 updateProfile(activeProfile.id, { password: hashedPassword });
                                                                 toast.success("Security updated!", { id: loadingToast });
@@ -338,20 +331,18 @@ export const SettingsMenu: React.FC = () => {
                                                                     }
                                                                     const loadingToast = toast.loading("Deleting profile...");
                                                                     try {
-                                                                        const bcrypt = (await import('bcryptjs')).default;
-                                                                        const isMatch = await bcrypt.compare(deletePassword, activeProfile.password || '');
-                                                                        if (!isMatch) {
+                                                                        const { correct } = await ProfileRepository.verifyPassword(
+                                                                            deletePassword,
+                                                                            activeProfile.password || ''
+                                                                        );
+                                                                        if (!correct) {
                                                                             toast.error("Incorrect password", { id: loadingToast });
                                                                             return;
                                                                         }
                                                                         
-                                                                        const { supabase: sp } = await import('../../core/lib/supabase');
-                                                                        if (sp) {
-                                                                            const { error } = await sp
-                                                                                .from('profiles')
-                                                                                .delete()
-                                                                                .eq('id', activeProfile.id);
-                                                                            if (error) throw error;
+                                                                        const repo = createProfileRepository(supabase);
+                                                                        if (repo) {
+                                                                            await repo.delete(activeProfile.id);
                                                                         }
                                                                         deleteProfile(activeProfile.id);
                                                                         toast.success("Profile deleted successfully", { id: loadingToast });
@@ -397,9 +388,9 @@ export const SettingsMenu: React.FC = () => {
                             try {
                                 const publicUrl = await uploadAvatar(activeProfile.id, blob);
                                 if (publicUrl) {
-                                    const { supabase: sp } = await import('../../core/lib/supabase');
-                                    if (sp) {
-                                        await sp.from('profiles').update({ avatar_url: publicUrl, is_flagged: true }).eq('id', activeProfile.id);
+                                    const repo = createProfileRepository(supabase);
+                                    if (repo) {
+                                        await repo.update(activeProfile.id, { avatar_url: publicUrl, is_flagged: true });
                                     }
                                     updateProfile(activeProfile.id, { avatar_url: publicUrl });
                                     toast.success("Avatar updated!", { id: loadingToast });

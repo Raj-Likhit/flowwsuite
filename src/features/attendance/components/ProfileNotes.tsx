@@ -42,11 +42,10 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
     const persistNotesToDb = useCallback(async (profileId: string, notes: string) => {
         try {
             const { supabase } = await import('../../../core/lib/supabase');
-            if (!supabase) return;
-            await supabase
-                .from('profiles')
-                .update({ notes })
-                .eq('id', profileId);
+            const { createProfileRepository } = await import('../repository/profileRepository');
+            const repo = createProfileRepository(supabase);
+            if (!repo) return;
+            await repo.update(profileId, { notes });
         } catch {
             // Silent fail — data is already saved locally; user can still sync manually
         }

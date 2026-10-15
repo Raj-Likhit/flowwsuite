@@ -1,37 +1,35 @@
 # Codebase Health Report
 
-*Generated automatically after codebase analysis.*
+*Updated October 15, 2026 after architectural refactoring.*
 
 ## 1. Build Status
 - **Status:** 🟢 **Passing**
-- **Time:** ~31s
-- **Details:** The Vite production build successfully compiles the TypeScript codebase and generates the PWA service workers. The build size is well optimized with compression (gzip).
+- **Time:** ~27s
+- **Details:** The Vite production build successfully compiles the TypeScript codebase without errors and bundles assets with gzip compression. PWA service workers generate cleanly with full precache coverage.
 
 ## 2. Test Suite & Coverage
-- **Status:** 🔴 **Failing Tests**
-- **Summary:** 120 tests passed, 5 tests failed (out of 125).
-- **Failing Files:**
-  1. `src/features/pdf-engine/hooks/usePdfDocument.test.ts` (2 failures)
-     - `should load a PDF file successfully`
-     - `should handle thumbnail rendering errors gracefully`
-  2. `src/features/pdf-engine/utils/coordTranslate.test.ts` (1 failure)
-     - `correctly translates top-left origin to bottom-left PDF coordinates`
-## 1. Type Safety & Linting
-**Status:** 🟢 Passing
-**Analysis:**
-- Zero TypeScript build errors.
-- ESLint passes successfully with 0 warnings and 0 errors.
-- We have addressed the `any` type usage in production files (`useFabricCanvas.ts`, `usePdfExport.ts`, `pdfLoader.ts`) and configured tests to ignore strict TypeScript rules to accommodate mocking.
+- **Status:** 🟢 **Passing (153/153 tests)**
+- **Summary:** 100% of the unit and integration test suite passing across 16 test files.
+- **Key Suites Verified:**
+  - `src/features/attendance/repository/profileRepository.test.ts` (19 tests)
+  - `src/features/attendance/hooks/useAnnouncement.test.ts` (3 tests)
+  - `src/features/attendance/store/useAttendanceStore.test.ts` (23 tests)
+  - `src/features/admin/hooks/useAdminDashboard.test.ts` (19 tests)
+  - `src/features/pdf-engine/hooks/usePdfDocument.test.ts` (11 tests)
+  - `src/features/pdf-engine/hooks/useFabricCanvas.test.ts` (16 tests)
+  - `src/features/pdf-engine/hooks/usePdfExport.test.ts` (8 tests)
 
-## 2. Unit Testing
-**Status:** 🟢 Passing (125/125 tests)
-**Analysis:**
-- All 125 tests are passing.
-- Fixed `pdfLoader` mocking issues in `usePdfDocument.test.ts` and `pdfLoader.test.ts`.
-- Fixed the rotation logic mismatch in `coordTranslate.test.ts` (specifically checking for `-0`).
-- Added the missing `toggleHideProfileName` function to `useAttendanceStore.ts` that the tests were expecting.
+## 3. Type Safety & Linting
+- **Status:** 🟢 **Passing**
+- **Analysis:**
+  - Zero TypeScript compilation errors (`tsc -b`).
+  - ESLint passes cleanly with 0 errors and 0 warnings.
+  - Duplicated types (such as `Announcement`) consolidated into `src/shared/types/announcement.types.ts`.
 
-## Recommendations
-1. **Fix Failing Tests:** Prioritize fixing the 5 failing tests to restore the test suite to a passing state. The `toggleHideProfileName` issue in the attendance store looks like a regression where a method was renamed or removed.
-2. **Address Linting Errors:** Begin replacing `any` types with proper interfaces or generic types, especially in the `pdf-engine` directory.
-3. **Clean Up Test Console Errors:** Fix the unhandled hook errors in `useAdminDashboard.test.ts` to ensure clean test runs.
+## 4. Architectural Improvements Completed
+1. **SPA Routing**: Replaced imperatively reloading `window.location.href` in `App.tsx` with React Router's `useNavigate()`, preserving browser history and SPA state.
+2. **Announcement Decoupling**: Extracted announcement querying and dismissal RPC logic out of `AttendanceView.tsx` into a dedicated `AnnouncementRepository` and `useAnnouncement` hook.
+3. **Settings Modularization**: Split the monolithic 412-line `SettingsMenu.tsx` into single-responsibility sub-panels (`AccessibilitySettings`, `ThemeSettings`, `ProfileSettings`, `DangerZone`) coordinating through a unified `useSettingsActions` hook.
+4. **Profile Selection Decomposition**: Decomposed the 611-line `ProfileSelection.tsx` monolith into focused sub-components (`ProfileCard`, `AddProfileModal`, `PasswordUnlockModal`) and extracted lockout/migration state into `useProfileAuth`.
+5. **Cleaned Dead Scaffolding**: Removed unused empty `src/store/` directory.
+

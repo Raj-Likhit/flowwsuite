@@ -86,6 +86,12 @@
   - `editable`: Full CRUD on attendance data
   - `readOnly`: View-only, disables update/delete actions
 - **Profile Switching UI**: `src/features/attendance/components/ProfileSelection.tsx`
+  - Coordinator component orchestrating focused sub-components:
+    - `ProfileCard.tsx`: Dedicated avatar and name card rendering
+    - `AddProfileModal.tsx`: Profile creation form and avatar selection
+    - `PasswordUnlockModal.tsx`: Authenticated password-prompt entry with lockout feedback
+    - `useProfileAuth.ts`: Custom hook managing password checking, attempt counts, and lockout throttling
+    - `constants.ts`: Shared static catalog of default DiceBear avatar URLs
 
 ### 1.5 Cloud Synchronization
 **Implementation**: `src/features/attendance/store/useAttendanceStore.ts:178-218`
@@ -991,8 +997,12 @@ devOptions: { enabled: true }
     <MotionConfig reducedMotion="user">  // Animations
       <MainApp>
         // Ambient Background (fixed)
-        // SettingsMenu (fixed top-right)
-        // Security Portal Button (admin only, fixed top-right)
+        // SettingsMenu & Sub-panels (fixed top-right)
+        //   - AccessibilitySettings
+        //   - ThemeSettings
+        //   - ProfileSettings
+        //   - DangerZone
+        // Security Portal Button (admin only, via useNavigate)
         
         <Routes>
           / → Navigate to /attendance
@@ -1012,8 +1022,8 @@ devOptions: { enabled: true }
 
 #### AttendanceView
 ```
-- Announcement check (on mount, if authenticated)
-- ProfileSelection (dropdown)
+- useAnnouncement hook (automated fetch & dismissal via AnnouncementRepository)
+- ProfileSelection (coordinator delegating to ProfileCard, AddProfileModal, PasswordUnlockModal)
 - ProgressRing (center focal point)
 - SafeDangerCards (2-column grid)
 - CustomGoalSection (expandable)
@@ -1093,7 +1103,23 @@ devOptions: { enabled: true }
    - Table formatting
    - Returns: generateReport function
 
-6. **usePageThumbnail**:
+6. **useAnnouncement**:
+   - Automated announcement polling and expiry filtering
+   - Isolated acknowledgment/seen RPC trigger via `AnnouncementRepository`
+   - Returns: activeAnnouncement, dismiss
+
+7. **useProfileAuth**:
+   - Password validation against bcrypt hashes and plaintext fallbacks
+   - Client-side brute-force lockout tracking with temporary disable timers
+   - Seamless read-only fallback mode
+   - Returns: auth state, unlockProfile, viewAttendance
+
+8. **useSettingsActions**:
+   - Unified profile modification (name, password, avatar upload, and delete)
+   - Stable singleton reference to `ProfileRepository` preventing redundant allocations
+   - Returns: action handlers for settings sub-panels
+
+9. **usePageThumbnail**:
    - IntersectionObserver setup
    - Lazy thumbnail rendering
    - Cleanup on unmount

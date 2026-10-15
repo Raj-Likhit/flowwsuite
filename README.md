@@ -43,21 +43,32 @@ Through aggressive chunk splitting, asynchronous script injection, and granular 
 ```mermaid
 graph TD
     subgraph Client Application [React PWA]
-        A[App Entry] --> B{Feature Router}
+        A[App Entry / React Router] --> B{Feature Router}
         B -->|Attendance| C[Attendance View]
+        B -->|Profile Selection| PS[Profile Selection & Modals]
         B -->|PDF Studio| D[PDF Engine View]
         B -->|Admin| E[Admin Dashboard]
+        SM[SettingsMenu & Panels] --> SA[useSettingsActions Hook]
+    end
+
+    subgraph Domain Repositories & Hooks
+        C --> AH[useAnnouncement Hook]
+        AH --> AR[AnnouncementRepository]
+        SA --> PR[ProfileRepository]
+        PS --> PR
+        PS --> UPA[useProfileAuth Hook]
+        C --> PR
     end
 
     subgraph PDF Engine Services
-        D --> F[heic2any / Fabric.js / jsPDF]
+        D --> F[Fabric.js / pdf-lib / pdfjs-dist / jsPDF]
         F --> G[Web Workers & OffscreenCanvas]
     end
 
-    subgraph Cloud Backend
-        C --> H[(Supabase PostgreSQL)]
+    subgraph Cloud Backend [Supabase]
+        PR --> H[(PostgreSQL RLS)]
+        AR --> H
         E --> H
-        H --> I[Row Level Security]
     end
 ```
 

@@ -144,7 +144,8 @@ export class ProfileRepository {
       const bcrypt = (await import('bcryptjs')).default;
       return { correct: await bcrypt.compare(plain, stored), needsMigration: false };
     }
-    return { correct: plain === stored, needsMigration: true };
+    const correct = plain === stored;
+    return { correct, needsMigration: correct };
   }
 }
 

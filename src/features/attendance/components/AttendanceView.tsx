@@ -13,6 +13,7 @@ import { CustomGoalSection } from './CustomGoalSection';
 import { AuditTrail } from './AuditTrail';
 import { ProfileNotes } from './ProfileNotes';
 import { supabase } from '../../../core/lib/supabase';
+import { createProfileRepository } from '../repository/profileRepository';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import { AnnouncementModal } from '../../../shared/components/AnnouncementModal';
@@ -143,32 +144,25 @@ export const AttendanceView: React.FC = () => {
     };
 
     const handleSync = async () => {
-        if (!activeProfile || isSyncing.current || isReadOnly || !supabase) return;
+        if (!activeProfile || isSyncing.current || isReadOnly) return;
         
         isSyncing.current = true;
         setLoading(true);
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    attended: activeProfile.attended,
-                    total: activeProfile.total,
-                    target_goal: activeProfile.targetGoal ?? 75,
-                    logs: activeProfile.logs ?? [],
-                    notes: activeProfile.notes ?? '',
-                })
-                .eq('id', activeProfile.id);
-
-            if (error) {
-                console.error('Sync failed:', error);
-                const msg = error.code === '42703'
-                    ? 'Database schema out of date. Please refresh or contact support.'
-                    : error.message || 'Failed to sync to cloud';
-                setSyncError(msg);
-                toast.error(msg);
+            const repo = createProfileRepository(supabase);
+            if (!repo) {
+                toast.error('Cloud sync unavailable. Check your connection.');
                 return;
             }
+
+            await repo.syncUp(activeProfile.id, {
+                attended: activeProfile.attended,
+                total: activeProfile.total,
+                targetGoal: activeProfile.targetGoal ?? 75,
+                logs: activeProfile.logs ?? [],
+                notes: activeProfile.notes ?? '',
+            });
 
             setSyncSuccess(true);
             setSyncError(null);
@@ -176,7 +170,9 @@ export const AttendanceView: React.FC = () => {
             setTimeout(() => setSyncSuccess(false), 2000);
         } catch (err: unknown) {
             console.error('Sync failed:', err);
-            const msg = err instanceof Error ? err.message : 'Failed to sync to cloud';
+            const msg = (err as { code?: string })?.code === '42703'
+                ? 'Database schema out of date. Please refresh or contact support.'
+                : err instanceof Error ? err.message : 'Failed to sync to cloud';
             setSyncError(msg);
             toast.error(msg);
         } finally {

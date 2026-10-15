@@ -8,3 +8,4 @@
 | Task 7 | Enhance ProfileNotes with direct DB autosave, debounce, and cleanup | Completed |
 | Task 8 | Verify test suite (125 tests) and production build | Completed |
 | Task 9 | Commit and push changes to GitHub | Completed |
+| Task 10 | **[ACTIVE]** Attendance Module Refactor — Create `ProfileRepository` and route all profile DB calls through it | Planning |

@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { motion, MotionConfig } from 'framer-motion';
-import { BrowserRouter, useLocation, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { useAuthStore } from './core/lib/useAuthStore';
 import { BottomTabs } from './shared/components/BottomTabs';
@@ -28,6 +28,7 @@ const pageTransition = {
 function MainApp() {
   const { user, role } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdminPage = location.pathname.startsWith('/admin-portal');
 
   return (
@@ -46,7 +47,7 @@ function MainApp() {
           <motion.button
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            onClick={() => window.location.href = '/admin-portal-floww-security'}
+            onClick={() => navigate('/admin-portal-floww-security')}
             className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-[10px] uppercase tracking-widest rounded-full backdrop-blur-md transition-all shadow-lg"
           >
             Security Portal

@@ -48,6 +48,46 @@ describe('coordTranslate Utilities', () => {
       // Expected rotation = -angle
       expect(result.rotation).toBe(-0);
     });
+
+    it('correctly adjusts coordinates when originX is center or right and originY is center or bottom', () => {
+      const centerMetrics = {
+        left: 100,
+        top: 200,
+        scaledWidth: 100,
+        scaledHeight: 50,
+        angle: 0,
+        canvasWidthPx: 800,
+        canvasHeightPx: 600,
+        pageWidthPt: 400,
+        pageHeightPt: 300,
+        originX: 'center',
+        originY: 'center',
+      };
+      const centerResult = canvasToPdfCoords(centerMetrics);
+      // tlLeft = 100 - 50 = 50 -> x = 50 * 0.5 = 25
+      // tlTop = 200 - 25 = 175 -> y = 300 - (175 * 0.5) - 25 = 300 - 87.5 - 25 = 187.5
+      expect(centerResult.x).toBe(25);
+      expect(centerResult.y).toBe(187.5);
+
+      const rightBottomMetrics = {
+        left: 200,
+        top: 300,
+        scaledWidth: 100,
+        scaledHeight: 50,
+        angle: 0,
+        canvasWidthPx: 800,
+        canvasHeightPx: 600,
+        pageWidthPt: 400,
+        pageHeightPt: 300,
+        originX: 'right',
+        originY: 'bottom',
+      };
+      const rbResult = canvasToPdfCoords(rightBottomMetrics);
+      // tlLeft = 200 - 100 = 100 -> x = 100 * 0.5 = 50
+      // tlTop = 300 - 50 = 250 -> y = 300 - (250 * 0.5) - 25 = 300 - 125 - 25 = 150
+      expect(rbResult.x).toBe(50);
+      expect(rbResult.y).toBe(150);
+    });
   });
 
   describe('pxToPt', () => {

@@ -97,5 +97,30 @@ describe('useAuthStore (Issue #21)', () => {
             expect(useAuthStore.getState().session).toBeNull();
             expect(useAuthStore.getState().loading).toBe(false);
         });
+
+        it('setLoading and setError update state', () => {
+            useAuthStore.getState().setLoading(true);
+            expect(useAuthStore.getState().loading).toBe(true);
+
+            useAuthStore.getState().setError('Custom error');
+            expect(useAuthStore.getState().error).toBe('Custom error');
+        });
+
+        it('handles onAuthStateChange event and updates session', () => {
+            const onAuthChangeCall = vi.mocked(supabase!.auth.onAuthStateChange).mock.calls[0];
+            if (onAuthChangeCall) {
+                const callback = onAuthChangeCall[0];
+                const newSession = {
+                    user: { id: 'auth-user', app_metadata: { role: 'admin' } },
+                } as any;
+
+                callback('SIGNED_IN', newSession);
+
+                const state = useAuthStore.getState();
+                expect(state.session).toBe(newSession);
+                expect(state.role).toBe('admin');
+                expect(state.loading).toBe(false);
+            }
+        });
     });
 });

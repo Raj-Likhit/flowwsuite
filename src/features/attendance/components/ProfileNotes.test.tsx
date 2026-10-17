@@ -103,4 +103,31 @@ describe('ProfileNotes', () => {
         expect(mockUpdate).toHaveBeenCalledTimes(1);
         expect(mockUpdate).toHaveBeenCalledWith('prof-1', { notes: 'Critical note before page switch' });
     });
+
+    it('copies notes to clipboard when Copy button is clicked', async () => {
+        const writeTextMock = vi.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, {
+            clipboard: {
+                writeText: writeTextMock,
+            },
+        });
+
+        render(<ProfileNotes />);
+        const copyBtn = screen.getByRole('button', { name: /copy notes to clipboard/i });
+        await act(async () => {
+            fireEvent.click(copyBtn);
+        });
+
+        expect(writeTextMock).toHaveBeenCalledWith('Initial notes content');
+    });
+
+    it('returns null when readOnly is true or activeProfile is null', () => {
+        const { container: container1 } = render(<ProfileNotes readOnly={true} />);
+        expect(container1.firstChild).toBeNull();
+
+        useAttendanceStore.setState({ activeProfile: null });
+        const { container: container2 } = render(<ProfileNotes />);
+        expect(container2.firstChild).toBeNull();
+    });
 });
+

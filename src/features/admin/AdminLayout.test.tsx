@@ -9,18 +9,28 @@ vi.mock('../../core/lib/useAuthStore', () => ({
     useAuthStore: vi.fn(),
 }));
 
+let mockSupabaseClient: any = {
+    auth: {
+        signInWithPassword: vi.fn(),
+        signOut: vi.fn(),
+    }
+};
+
 vi.mock('../../core/lib/supabase', () => ({
-    supabase: {
-        auth: {
-            signInWithPassword: vi.fn(),
-            signOut: vi.fn(),
-        }
+    get supabase() {
+        return mockSupabaseClient;
     }
 }));
 
 describe('AdminLayout', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockSupabaseClient = {
+            auth: {
+                signInWithPassword: vi.fn(),
+                signOut: vi.fn(),
+            }
+        };
     });
 
     it('renders Access Denied screen with email and password inputs for unauthenticated users', () => {
@@ -219,5 +229,54 @@ describe('AdminLayout', () => {
         });
 
         expect(mockSignOut).toHaveBeenCalled();
+    });
+
+    it('renders loader when loading is true', () => {
+        vi.mocked(useAuthStore).mockReturnValue({
+            user: null,
+            role: 'guest',
+            loading: true,
+            signOut: vi.fn(),
+        } as any);
+
+        const { container } = render(
+            <MemoryRouter>
+                <AdminLayout>
+                    <div>Content</div>
+                </AdminLayout>
+            </MemoryRouter>
+        );
+
+        expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    });
+
+    it('shows error when supabase client is unavailable during login', async () => {
+        vi.mocked(useAuthStore).mockReturnValue({
+            user: null,
+            role: 'guest',
+            loading: false,
+            signOut: vi.fn(),
+        } as any);
+
+        mockSupabaseClient = null;
+
+        render(
+            <MemoryRouter>
+                <AdminLayout><div>Child</div></AdminLayout>
+            </MemoryRouter>
+        );
+
+        fireEvent.change(screen.getByPlaceholderText('admin@example.com'), {
+            target: { value: 'admin@domain.com' },
+        });
+        fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+            target: { value: 'SuperSecret123!' },
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByLabelText('Submit'));
+        });
+
+        expect(screen.getByText('Supabase client unavailable.')).toBeInTheDocument();
     });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as pdfjsLib from 'pdfjs-dist';
-import { initPdfJs, loadPdfDocument, renderPageToImageBitmap } from './pdfLoader';
+import { initPdfJs, loadPdfDocument, renderPageToImageBitmap, destroyPdfDocument } from './pdfLoader';
 
 // Mock pdfjs-dist
 vi.mock('pdfjs-dist', () => {
@@ -139,6 +139,40 @@ describe('pdfLoader utilities', () => {
 
             await expect(renderPageToImageBitmap(mockPdfDoc, 0, 1.5))
                 .rejects.toThrow('Could not get 2d context from OffscreenCanvas');
+        });
+
+        it('should call page.cleanup if defined', async () => {
+            const cleanupFn = vi.fn();
+            const mockPage = {
+                getViewport: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+                render: vi.fn().mockReturnValue({ promise: Promise.resolve() }),
+                cleanup: cleanupFn,
+            };
+            const mockPdfDoc = {
+                getPage: vi.fn().mockResolvedValue(mockPage),
+            } as any;
+
+            await renderPageToImageBitmap(mockPdfDoc, 0, 1);
+            expect(cleanupFn).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('destroyPdfDocument', () => {
+        it('should safely handle null or undefined doc', async () => {
+            await expect(destroyPdfDocument(null)).resolves.toBeUndefined();
+            await expect(destroyPdfDocument(undefined)).resolves.toBeUndefined();
+        });
+
+        it('should call destroy if present on doc', async () => {
+            const destroyMock = vi.fn().mockResolvedValue(undefined);
+            const doc = { destroy: destroyMock } as any;
+            await destroyPdfDocument(doc);
+            expect(destroyMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('should safely ignore doc if destroy is not a function', async () => {
+            const doc = { destroy: 'not-a-fn' } as any;
+            await expect(destroyPdfDocument(doc)).resolves.toBeUndefined();
         });
     });
 });

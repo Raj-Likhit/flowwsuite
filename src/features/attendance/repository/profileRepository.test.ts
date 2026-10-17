@@ -263,6 +263,24 @@ describe('ProfileRepository', () => {
 
       await expect(repo.uploadAvatar('p1', new Blob(['x'], { type: 'image/jpeg' }))).rejects.toMatchObject({ message: 'bucket error' });
     });
+
+    it('returns false from deleteAvatarFile when remove throws or errors', async () => {
+      (db as any).storage.from = vi.fn().mockReturnValue({
+        remove: vi.fn().mockRejectedValue(new Error('Storage failure')),
+      });
+
+      const res = await repo.deleteAvatarFile('https://xyz.supabase.co/storage/v1/object/public/avatars/avatar.png');
+      expect(res).toBe(false);
+
+      (db as any).storage.from = vi.fn().mockReturnValue({
+        remove: vi.fn().mockResolvedValue({ error: { message: 'Failed' } }),
+      });
+      const resError = await repo.deleteAvatarFile('https://xyz.supabase.co/storage/v1/object/public/avatars/avatar.png');
+      expect(resError).toBe(false);
+
+      const resInvalid = await repo.deleteAvatarFile('not-a-supabase-url');
+      expect(resInvalid).toBe(false);
+    });
   });
 
   // ── extractStoragePath helper ─────────────────────────────────────────────

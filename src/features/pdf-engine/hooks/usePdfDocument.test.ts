@@ -379,4 +379,56 @@ describe('usePdfDocument', () => {
 
         expect(mockDestroy).toHaveBeenCalledTimes(1);
     });
+
+    it('should immediately destroy doc when eagerPages is empty (0 pages)', async () => {
+        const { result } = renderHook(() => usePdfDocument());
+        const mockDestroy = vi.fn().mockResolvedValue(undefined);
+        const mockPdfDoc = {
+            numPages: 0,
+            destroy: mockDestroy,
+        };
+        vi.mocked(pdfLoader.loadPdfDocument).mockResolvedValue(mockPdfDoc as any);
+
+        const file = new File(['mock content'], 'empty.pdf', { type: 'application/pdf' });
+        await act(async () => {
+            await result.current.loadFile(file);
+        });
+
+        expect(mockDestroy).toHaveBeenCalled();
+    });
+
+    it('should handle error in renderThumbnailOnDemand gracefully', async () => {
+        const { result } = renderHook(() => usePdfDocument());
+        (usePdfStore.getState as any).mockReturnValue({
+            sources: [{
+                id: 'test-source',
+                type: 'pdf',
+                arrayBuffer: new ArrayBuffer(10)
+            }]
+        });
+        vi.mocked(pdfLoader.loadPdfDocument).mockRejectedValueOnce(new Error('Corrupt PDF'));
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        await act(async () => {
+            await result.current.renderThumbnailOnDemand('test-source', 'page-1', 0);
+        });
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Lazy thumbnail render failed for page page-1'),
+            expect.any(Error)
+        );
+        consoleSpy.mockRestore();
+    });
+
+    it('should toast specific message when PDF is password protected', async () => {
+        const { result } = renderHook(() => usePdfDocument());
+        vi.mocked(pdfLoader.loadPdfDocument).mockRejectedValueOnce(new Error('PASSWORD_REQUIRED'));
+
+        const file = new File(['mock content'], 'locked.pdf', { type: 'application/pdf' });
+        await act(async () => {
+            await result.current.loadFile(file);
+        });
+
+        expect(toast.error).toHaveBeenCalledWith('Password protected PDFs are not yet supported.');
+    });
 });

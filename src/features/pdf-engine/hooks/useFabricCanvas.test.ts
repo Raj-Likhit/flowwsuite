@@ -515,4 +515,89 @@ describe('useFabricCanvas', () => {
         });
         expect(mockSetOverlay).toHaveBeenCalled();
     });
+
+    it('should delete selected active objects', () => {
+        const canvasRef = { current: document.createElement('canvas') };
+        const mockObj = { id: 'obj-to-delete' };
+        mockGetActiveObjects.mockReturnValueOnce([mockObj]);
+
+        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+        act(() => {
+            result.current.initCanvas(800, 600);
+        });
+
+        act(() => {
+            result.current.deleteSelected();
+        });
+
+        expect(mockRemove).toHaveBeenCalledWith(mockObj);
+        expect(mockDiscardActiveObject).toHaveBeenCalled();
+        expect(mockRenderAll).toHaveBeenCalled();
+    });
+
+    it('should rescale loaded objects when canvas dimensions differ from stored dimensions', async () => {
+        const storedOverlay = {
+            version: '7.0.0',
+            objects: [{ left: 50, top: 50, scaleX: 1, scaleY: 1 }],
+            canvasWidth: 400,
+            canvasHeight: 300,
+        };
+
+        (usePdfStore.getState as any).mockReturnValue({
+            overlays: [{ pageId: 'page-1', fabricJson: storedOverlay }]
+        });
+
+        const mockSet = vi.fn();
+        const mockSetCoords = vi.fn();
+        mockGetObjects.mockImplementation(() => [{
+            left: 50,
+            top: 50,
+            scaleX: 1,
+            scaleY: 1,
+            set: mockSet,
+            setCoords: mockSetCoords,
+        }]);
+
+        const canvasRef = { current: document.createElement('canvas') };
+        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+
+        await act(async () => {
+            result.current.initCanvas(800, 600);
+        });
+
+        expect(mockSet).toHaveBeenCalledWith(expect.objectContaining({
+            left: 100,
+            top: 100,
+        }));
+        expect(mockSetCoords).toHaveBeenCalled();
+    });
+
+    it('should handle errors in undo and redo gracefully', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const canvasRef = { current: document.createElement('canvas') };
+        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+
+        act(() => {
+            result.current.initCanvas(800, 600);
+        });
+
+        act(() => {
+            mockToJSONValue = { ...mockToJSONValue, version: '1.1' };
+            result.current.saveChanges();
+        });
+
+        mockLoadFromJSON.mockRejectedValueOnce(new Error('Corrupt state'));
+        await act(async () => {
+            result.current.undo();
+        });
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to undo canvas state:', expect.any(Error));
+
+        mockLoadFromJSON.mockRejectedValueOnce(new Error('Corrupt state on redo'));
+        await act(async () => {
+            result.current.redo();
+        });
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to redo canvas state:', expect.any(Error));
+
+        consoleSpy.mockRestore();
+    });
 });

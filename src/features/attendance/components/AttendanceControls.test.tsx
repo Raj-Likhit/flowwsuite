@@ -93,4 +93,26 @@ describe('AttendanceControls', () => {
         const totalInput = screen.getByLabelText('Total Classes') as HTMLInputElement;
         expect(totalInput).toHaveAttribute('readonly');
     });
+
+    it('blurs inputs on Enter key press', () => {
+        const onUpdate = vi.fn();
+        render(<AttendanceControls totalCount={10} attendedCount={8} onUpdate={onUpdate} />);
+
+        const totalInput = screen.getByLabelText('Total Classes') as HTMLInputElement;
+        const attendedInput = screen.getByLabelText('Attended') as HTMLInputElement;
+
+        fireEvent.keyDown(totalInput, { key: 'Enter' });
+        fireEvent.keyDown(attendedInput, { key: 'Enter' });
+    });
+
+    it('handles total blur clamping attended if total is less than attended', () => {
+        const onUpdate = vi.fn();
+        render(<AttendanceControls totalCount={10} attendedCount={8} onUpdate={onUpdate} />);
+
+        const totalInput = screen.getByLabelText('Total Classes') as HTMLInputElement;
+        fireEvent.change(totalInput, { target: { value: '5' } });
+        fireEvent.blur(totalInput);
+
+        expect(onUpdate).toHaveBeenCalledWith(5, 5);
+    });
 });

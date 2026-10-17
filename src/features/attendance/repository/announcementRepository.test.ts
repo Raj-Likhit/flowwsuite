@@ -68,6 +68,20 @@ describe('AnnouncementRepository', () => {
             expect(result).toEqual(mockData);
         });
 
+        it('returns empty array when data is null', async () => {
+            const mockQuery: any = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                or: vi.fn().mockReturnThis(),
+                order: vi.fn().mockReturnThis(),
+                limit: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+            mockDb.from.mockReturnValue(mockQuery);
+
+            const result = await repo.fetchActiveAnnouncements('prof-123');
+            expect(result).toEqual([]);
+        });
+
         it('throws an error if the database query fails', async () => {
             const dbError = new Error('Database connection failed');
             const mockQuery: any = {

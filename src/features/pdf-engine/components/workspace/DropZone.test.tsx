@@ -108,5 +108,67 @@ describe('DropZone & validateFile', () => {
       expect(onFilesAccepted).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalled();
     });
+
+    it('shows generic error toast when dropping multiple invalid files', () => {
+      const onFilesAccepted = vi.fn();
+      render(<DropZone onFilesAccepted={onFilesAccepted} />);
+
+      const dropZone = screen.getByRole('button', { name: /upload pdf or image files/i });
+      const inv1 = new File(['data'], 'file1.exe', { type: 'application/x-msdownload' });
+      const inv2 = new File(['data'], 'file2.zip', { type: 'application/zip' });
+
+      fireEvent.drop(dropZone, {
+        dataTransfer: {
+          files: [inv1, inv2],
+        },
+      });
+
+      expect(onFilesAccepted).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith('No valid files found. Please upload PDF, JPEG, PNG, or WEBP files under 50MB.');
+    });
+
+    it('warns with toast when mixed valid and invalid files are dropped', () => {
+      const onFilesAccepted = vi.fn();
+      render(<DropZone onFilesAccepted={onFilesAccepted} />);
+
+      const dropZone = screen.getByRole('button', { name: /upload pdf or image files/i });
+      const validFile = new File(['pdf-data'], 'doc.pdf', { type: 'application/pdf' });
+      const invalidFile = new File(['exe-data'], 'bad.exe', { type: 'application/x-msdownload' });
+
+      fireEvent.drop(dropZone, {
+        dataTransfer: {
+          files: [validFile, invalidFile],
+        },
+      });
+
+      expect(onFilesAccepted).toHaveBeenCalledWith([validFile]);
+      expect(toast.warning).toHaveBeenCalledWith('Accepted 1 file(s). Skipped 1 invalid file(s).');
+    });
+
+    it('handles file selection via file input and drag over/leave states', () => {
+      const onFilesAccepted = vi.fn();
+      const { container } = render(<DropZone onFilesAccepted={onFilesAccepted} />);
+
+      const dropZone = screen.getByRole('button', { name: /upload pdf or image files/i });
+
+      // Drag over
+      fireEvent.dragOver(dropZone);
+      expect(dropZone.className).toContain('border-primary-500');
+
+      // Drag leave
+      fireEvent.dragLeave(dropZone);
+      expect(dropZone.className).not.toContain('bg-primary-500/10 scale-[1.02]');
+
+      // Click on dropzone triggers input click
+      const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const clickSpy = vi.spyOn(input, 'click');
+      fireEvent.click(dropZone);
+      expect(clickSpy).toHaveBeenCalled();
+
+      // Change file input
+      const file = new File(['content'], 'upload.pdf', { type: 'application/pdf' });
+      fireEvent.change(input, { target: { files: [file] } });
+      expect(onFilesAccepted).toHaveBeenCalledWith([file]);
+    });
   });
 });

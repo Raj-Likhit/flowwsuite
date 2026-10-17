@@ -290,4 +290,184 @@ describe('usePdfExport', () => {
             expect(mockWorker.terminate).toHaveBeenCalled();
         });
     });
+
+    describe('advanced export options & fallbacks', () => {
+        it('supports web share API when intent is share', async () => {
+            const shareMock = vi.fn().mockResolvedValue(undefined);
+            const canShareMock = vi.fn().mockReturnValue(true);
+            Object.assign(navigator, {
+                share: shareMock,
+                canShare: canShareMock,
+            });
+
+            mockState.pages = [
+                { id: 'page1', sourceId: 'src1', sourceType: 'pdf', originalIndex: 0, widthPt: 100, heightPt: 100 } as any
+            ];
+            mockState.sources = [
+                { id: 'src1', type: 'pdf', arrayBuffer: new ArrayBuffer(10) } as any
+            ];
+
+            const { result } = renderHook(() => usePdfExport());
+
+            let exportPromise: Promise<void>;
+            act(() => {
+                exportPromise = result.current.exportPdf({ intent: 'share' });
+            });
+
+            act(() => {
+                if (mockWorker.onmessage) {
+                    mockWorker.onmessage({ data: { type: 'COMPILE_DONE', pdfBytes: new Uint8Array([1, 2, 3]) } } as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            expect(shareMock).toHaveBeenCalled();
+        });
+
+        it('falls back to download when navigator.share throws', async () => {
+            const shareMock = vi.fn().mockRejectedValue(new Error('Share error'));
+            const canShareMock = vi.fn().mockReturnValue(true);
+            Object.assign(navigator, {
+                share: shareMock,
+                canShare: canShareMock,
+            });
+
+            mockState.pages = [
+                { id: 'page1', sourceId: 'src1', sourceType: 'pdf', originalIndex: 0, widthPt: 100, heightPt: 100 } as any
+            ];
+            mockState.sources = [
+                { id: 'src1', type: 'pdf', arrayBuffer: new ArrayBuffer(10) } as any
+            ];
+
+            const { result } = renderHook(() => usePdfExport());
+
+            let exportPromise: Promise<void>;
+            act(() => {
+                exportPromise = result.current.exportPdf({ intent: 'share' });
+            });
+
+            act(() => {
+                if (mockWorker.onmessage) {
+                    mockWorker.onmessage({ data: { type: 'COMPILE_DONE', pdfBytes: new Uint8Array([1, 2, 3]) } } as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            expect(toast.success).toHaveBeenCalled();
+        });
+
+        it('shows compressed export toast when compression is enabled', async () => {
+            mockState.pages = [
+                { id: 'page1', sourceId: 'src1', sourceType: 'blank', originalIndex: -1, widthPt: 100, heightPt: 100, thumbnailDataUrl: 'data:image/jpeg;base64,thumb' } as any
+            ];
+            mockState.sources = [];
+
+            const { result } = renderHook(() => usePdfExport());
+
+            let exportPromise: Promise<void>;
+            act(() => {
+                exportPromise = result.current.exportPdf({ compression: { enabled: true, imageQuality: 0.8, maxDimensionPx: 1000 } });
+            });
+
+            act(() => {
+                if (mockWorker.onmessage) {
+                    mockWorker.onmessage({ data: { type: 'COMPILE_DONE', pdfBytes: new Uint8Array([1, 2, 3]) } } as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            expect(toast.success).toHaveBeenCalledWith('Compressed export successful!', expect.any(Object));
+        });
+
+        it('handles worker compilation error message and onerror', async () => {
+            mockState.pages = [
+                { id: 'page1', sourceId: 'src1', sourceType: 'pdf', originalIndex: 0, widthPt: 100, heightPt: 100 } as any
+            ];
+            mockState.sources = [
+                { id: 'src1', type: 'pdf', arrayBuffer: new ArrayBuffer(10) } as any
+            ];
+
+            const { result } = renderHook(() => usePdfExport());
+
+            let exportPromise: Promise<void>;
+            act(() => {
+                exportPromise = result.current.exportPdf();
+            });
+
+            act(() => {
+                if (mockWorker.onmessage) {
+                    mockWorker.onmessage({ data: { type: 'COMPILE_ERROR', error: 'Compile failed' } } as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            expect(toast.error).toHaveBeenCalledWith('Export failed: Compile failed', expect.any(Object));
+
+            // Test worker.onerror
+            act(() => {
+                exportPromise = result.current.exportPdf();
+            });
+
+            act(() => {
+                if (mockWorker.onerror) {
+                    mockWorker.onerror(new Error('Fatal worker crash') as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            expect(toast.error).toHaveBeenCalledWith('Export failed: Fatal worker crash', expect.any(Object));
+        });
+
+        it('handles blank pages in JPEG ZIP export', async () => {
+            mockState.pages = [
+                { id: 'blank-page', sourceType: 'blank', widthPt: 200, heightPt: 300 } as any
+            ];
+            mockState.overlays = [];
+
+            const mockZipFile = vi.fn();
+            const mockZipGenerateAsync = vi.fn().mockResolvedValue(new Blob(['test']));
+            vi.mocked(JSZip).mockImplementation(class {
+                file = mockZipFile;
+                generateAsync = mockZipGenerateAsync;
+            } as any);
+
+            const { result } = renderHook(() => usePdfExport());
+
+            await act(async () => {
+                await result.current.exportAsJpegZip();
+            });
+
+            expect(mockZipFile).toHaveBeenCalledWith('page-001.jpg', expect.any(String), { base64: true });
+        });
+
+        it('shows warning when some pages fail thumbnail generation in JPEG ZIP', async () => {
+            mockState.pages = [
+                { id: 'missing-page', sourceId: 'non-existent', sourceType: 'pdf', thumbnailDataUrl: null, widthPt: 200, heightPt: 300 } as any
+            ];
+            mockState.sources = [];
+
+            const { result } = renderHook(() => usePdfExport());
+
+            await act(async () => {
+                await result.current.exportAsJpegZip();
+            });
+
+            expect(toast.error).toHaveBeenCalledWith('Some pages are still rendering. Try again in a moment.');
+        });
+    });
 });

@@ -313,6 +313,24 @@ describe('useAdminDashboard', () => {
         expect(toast.success).toHaveBeenCalledWith('Announcement broadcasted successfully!');
     });
 
+    it('should warn when push notification could not reach any recipients', async () => {
+        (supabase as any).functions.invoke.mockResolvedValue({
+            data: { failed: 2, delivered: 0 },
+            error: null,
+        });
+
+        const { result } = renderHook(() => useAdminDashboard());
+
+        let success = false;
+        await act(async () => {
+            success = await result.current.publishAnnouncement('Hello', 'all', '', null);
+        });
+
+        expect(success).toBe(true);
+        expect(toast.warning).toHaveBeenCalledWith('Announcement saved, but push notification could not reach recipients.');
+        expect(toast.success).toHaveBeenCalledWith('Announcement broadcasted successfully!');
+    });
+
     it('should warn when push service throws an exception rather than crashing or swallowing', async () => {
         (supabase as any).functions.invoke.mockRejectedValue(new Error('Network offline'));
 

@@ -121,13 +121,13 @@ async function compressDataUrlToJpeg(
 async function addRasterizedPage(
   outDoc: PDFDocument,
   pageSpec: CompileWorkerPage,
-  options: CompileWorkerRequest['exportOptions']
+  options?: CompileWorkerRequest['exportOptions']
 ) {
   const page = outDoc.addPage([pageSpec.widthPt, pageSpec.heightPt]);
 
   if (!pageSpec.rasterBaseDataUrl) return page;
 
-  const compression = options.compression;
+  const compression = options?.compression;
   const imageBytes = compression?.enabled
     ? await compressDataUrlToJpeg(
         pageSpec.rasterBaseDataUrl,
@@ -152,9 +152,9 @@ async function addCompiledPage(
   pdfCache: Map<string, PDFDocument>,
   sourceMap: Map<string, CompileWorkerSource>,
   pageSpec: CompileWorkerPage,
-  options: CompileWorkerRequest['exportOptions']
+  options?: CompileWorkerRequest['exportOptions']
 ) {
-  if (options.compression?.enabled && pageSpec.rasterBaseDataUrl) {
+  if (options?.compression?.enabled && pageSpec.rasterBaseDataUrl) {
     return addRasterizedPage(outDoc, pageSpec, options);
   }
 
@@ -312,8 +312,8 @@ async function applyOverlay(
   }
 }
 
-self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
-  const { sources, orderedPages, overlays, metadata, exportOptions } = event.data;
+export async function compilePdfDocument(data: CompileWorkerRequest): Promise<Uint8Array> {
+  const { sources, orderedPages, overlays, metadata, exportOptions } = data;
 
   const fontCache = new Map<StandardFonts, PDFFont>();
   const sourceMap = new Map(sources.map((source) => [source.id, source]));
@@ -336,17 +336,22 @@ self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
     if (metadata?.keywords) outDoc.setKeywords([metadata.keywords]);
     if (metadata?.creator) outDoc.setCreator(metadata.creator);
 
-    const pdfBytes = await outDoc.save();
-
-    self.postMessage({ type: 'COMPILE_DONE', pdfBytes } as CompileWorkerResponse, [pdfBytes.buffer]);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    self.postMessage({ type: 'COMPILE_ERROR', error: errorMessage } as CompileWorkerResponse);
+    return await outDoc.save();
   } finally {
     fontCache.clear();
     pdfCache.clear();
     sourceMap.clear();
   }
-};
+}
 
-export {};
+if (typeof self !== 'undefined' && 'postMessage' in self) {
+  self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
+    try {
+      const pdfBytes = await compilePdfDocument(event.data);
+      self.postMessage({ type: 'COMPILE_DONE', pdfBytes } as CompileWorkerResponse, [pdfBytes.buffer]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      self.postMessage({ type: 'COMPILE_ERROR', error: errorMessage } as CompileWorkerResponse);
+    }
+  };
+}

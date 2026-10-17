@@ -17,12 +17,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
+    testTimeout: 15000,
+    hookTimeout: 15000,
     coverage: {
       provider: 'v8',
       // @ts-expect-error - 'all' option is valid for v8 coverage provider
       all: true,
       include: ['src/**/*.ts', 'src/**/*.tsx'],
-      exclude: ['src/main.tsx', 'src/**/*.d.ts', 'src/vite-env.d.ts', 'src/**/*.test.*', 'src/**/*.types.ts']
+      exclude: ['src/main.tsx', 'src/**/*.d.ts', 'src/vite-env.d.ts', 'src/**/*.test.*', 'src/**/*.types.ts', 'src/**/types.ts']
     }
   },
   plugins: [

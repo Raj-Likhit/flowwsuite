@@ -4,7 +4,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!assets/|cmaps/|standard_fonts/|avatars/|.*\\.[a-zA-Z0-9]+$).*)",
+      "source": "/((?!assets/|cmaps/|standard_fonts/|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ],

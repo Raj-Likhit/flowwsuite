@@ -130,27 +130,6 @@ export interface PdfMetadata {
 // Worker Messages
 // -----------------------------------------------------------------------------
 
-/** Message sent TO the render worker */
-export interface RenderWorkerRequest {
-  type: 'RENDER_PAGE';
-  pageId: string;
-  /** ArrayBuffer of the full PDF file */
-  pdfBuffer: ArrayBuffer;
-  /** 0-based page index */
-  pageIndex: number;
-  /** Scale factor for rendering (e.g. 1.5 for higher-res thumbnails) */
-  scale: number;
-}
-
-/** Message received FROM the render worker */
-export interface RenderWorkerResponse {
-  type: 'RENDER_DONE' | 'RENDER_ERROR';
-  pageId: string;
-  /** ImageBitmap of the rendered page — only set on RENDER_DONE */
-  bitmap?: ImageBitmap;
-  error?: string;
-}
-
 /** Source bytes sent TO the compile worker */
 export interface CompileWorkerSource {
   id: string;

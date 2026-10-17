@@ -217,5 +217,12 @@
 | Task 105 | Update `App.tsx` to use `lazyWithRetry` and enhance `ErrorBoundary.tsx` | Completed |
 | Task 106 | Add unit tests, run verification gate, commit and push to remote | Completed |
 
+## Codebase Cleanup & Pruning (Single-Flow Execution)
 
-
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 107 | Remove unused static assets (`vite.svg`, `react.svg`, `public/avatars/`) | Completed |
+| Task 108 | Remove dead types & unused code (`RenderWorker*`, `RECOVERY_CAP`) | Completed |
+| Task 109 | Remove obsolete artifacts & scripts (`.vite-dev.log`, `benchmark.js`, stale reports) | Completed |
+| Task 110 | Prune unused devDependencies (`puppeteer`, `@vitest/ui`, `@testing-library/dom`) | Completed |
+| Task 111 | Verification Gate (vitest, tsc, lint, build) and push to remote | Completed |

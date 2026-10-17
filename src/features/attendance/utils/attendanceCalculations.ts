@@ -2,7 +2,6 @@ import {
     evaluateGoal,
     attendancePercentage,
     roundForDisplay,
-    RECOVERY_CAP_CLASSES,
 } from '../domain/attendance';
 
 export interface AttendanceMetrics {
@@ -16,8 +15,6 @@ export interface AttendanceMetrics {
     recoveryMessage?: string;
     progressToGoal: number;
 }
-
-export const RECOVERY_CAP = RECOVERY_CAP_CLASSES;
 
 /**
  * Calculates attendance status, margin for skipped classes, and classes needed

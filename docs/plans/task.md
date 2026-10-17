@@ -207,5 +207,15 @@
 | Task 100 | Test PDF Engine Utilities, Worker & Hooks (`imageTranscoder`, `pdfLoader`, `coordTranslate`, `useFabricCanvas`, `usePdfExport`, `usePdfDocument`, `pdf.compile.worker`) | Completed |
 | Task 101 | Final Verification Gate & Commit: 100% test coverage achieved, tsc -b, lint, build, commit & push | Completed |
 
+## Dynamic Import & Deployment Chunk-Loading Remediation (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 102 | Fix `vercel.json` SPA rewrite rule and strict cache-control for HTML/SW | Completed |
+| Task 103 | Update `vite.config.ts` Workbox PWA configuration | Completed |
+| Task 104 | Create `lazyWithRetry` utility and `vite:preloadError` listener | Completed |
+| Task 105 | Update `App.tsx` to use `lazyWithRetry` and enhance `ErrorBoundary.tsx` | Completed |
+| Task 106 | Add unit tests, run verification gate, commit and push to remote | Completed |
+
 
 

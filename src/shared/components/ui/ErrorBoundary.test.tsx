@@ -77,4 +77,27 @@ describe('ErrorBoundary', () => {
 
         expect(reloadMock).toHaveBeenCalledTimes(1);
     });
+
+    it('displays Update Available UI when error is a chunk load error', () => {
+        const reloadMock = vi.fn();
+        Object.defineProperty(window, 'location', {
+            configurable: true,
+            value: { reload: reloadMock }
+        });
+
+        render(
+            <ErrorBoundary>
+                <ThrowingComponent shouldThrow={true} message="Failed to fetch dynamically imported module: /assets/test.js" />
+            </ErrorBoundary>
+        );
+
+        expect(screen.getByText('Update Available')).toBeInTheDocument();
+        expect(screen.getByText(/A new version of FlowSuite has been published/i)).toBeInTheDocument();
+        
+        const updateBtn = screen.getByRole('button', { name: /update & refresh/i });
+        expect(updateBtn).toBeInTheDocument();
+        fireEvent.click(updateBtn);
+
+        expect(reloadMock).toHaveBeenCalledTimes(1);
+    });
 });

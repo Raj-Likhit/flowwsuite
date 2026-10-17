@@ -55,6 +55,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         importScripts: ['/sw-custom.js'],
         runtimeCaching: [
           {

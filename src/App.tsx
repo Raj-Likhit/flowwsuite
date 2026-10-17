@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { motion, MotionConfig } from 'framer-motion';
 import { BrowserRouter, useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -7,12 +7,13 @@ import { BottomTabs } from './shared/components/BottomTabs';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/react';
 import { ErrorBoundary } from './shared/components/ui/ErrorBoundary';
+import { lazyWithRetry } from './shared/utils/lazyWithRetry';
 
-const AttendanceView = lazy(() => import('./features/attendance/components/AttendanceView').then(module => ({ default: module.AttendanceView })));
-const PdfEngineView = lazy(() => import('./features/pdf-engine/components/PdfEngineView').then(module => ({ default: module.PdfEngineView })));
-const AdminLayout = lazy(() => import('./features/admin/AdminLayout').then(module => ({ default: module.AdminLayout })));
-const AdminDashboard = lazy(() => import('./features/admin/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-const SettingsMenu = lazy(() => import('./shared/components/SettingsMenu').then(module => ({ default: module.SettingsMenu })));
+const AttendanceView = lazyWithRetry(() => import('./features/attendance/components/AttendanceView').then(module => ({ default: module.AttendanceView })));
+const PdfEngineView = lazyWithRetry(() => import('./features/pdf-engine/components/PdfEngineView').then(module => ({ default: module.PdfEngineView })));
+const AdminLayout = lazyWithRetry(() => import('./features/admin/AdminLayout').then(module => ({ default: module.AdminLayout })));
+const AdminDashboard = lazyWithRetry(() => import('./features/admin/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const SettingsMenu = lazyWithRetry(() => import('./shared/components/SettingsMenu').then(module => ({ default: module.SettingsMenu })));
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },

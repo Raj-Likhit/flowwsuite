@@ -14,6 +14,18 @@ function getRootElement(): HTMLElement {
   return root
 }
 
+// Auto-recover if Vite encounters a dynamic import preload error due to a new deployment
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', () => {
+    const lastRetry = window.sessionStorage.getItem('vite_preload_retry');
+    const now = Date.now();
+    if (!lastRetry || now - parseInt(lastRetry, 10) > 15000) {
+      window.sessionStorage.setItem('vite_preload_retry', now.toString());
+      window.location.reload();
+    }
+  });
+}
+
 function mount() {
   const container = getRootElement()
   const root = createRoot(container)

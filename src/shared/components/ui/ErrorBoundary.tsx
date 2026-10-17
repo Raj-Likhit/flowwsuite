@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { isChunkLoadError } from '../../utils/lazyWithRetry';
 
 interface Props {
     children: ReactNode;
@@ -26,6 +27,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
     public render() {
         if (this.state.hasError) {
+            const isChunk = isChunkLoadError(this.state.error);
+
             return (
                 <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 relative overflow-hidden">
                     {/* Ambient Background */}
@@ -39,22 +42,31 @@ export class ErrorBoundary extends Component<Props, State> {
                         </div>
 
                         <div className="space-y-3">
-                            <h1 className="text-3xl font-black text-white tracking-tighter">System Error</h1>
+                            <h1 className="text-3xl font-black text-white tracking-tighter">
+                                {isChunk ? "Update Available" : "System Error"}
+                            </h1>
                             <p className="text-white/40 text-sm font-medium leading-relaxed px-4">
-                                {this.state.error?.message || "The application encountered an unexpected state and needs to recover."}
+                                {isChunk
+                                    ? "A new version of FlowSuite has been published. Please refresh to load the latest updates."
+                                    : (this.state.error?.message || "The application encountered an unexpected state and needs to recover.")}
                             </p>
                         </div>
 
                         <div className="pt-4">
                             <button
-                                onClick={() => window.location.reload()}
+                                onClick={() => {
+                                    if (typeof window !== 'undefined') {
+                                        window.sessionStorage.clear();
+                                        window.location.reload();
+                                    }
+                                }}
                                 className="w-full bg-white text-black font-black uppercase tracking-widest text-xs py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-200 transition-all active:scale-[0.98]"
                             >
                                 <RefreshCw className="w-4 h-4" />
-                                Reboot System
+                                {isChunk ? "Update & Refresh" : "Reboot System"}
                             </button>
                             <p className="mt-4 text-[10px] uppercase font-bold tracking-[0.2em] text-white/20">
-                                Flowwsuite Emergency Protocol
+                                {isChunk ? "Flowwsuite Update Protocol" : "Flowwsuite Emergency Protocol"}
                             </p>
                         </div>
                     </div>

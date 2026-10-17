@@ -3,6 +3,13 @@ import { renderHook, act } from '@testing-library/react';
 import { useAnnouncement } from './useAnnouncement';
 import * as repoModule from '../repository/announcementRepository';
 
+let mockSupabase: any = {};
+vi.mock('../../../core/lib/supabase', () => ({
+    get supabase() {
+        return mockSupabase;
+    },
+}));
+
 describe('useAnnouncement', () => {
     const mockAnnouncements = [
         {
@@ -118,5 +125,14 @@ describe('useAnnouncement', () => {
             await res2.current.dismiss();
         });
         expect(mockRepo.markSeen).not.toHaveBeenCalled();
+    });
+
+    it('does not fetch announcements when supabase is null', async () => {
+        const orig = mockSupabase;
+        mockSupabase = null;
+        const { result } = renderHook(() => useAnnouncement('prof-1', false));
+        expect(result.current.activeAnnouncement).toBeNull();
+        expect(mockRepo.fetchActiveAnnouncements).not.toHaveBeenCalled();
+        mockSupabase = orig;
     });
 });

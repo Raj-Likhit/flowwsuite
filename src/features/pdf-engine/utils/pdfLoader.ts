@@ -29,12 +29,15 @@ export async function initPdfJs(): Promise<typeof import('pdfjs-dist')> {
  */
 export async function loadPdfDocument(buffer: ArrayBuffer): Promise<PDFDocumentProxy> {
   const lib = await initPdfJs();
+  const baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+
   try {
     const loadingTask = lib.getDocument({
       data: buffer,
-      cMapUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/cmaps/`,
+      cMapUrl: `${normalizedBase}cmaps/`,
       cMapPacked: true,
-      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${lib.version}/standard_fonts/`,
+      standardFontDataUrl: `${normalizedBase}standard_fonts/`,
       enableHWA: true,
     });
     return await loadingTask.promise;
@@ -60,19 +63,36 @@ export async function renderPageToImageBitmap(
   scale: number
 ): Promise<ImageBitmap> {
   const page = await pdfDoc.getPage(pageIndex + 1); // pdfjs is 1-indexed
-  const viewport = page.getViewport({ scale });
-  
-  const canvas = new OffscreenCanvas(viewport.width, viewport.height);
-  const ctx = canvas.getContext('2d');
-  
-  if (!ctx) {
-    throw new Error('Could not get 2d context from OffscreenCanvas');
-  }
+  try {
+    const viewport = page.getViewport({ scale });
+    
+    const canvas = new OffscreenCanvas(viewport.width, viewport.height);
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      throw new Error('Could not get 2d context from OffscreenCanvas');
+    }
 
-  await page.render({
-    canvas: canvas as unknown as HTMLCanvasElement,
-    canvasContext: ctx as unknown as CanvasRenderingContext2D,
-    viewport,
-  }).promise;
-  return canvas.transferToImageBitmap();
+    await page.render({
+      canvas: canvas as unknown as HTMLCanvasElement,
+      canvasContext: ctx as unknown as CanvasRenderingContext2D,
+      viewport,
+    }).promise;
+    return canvas.transferToImageBitmap();
+  } finally {
+    if (typeof (page as { cleanup?: () => void })?.cleanup === 'function') {
+      page.cleanup();
+    }
+  }
+}
+
+/**
+ * Safely destroys a PDFDocumentProxy instance if destroy() is supported.
+ */
+export async function destroyPdfDocument(doc: PDFDocumentProxy | null | undefined): Promise<void> {
+  if (!doc) return;
+  const destructible = doc as { destroy?: () => Promise<void> };
+  if (typeof destructible.destroy === 'function') {
+    await destructible.destroy();
+  }
 }

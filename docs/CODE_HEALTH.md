@@ -8,13 +8,13 @@
 - **Details:** The Vite production build successfully compiles the TypeScript codebase without errors and bundles assets with gzip compression. PWA service workers generate cleanly with full precache coverage and offline runtime caching for Dicebear avatars.
 
 ## 2. Test Suite & Coverage
-- **Status:** 🟢 **Passing (289/289 tests)**
-- **Summary:** 100% passing across 30 test files with comprehensive unit, integration, and architecture coverage.
+- **Status:** 🟢 **Passing (314/314 tests)**
+- **Summary:** 100% passing across 32 test files with comprehensive unit, integration, and architecture coverage.
 - **Key Suites Verified:**
   - `src/features/attendance/domain/attendance.test.ts` (25 tests, exhaustive combinatorics)
   - `src/features/attendance/domain/sync.test.ts` (13 tests)
   - `src/features/attendance/repository/profileMapper.test.ts` (6 tests)
-  - `src/features/attendance/repository/profileRepository.test.ts` (19 tests)
+  - `src/features/attendance/repository/profileRepository.test.ts` (37 tests)
   - `src/features/attendance/hooks/useAnnouncement.test.ts` (3 tests)
   - `src/features/attendance/store/useAttendanceStore.test.ts` (30 tests)
   - `src/features/attendance/utils/attendanceCalculations.test.ts` (5 tests)
@@ -25,10 +25,14 @@
   - `src/features/admin/hooks/useAdminDashboard.test.ts` (21 tests)
   - `src/features/admin/AdminLayout.test.tsx` (7 tests)
   - `src/core/lib/useAuthStore.test.ts` (6 tests)
-  - `src/features/pdf-engine/hooks/usePdfDocument.test.ts` (11 tests)
-  - `src/features/pdf-engine/hooks/useFabricCanvas.test.ts` (16 tests)
-  - `src/features/pdf-engine/hooks/usePdfExport.test.ts` (8 tests)
+  - `src/features/pdf-engine/hooks/usePdfDocument.test.ts` (13 tests)
+  - `src/features/pdf-engine/hooks/useFabricCanvas.test.ts` (17 tests)
+  - `src/features/pdf-engine/hooks/usePdfExport.test.ts` (10 tests)
   - `src/features/pdf-engine/hooks/useSignatureStore.test.ts` (6 tests)
+  - `src/features/pdf-engine/utils/pdfLoader.test.ts` (8 tests)
+  - `src/features/pdf-engine/utils/imageTranscoder.test.ts` (8 tests)
+  - `src/features/pdf-engine/utils/coordTranslate.test.ts` (14 tests)
+  - `src/features/pdf-engine/utils/fontResolver.test.ts` (5 tests)
 
 ## 3. Type Safety & Linting
 - **Status:** 🟢 **Passing**
@@ -47,4 +51,9 @@
 5. **Purified Zustand Store**: Eliminated side-effects inside state reducers, atomic profile synchronization via `patchProfile`, and modular `planSync` decision engine.
 6. **Unified UI Goal Calculations**: UI components (`SafeDangerCards`, `CustomGoalSection`, `useAttendanceReport`) wire into domain's `evaluateGoal` via `attendanceCalculations.ts` and `goalCopy.ts`.
 7. **Architectural Guardrails**: ESLint error-level rules prevent domain and repository architectural boundary leaks.
+8. **Offline PDF Assets Localization**: Decoupled `pdfLoader.ts` from unpkg CDN by copying CMaps and standard fonts locally into `public/` and adding PWA CacheFirst caching rules.
+9. **Resilient WebP Image Transcoding**: Extracted `imageTranscoder.ts` to seamlessly convert WebP/non-standard overlay and page images to PNG, preventing export worker crashes in `pdf-lib`.
+10. **Memory & Performance Leaks Remediated (Issue #22)**: Destroyed all `PDFDocumentProxy` instances, closed all `ImageBitmap` buffers, cleaned up individual page operator lists via `page.cleanup()`, and terminated compilation workers on hook unmount.
+11. **Compressed Export Optimization (Issue #23)**: Render missing raster base pages dynamically on-demand, preventing export blocking on lazy-loaded pages, and wrapped compression bitmaps in try-finally.
+12. **High-Fidelity JPEG ZIP Export (Issue #24)**: Enabled on-demand page rasterization for JPEG ZIP export, preserving `overlay.previewDataUrl` annotations and signatures instead of dropping user edits.
 

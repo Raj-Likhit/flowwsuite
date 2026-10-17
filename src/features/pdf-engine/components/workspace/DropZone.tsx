@@ -27,14 +27,7 @@ interface DropZoneProps {
   onFilesAccepted: (files: File[]) => void;
 }
 
-const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-
-/**
- * Validates a file against the accepted types list.
- */
-function isValidFile(file: File): boolean {
-  return ACCEPTED_TYPES.includes(file.type);
-}
+import { validateFile } from '../../utils/fileValidation';
 
 export const DropZone: React.FC<DropZoneProps> = ({ onFilesAccepted }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -58,6 +51,39 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFilesAccepted }) => {
     setIsDragOver(false);
   }, []);
 
+  const processFiles = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+
+    const validFiles: File[] = [];
+    const invalidMessages: string[] = [];
+
+    for (const file of files) {
+      const result = validateFile(file);
+      if (result.valid) {
+        validFiles.push(file);
+      } else if (result.message) {
+        invalidMessages.push(result.message);
+      }
+    }
+
+    if (validFiles.length === 0) {
+      setHasError(true);
+      if (invalidMessages.length === 1) {
+        toast.error(invalidMessages[0]);
+      } else {
+        toast.error('No valid files found. Please upload PDF, JPEG, PNG, or WEBP files under 50MB.');
+      }
+      setTimeout(() => setHasError(false), 500);
+      return;
+    }
+
+    if (invalidMessages.length > 0) {
+      toast.warning(`Accepted ${validFiles.length} file(s). Skipped ${invalidMessages.length} invalid file(s).`);
+    }
+
+    onFilesAccepted(validFiles);
+  }, [onFilesAccepted]);
+
   /**
    * Handles file drop event.
    */
@@ -66,43 +92,21 @@ export const DropZone: React.FC<DropZoneProps> = ({ onFilesAccepted }) => {
     setIsDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(isValidFile);
-    
-    if (validFiles.length === 0) {
-      setHasError(true);
-      toast.error('Invalid file type. Please upload PDF, JPEG, PNG, or WEBP.');
-      setTimeout(() => setHasError(false), 500); // Reset error state after animation
-      return;
-    }
-    
-    if (validFiles.length < files.length) {
-      toast.warning(`Skipped ${files.length - validFiles.length} invalid files.`);
-    }
-
-    onFilesAccepted(validFiles);
-  }, [onFilesAccepted]);
+    processFiles(files);
+  }, [processFiles]);
 
   /**
    * Handles file selection via the hidden <input type="file">.
    */
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
-
-    const validFiles = files.filter(isValidFile);
-    
-    if (validFiles.length === 0) {
-      toast.error('Invalid file type. Please upload PDF, JPEG, PNG, or WEBP.');
-      return;
-    }
-
-    onFilesAccepted(validFiles);
+    processFiles(files);
     
     // Reset input so the same files can be selected again if needed
     if (inputRef.current) {
       inputRef.current.value = '';
     }
-  }, [onFilesAccepted]);
+  }, [processFiles]);
 
   return (
     <motion.div

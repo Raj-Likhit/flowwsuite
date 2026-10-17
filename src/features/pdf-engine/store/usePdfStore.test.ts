@@ -36,18 +36,24 @@ describe('usePdfStore', () => {
     expect(usePdfStore.getState().overlays).toHaveLength(0);
   });
 
-  it('rotatePage rotates the page correctly and wraps around 360', () => {
-    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'pdf', originalIndex: 0, currentIndex: 0, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };
+  it('rotatePage rotates the page correctly, swaps width/height, and wraps around 360', () => {
+    const page: PdfPage = { id: 'p1', sourceId: 's1', sourceType: 'pdf', originalIndex: 0, currentIndex: 0, widthPt: 400, heightPt: 300, rotation: 0, isSelected: false, thumbnailDataUrl: null };
     usePdfStore.getState().setPages([page]);
 
     usePdfStore.getState().rotatePage('p1', 'cw');
     expect(usePdfStore.getState().pages[0].rotation).toBe(90);
+    expect(usePdfStore.getState().pages[0].widthPt).toBe(300);
+    expect(usePdfStore.getState().pages[0].heightPt).toBe(400);
 
     usePdfStore.getState().rotatePage('p1', 'ccw');
     expect(usePdfStore.getState().pages[0].rotation).toBe(0);
+    expect(usePdfStore.getState().pages[0].widthPt).toBe(400);
+    expect(usePdfStore.getState().pages[0].heightPt).toBe(300);
 
     usePdfStore.getState().rotatePage('p1', 'ccw');
     expect(usePdfStore.getState().pages[0].rotation).toBe(270);
+    expect(usePdfStore.getState().pages[0].widthPt).toBe(300);
+    expect(usePdfStore.getState().pages[0].heightPt).toBe(400);
     
     // Test ignoring other pages
     const page2: PdfPage = { id: 'p2', sourceId: 's1', sourceType: 'pdf', originalIndex: 1, currentIndex: 1, widthPt: 100, heightPt: 100, rotation: 0, isSelected: false, thumbnailDataUrl: null };

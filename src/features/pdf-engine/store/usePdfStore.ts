@@ -173,7 +173,12 @@ export const usePdfStore = create<PdfEngineState & PdfEngineActions>()((set) => 
     pages: state.pages.map(p => {
       if (p.id !== pageId) return p;
       const change = direction === 'cw' ? 90 : -90;
-      return { ...p, rotation: (p.rotation + change + 360) % 360 as PdfPage['rotation'] };
+      return {
+        ...p,
+        rotation: ((p.rotation + change + 360) % 360) as PdfPage['rotation'],
+        widthPt: p.heightPt,
+        heightPt: p.widthPt,
+      };
     })
   })),
 

@@ -68,9 +68,9 @@ describe('pdfLoader utilities', () => {
             expect(result).toBe(mockProxy);
             expect(mockGetDocument).toHaveBeenCalledWith(expect.objectContaining({
                 data: buffer,
-                cMapUrl: 'https://unpkg.com/pdfjs-dist@mock-version/cmaps/',
+                cMapUrl: '/cmaps/',
                 cMapPacked: true,
-                standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@mock-version/standard_fonts/',
+                standardFontDataUrl: '/standard_fonts/',
                 enableHWA: true,
             }));
         });

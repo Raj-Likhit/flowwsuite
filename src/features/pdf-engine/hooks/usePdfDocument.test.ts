@@ -21,6 +21,11 @@ vi.mock('../utils/pdfLoader', () => ({
     initPdfJs: vi.fn(),
     loadPdfDocument: vi.fn(),
     renderPageToImageBitmap: vi.fn(),
+    destroyPdfDocument: vi.fn().mockImplementation(async (doc) => {
+        if (doc && typeof doc.destroy === 'function') {
+            await doc.destroy();
+        }
+    }),
 }));
 
 // Mock browser APIs
@@ -321,5 +326,57 @@ describe('usePdfDocument', () => {
         expect(consoleError).toHaveBeenCalled();
         
         consoleError.mockRestore();
+    });
+
+    it('should call pdfDoc.destroy() when rendering hi-res page', async () => {
+        const { result } = renderHook(() => usePdfDocument());
+        const mockDestroy = vi.fn().mockResolvedValue(undefined);
+
+        (usePdfStore.getState as any).mockReturnValue({
+            sources: [{
+                id: 'test-source',
+                type: 'pdf',
+                arrayBuffer: new ArrayBuffer(10)
+            }]
+        });
+
+        const mockPdfDoc = {
+            numPages: 1,
+            destroy: mockDestroy,
+        };
+        vi.mocked(pdfLoader.loadPdfDocument).mockResolvedValueOnce(mockPdfDoc as any);
+        vi.mocked(pdfLoader.renderPageToImageBitmap).mockResolvedValueOnce({ width: 100, height: 100 } as any);
+
+        await act(async () => {
+            await result.current.renderPageHiRes('test-source', 0, 2);
+        });
+
+        expect(mockDestroy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call doc.destroy() when lazily rendering thumbnail on demand', async () => {
+        const { result } = renderHook(() => usePdfDocument());
+        const mockDestroy = vi.fn().mockResolvedValue(undefined);
+
+        (usePdfStore.getState as any).mockReturnValue({
+            sources: [{
+                id: 'test-source',
+                type: 'pdf',
+                arrayBuffer: new ArrayBuffer(10)
+            }]
+        });
+
+        const mockPdfDoc = {
+            numPages: 1,
+            destroy: mockDestroy,
+        };
+        vi.mocked(pdfLoader.loadPdfDocument).mockResolvedValueOnce(mockPdfDoc as any);
+        vi.mocked(pdfLoader.renderPageToImageBitmap).mockResolvedValueOnce({ width: 100, height: 100, close: vi.fn() } as any);
+
+        await act(async () => {
+            await result.current.renderThumbnailOnDemand('test-source', 'page-1', 0);
+        });
+
+        expect(mockDestroy).toHaveBeenCalledTimes(1);
     });
 });

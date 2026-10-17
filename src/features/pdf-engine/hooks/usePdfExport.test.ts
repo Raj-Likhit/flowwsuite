@@ -60,7 +60,7 @@ global.FileReader = class {
 describe('usePdfExport', () => {
     const mockState = {
         pages: [] as PdfPage[],
-        overlays: [],
+        overlays: [] as any[],
         sources: [] as PdfSource[],
         metadata: { title: 'Test PDF' },
     };
@@ -233,6 +233,61 @@ describe('usePdfExport', () => {
             });
 
             expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('JPEG ZIP export failed'), expect.any(Object));
+        });
+
+        it('should use overlay.previewDataUrl over thumbnailDataUrl when available in JPEG ZIP', async () => {
+            mockState.pages = [
+                { id: 'page1', sourceType: 'pdf', thumbnailDataUrl: 'data:image/jpeg;base64,rawthumbnail', widthPt: 100, heightPt: 100 } as any
+            ];
+            mockState.overlays = [
+                { pageId: 'page1', fabricJson: {}, previewDataUrl: 'data:image/jpeg;base64,annotatedpreview' } as any
+            ];
+
+            const mockZipFile = vi.fn();
+            const mockZipGenerateAsync = vi.fn().mockResolvedValue(new Blob(['test']));
+            vi.mocked(JSZip).mockImplementation(class {
+                file = mockZipFile;
+                generateAsync = mockZipGenerateAsync;
+            } as any);
+
+            const { result } = renderHook(() => usePdfExport());
+
+            await act(async () => {
+                await result.current.exportAsJpegZip();
+            });
+
+            expect(mockZipFile).toHaveBeenCalledWith('page-001.jpg', 'annotatedpreview', { base64: true });
+        });
+    });
+
+    describe('worker lifecycle', () => {
+        it('should terminate compile worker on unmount', async () => {
+            mockState.pages = [
+                { id: 'page1', sourceId: 'src1', sourceType: 'pdf', originalIndex: 0, widthPt: 100, heightPt: 100 } as any
+            ];
+            mockState.sources = [
+                { id: 'src1', type: 'pdf', arrayBuffer: new ArrayBuffer(10) } as any
+            ];
+
+            const { result, unmount } = renderHook(() => usePdfExport());
+
+            let exportPromise: Promise<void>;
+            act(() => {
+                exportPromise = result.current.exportPdf();
+            });
+
+            act(() => {
+                if (mockWorker.onmessage) {
+                    mockWorker.onmessage({ data: { type: 'COMPILE_DONE', pdfBytes: new Uint8Array([1, 2, 3]) } } as any);
+                }
+            });
+
+            await act(async () => {
+                await exportPromise;
+            });
+
+            unmount();
+            expect(mockWorker.terminate).toHaveBeenCalled();
         });
     });
 });

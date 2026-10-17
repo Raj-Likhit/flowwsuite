@@ -131,4 +131,65 @@
 | Task 64 | Add ESLint architecture guardrails for domain and repository isolation in `eslint.config.js` | Completed |
 | Task 65 | Final Verification Gate (full vitest run, tsc -b, npm run lint, npm run build, localhost check) | Completed |
 
+## PDF Engine Remediation (Step 1 - Issue #14: Localize pdf.js CDN Assets)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 66 | Copy CMaps and standard fonts from `node_modules/pdfjs-dist` to `public/` | Completed |
+| Task 67 | Update `pdfLoader.ts` and `pdfLoader.test.ts` to load CMaps and standard fonts locally | Completed |
+| Task 68 | Verify Step 1 with unit tests and typecheck | Completed |
+
+## PDF Engine Remediation (Step 2 - Issue #8: WebP Overlay Transcoding)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 69 | Implement WebP/image transcoding in `pdf.compile.worker.ts` to valid PNG for pdf-lib | Completed |
+| Task 70 | Add unit/integration tests for WebP overlay embedding during PDF compilation | Completed |
+| Task 71 | Verify Step 2 with unit tests, typecheck, and build | Completed |
+
+## PDF Engine Remediation (Step 3 - Issues #9 & #10: Page Rotation & Rotated Overlays)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 72 | Remove rotation !== 0 guard in `pdf.compile.worker.ts` to burn in 0° and all angles | Completed |
+| Task 73 | Update `rotatePage` in `usePdfStore.ts` to swap `widthPt` and `heightPt` | Completed |
+| Task 74 | Implement rotation-aware coordinate translation in `coordTranslate.ts` & worker | Completed |
+| Task 75 | Add unit tests for rotated coordinate translation and store rotation | Completed |
+
+## PDF Engine Remediation (Step 4 - Issue #7: Dynamic Text Overlay Fonts)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 76 | Create `fontResolver.ts` resolving family, weight, and style to StandardFonts | Completed |
+| Task 77 | Wire font resolver and font cache in `pdf.compile.worker.ts` | Completed |
+| Task 78 | Add unit tests in `fontResolver.test.ts` | Completed |
+
+## PDF Engine Remediation (Step 5 - Final Verification Gate)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 79 | Final verification gate (vitest, tsc -b, lint, build, localhost 200 OK) | Completed |
+
+## PDF Engine Remediation (Batch 2: Issues #22, #23, #24 - Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 80 | Fix Issue #22: Memory and performance leaks (document/page destruction, bitmap closing, worker cleanup) | Completed |
+| Task 81 | Fix Issue #23: Compressed export inefficiencies (on-demand rasterization, quality optimization, buffer transfer) | Completed |
+| Task 82 | Fix Issue #24: "Export as JPEG ZIP" is broken (full overlay compilation, hi-res export, non-blocking pipeline) | Completed |
+| Task 83 | Update unit tests in `usePdfDocument.test.ts`, `pdfLoader.test.ts`, and `usePdfExport.test.ts` | Completed |
+| Task 84 | Final Verification Gate (full vitest run, tsc -b, npm run lint, npm run build, localhost check) | Completed |
+
+## PDF Engine Remediation (Final Batch: Issues #25, #30, #33 - Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 85 | Fix Issue #30: DropZone checks (file size limits, extension fallback, empty file rejection, skipped feedback) | Completed |
+| Task 86 | Fix Issue #25: Export fidelity loss (WinAnsi character sanitization, multi-line lineHeight, opacity support) | Completed |
+| Task 87 | Fix Issue #33: Bundle bloat (split `jspdf` and `html2canvas` from `pdf-lib`, optimize lazy vendor chunks) | Completed |
+| Task 88 | Unit & integration tests for Issues #25, #30, and #33 | Completed |
+| Task 89 | Final Verification Gate (vitest, tsc -b, lint, build, localhost check) | In Progress |
+| Task 90 | Commit and push all PDF engine fixes to `origin/main` | Pending |
+
+
 

@@ -11,12 +11,13 @@
 //   await exportPdf({ password: 'secret123' });
 // =============================================================================
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { usePdfStore } from '../store/usePdfStore';
-import type { CompileWorkerSource, ExportOptions } from '../types/pdf.types';
+import type { CompileWorkerSource, ExportOptions, PdfPage, PdfSource } from '../types/pdf.types';
 import type { CompileWorkerRequest, CompileWorkerResponse } from '../types/pdf.types';
 import { getExportFilename } from '../config/exportConfig';
+import { destroyPdfDocument, loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
 
 async function createBlankPageDataUrl(widthPt: number, heightPt: number): Promise<string> {
   const width = Math.max(1, Math.round(widthPt));
@@ -36,10 +37,57 @@ async function createBlankPageDataUrl(widthPt: number, heightPt: number): Promis
   });
 }
 
+async function ensurePageRasterBase(
+  page: PdfPage,
+  source?: PdfSource
+): Promise<string | null> {
+  if (page.thumbnailDataUrl) {
+    return page.thumbnailDataUrl;
+  }
+  if (page.sourceType === 'blank') {
+    return createBlankPageDataUrl(page.widthPt, page.heightPt);
+  }
+  if (page.sourceType === 'pdf' && source?.arrayBuffer) {
+    try {
+      const doc = await loadPdfDocument(source.arrayBuffer.slice(0));
+      try {
+        const bitmap = await renderPageToImageBitmap(doc, page.originalIndex, 1.5);
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+          return await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+        bitmap.close();
+      } finally {
+        await destroyPdfDocument(doc);
+      }
+    } catch (e) {
+      console.warn(`Could not render on-demand raster base for page ${page.id}:`, e);
+    }
+  }
+  return null;
+}
+
 export function usePdfExport() {
   const [isExporting, setIsExporting] = useState(false);
   const compileWorkerRef = useRef<Worker | null>(null);
   const { pages, overlays, sources, metadata } = usePdfStore();
+
+  useEffect(() => {
+    return () => {
+      if (compileWorkerRef.current) {
+        compileWorkerRef.current.terminate();
+        compileWorkerRef.current = null;
+      }
+    };
+  }, []);
 
   const getOrCreateCompileWorker = useCallback((): Worker => {
     if (!compileWorkerRef.current) {
@@ -95,6 +143,16 @@ export function usePdfExport() {
     }
 
     if (options.compression?.enabled) {
+      // Resolve any missing thumbnails on-demand to avoid blocking export
+      for (const page of pages) {
+        if (page.sourceType !== 'blank' && !page.thumbnailDataUrl) {
+          const source = sources.find((s) => s.id === page.sourceId);
+          const dataUrl = await ensurePageRasterBase(page, source);
+          if (dataUrl) {
+            page.thumbnailDataUrl = dataUrl;
+          }
+        }
+      }
       const missingThumbnails = pages.some((page) => page.sourceType !== 'blank' && !page.thumbnailDataUrl);
       if (missingThumbnails) {
         toast.error('Some pages are still rendering. Try compressed export again in a moment.');
@@ -123,11 +181,9 @@ export function usePdfExport() {
       }));
 
       const referencedSourceIds = new Set(
-        options.compression?.enabled
-          ? []
-          : orderedPages
-              .filter((page) => page.sourceType !== 'blank')
-              .map((page) => page.sourceId)
+        orderedPages
+          .filter((page) => page.sourceType !== 'blank' && (!options.compression?.enabled || !page.rasterBaseDataUrl))
+          .map((page) => page.sourceId)
       );
 
       const workerSources: CompileWorkerSource[] = sources
@@ -183,6 +239,17 @@ export function usePdfExport() {
       return;
     }
 
+    // Resolve any missing thumbnails on-demand to avoid blocking export
+    for (const page of pages) {
+      if (page.sourceType !== 'blank' && !page.thumbnailDataUrl) {
+        const source = sources.find((s) => s.id === page.sourceId);
+        const dataUrl = await ensurePageRasterBase(page, source);
+        if (dataUrl) {
+          page.thumbnailDataUrl = dataUrl;
+        }
+      }
+    }
+
     const missingThumbnails = pages.some((page) => page.sourceType !== 'blank' && !page.thumbnailDataUrl);
     if (missingThumbnails) {
       toast.error('Some pages are still rendering. Try again in a moment.');
@@ -198,7 +265,8 @@ export function usePdfExport() {
       const zip = new (JSZip as new () => import('jszip'))();
 
       for (const [index, page] of pages.entries()) {
-        const dataUrl = page.thumbnailDataUrl || await createBlankPageDataUrl(page.widthPt, page.heightPt);
+        const overlay = overlays.find((o) => o.pageId === page.id);
+        const dataUrl = overlay?.previewDataUrl || page.thumbnailDataUrl || await createBlankPageDataUrl(page.widthPt, page.heightPt);
         const base64 = dataUrl.split(',')[1];
         zip.file(`page-${String(index + 1).padStart(3, '0')}.jpg`, base64, { base64: true });
       }
@@ -225,7 +293,7 @@ export function usePdfExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [pages, metadata.title]);
+  }, [pages, overlays, sources, metadata.title]);
 
   return {
     exportPdf,

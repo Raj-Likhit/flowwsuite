@@ -69,6 +69,20 @@ export default defineConfig({
               },
             },
           },
+          {
+            urlPattern: /\/(?:cmaps|standard_fonts)\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdfjs-assets',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ],
       },
       devOptions: {
@@ -90,7 +104,8 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('fabric')) return 'fabric';
-            if (id.includes('pdf-lib') || id.includes('jspdf')) return 'pdf';
+            if (id.includes('pdf-lib')) return 'pdf-lib';
+            if (id.includes('jspdf') || id.includes('html2canvas')) return 'jspdf';
             if (id.includes('pdfjs-dist')) return 'pdfjs';
             if (id.includes('jszip')) return 'jszip';
             if (id.includes('@dnd-kit')) return 'dnd-kit';

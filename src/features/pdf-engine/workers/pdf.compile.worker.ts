@@ -1,6 +1,14 @@
-import { PDFDocument, degrees, StandardFonts, rgb, type PDFPage } from 'pdf-lib';
-import { canvasToPdfCoords, hexToRgb, pxToPt } from '../utils/coordTranslate';
+import { PDFDocument, degrees, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib';
+import {
+  canvasToPdfCoords,
+  hexToRgb,
+  pxToPt,
+  applyRotationToPdfCoords,
+  transformPointToUnrotated,
+} from '../utils/coordTranslate';
 import { fabricPathToSvgString } from '../utils/fabricSerializer';
+import { ensurePngOrJpgBytes, dataUrlToBytes } from '../utils/imageTranscoder';
+import { getOrEmbedStandardFont } from '../utils/fontResolver';
 import type {
   CompileWorkerPage,
   CompileWorkerRequest,
@@ -21,12 +29,32 @@ interface FabricOverlayObject {
   stroke?: string;
   strokeWidth?: number;
   text?: string;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  fontStyle?: string;
   fontSize?: number;
+  lineHeight?: number;
+  opacity?: number;
+  textAlign?: string;
   path?: Array<Array<string | number>>;
   src?: string;
   pathOffset?: { x: number; y: number };
   originX?: string;
   originY?: string;
+}
+
+export function sanitizeWinAnsiText(text: string): string {
+  const normalized = text
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\u2026/g, '...')
+    .replace(/\u2022/g, '*')
+    .replace(/\u00A0/g, ' ');
+
+  return Array.from(normalized)
+    .map((char) => (char.charCodeAt(0) <= 255 ? char : '?'))
+    .join('');
 }
 
 interface FabricOverlayJson {
@@ -37,9 +65,12 @@ interface FabricOverlayJson {
 
 async function addImagePage(outDoc: PDFDocument, source: CompileWorkerSource, pageSpec: CompileWorkerPage) {
   const page = outDoc.addPage([pageSpec.widthPt, pageSpec.heightPt]);
-  const image = source.mimeType === 'image/png'
-    ? await outDoc.embedPng(source.arrayBuffer)
-    : await outDoc.embedJpg(source.arrayBuffer);
+  const sourceBytes = new Uint8Array(source.arrayBuffer);
+  const { bytes: readyBytes, isPng } = await ensurePngOrJpgBytes(sourceBytes, source.mimeType);
+
+  const image = isPng
+    ? await outDoc.embedPng(readyBytes)
+    : await outDoc.embedJpg(readyBytes);
 
   page.drawImage(image, {
     x: 0,
@@ -49,21 +80,6 @@ async function addImagePage(outDoc: PDFDocument, source: CompileWorkerSource, pa
   });
 
   return page;
-}
-
-function dataUrlToBytes(dataUrl: string): { mimeType: string; bytes: Uint8Array } {
-  const match = dataUrl.match(/^data:([^;,]+)(;base64)?,(.*)$/);
-  if (!match) throw new Error('Unsupported embedded image data');
-
-  const [, mimeType, isBase64, payload] = match;
-  const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return { mimeType, bytes };
 }
 
 async function compressDataUrlToJpeg(
@@ -76,28 +92,30 @@ async function compressDataUrlToJpeg(
   new Uint8Array(byteBuffer).set(bytes);
   const blob = new Blob([byteBuffer], { type: mimeType });
   const bitmap = await createImageBitmap(blob);
-  const scale = Math.min(1, maxDimensionPx / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d');
+  try {
+    const scale = Math.min(1, maxDimensionPx / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
 
-  if (!ctx) {
+    if (!ctx) {
+      return bytes;
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    const jpegBlob = await canvas.convertToBlob({
+      type: 'image/jpeg',
+      quality: Math.min(0.95, Math.max(0.35, quality)),
+    });
+
+    return new Uint8Array(await jpegBlob.arrayBuffer());
+  } finally {
     bitmap.close();
-    return bytes;
   }
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-
-  const jpegBlob = await canvas.convertToBlob({
-    type: 'image/jpeg',
-    quality: Math.min(0.95, Math.max(0.35, quality)),
-  });
-
-  return new Uint8Array(await jpegBlob.arrayBuffer());
 }
 
 async function addRasterizedPage(
@@ -170,12 +188,17 @@ async function embedCanvasImage(outDoc: PDFDocument, src: string) {
   const { mimeType, bytes } = src.startsWith('data:')
     ? dataUrlToBytes(src)
     : {
-        mimeType: src.includes('image/png') ? 'image/png' : 'image/jpeg',
+        mimeType: src.includes('image/png')
+          ? 'image/png'
+          : src.includes('image/webp')
+            ? 'image/webp'
+            : 'image/jpeg',
         bytes: new Uint8Array(await (await fetch(src)).arrayBuffer()),
       };
 
-  if (mimeType.includes('png')) return outDoc.embedPng(bytes);
-  return outDoc.embedJpg(bytes);
+  const { bytes: readyBytes, isPng } = await ensurePngOrJpgBytes(bytes, mimeType);
+  if (isPng) return outDoc.embedPng(readyBytes);
+  return outDoc.embedJpg(readyBytes);
 }
 
 async function applyOverlay(
@@ -183,7 +206,7 @@ async function applyOverlay(
   page: PDFPage,
   pageSpec: CompileWorkerPage,
   overlays: CompileWorkerRequest['overlays'],
-  helveticaFont: Awaited<ReturnType<PDFDocument['embedFont']>>
+  fontCache: Map<StandardFonts, PDFFont>
 ) {
   const overlay = overlays.find((o) => o.pageId === pageSpec.id);
   if (!overlay?.fabricJson) return;
@@ -192,7 +215,9 @@ async function applyOverlay(
   const objects = fabricJson.objects;
   const canvasWidthPx = fabricJson.canvasWidth;
   const canvasHeightPx = fabricJson.canvasHeight;
-  const { width: pageWidthPt, height: pageHeightPt } = page.getSize();
+  const visualWidthPt = pageSpec.widthPt || page.getWidth();
+  const visualHeightPt = pageSpec.heightPt || page.getHeight();
+  const pageRotation = pageSpec.rotation || 0;
 
   if (!objects || !Array.isArray(objects) || !canvasWidthPx || !canvasHeightPx) return;
 
@@ -205,34 +230,48 @@ async function applyOverlay(
       angle: obj.angle || 0,
       canvasWidthPx,
       canvasHeightPx,
-      pageWidthPt,
-      pageHeightPt,
+      pageWidthPt: visualWidthPt,
+      pageHeightPt: visualHeightPt,
       originX: obj.originX || 'left',
       originY: obj.originY || 'top',
     };
 
-    const coords = canvasToPdfCoords(metrics);
+    const visualCoords = canvasToPdfCoords(metrics);
+    const coords = applyRotationToPdfCoords(visualCoords, visualWidthPt, visualHeightPt, pageRotation);
+    const opacity = typeof obj.opacity === 'number' ? Math.max(0, Math.min(1, obj.opacity)) : undefined;
 
     const objectType = getObjectType(obj);
 
     if (objectType === 'i-text' || objectType === 'itext' || objectType === 'textbox' || objectType === 'text') {
       const fill = obj.fill ? hexToRgb(obj.fill) : null;
       // Use height ratio for font size since fontSize is a vertical measurement
-      const fontScaleRatio = pageHeightPt / canvasHeightPx;
-      page.drawText(obj.text || '', {
+      const fontScaleRatio = visualHeightPt / canvasHeightPx;
+      const fontSizePt = (obj.fontSize || 24) * (obj.scaleY || 1) * fontScaleRatio;
+      const lineHeightPt = fontSizePt * (obj.lineHeight || 1.16);
+      const font = await getOrEmbedStandardFont(outDoc, fontCache, {
+        fontFamily: obj.fontFamily,
+        fontWeight: obj.fontWeight,
+        fontStyle: obj.fontStyle,
+      });
+
+      const sanitizedText = sanitizeWinAnsiText(obj.text || '');
+
+      page.drawText(sanitizedText, {
         x: coords.x,
         y: coords.y,
-        size: (obj.fontSize || 24) * (obj.scaleY || 1) * fontScaleRatio,
-        font: helveticaFont,
+        size: fontSizePt,
+        lineHeight: lineHeightPt,
+        font,
         color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
+        opacity,
         rotate: degrees(coords.rotation),
       });
     } else if (objectType === 'path' && obj.path) {
       const stroke = obj.stroke ? hexToRgb(obj.stroke) : null;
       const fill = obj.fill ? hexToRgb(obj.fill) : null;
       
-      const baseScaleX = pageWidthPt / canvasWidthPx;
-      const baseScaleY = pageHeightPt / canvasHeightPx;
+      const baseScaleX = visualWidthPt / canvasWidthPx;
+      const baseScaleY = visualHeightPt / canvasHeightPx;
       
       // Fabric path objects store path data in their local coordinate space.
       // The path's position on the canvas is determined by (left, top) and pathOffset.
@@ -245,15 +284,18 @@ async function applyOverlay(
       const canvas_y = (obj.top || 0) - (obj.pathOffset?.y || 0) * objScaleY;
       
       const pdf_x = canvas_x * baseScaleX;
-      const pdf_y = pageHeightPt - (canvas_y * baseScaleY);
+      const pdf_y = visualHeightPt - (canvas_y * baseScaleY);
+      const rotatedPt = transformPointToUnrotated(pdf_x, pdf_y, visualWidthPt, visualHeightPt, pageRotation);
 
       page.drawSvgPath(fabricPathToSvgString(obj.path), {
-        x: pdf_x,
-        y: pdf_y,
+        x: rotatedPt.x,
+        y: rotatedPt.y,
         scale: baseScaleX * objScaleX,
         color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
         borderColor: stroke ? rgb(stroke.r, stroke.g, stroke.b) : undefined,
-        borderWidth: pxToPt((obj.strokeWidth || 1) * objScaleX, canvasWidthPx, pageWidthPt),
+        borderWidth: pxToPt((obj.strokeWidth || 1) * objScaleX, canvasWidthPx, visualWidthPt),
+        opacity,
+        borderOpacity: opacity,
       });
     } else if (objectType === 'image' && obj.src) {
       const image = await embedCanvasImage(outDoc, obj.src);
@@ -263,6 +305,7 @@ async function applyOverlay(
         y: coords.y,
         width: coords.width,
         height: coords.height,
+        opacity,
         rotate: degrees(coords.rotation),
       });
     }
@@ -272,20 +315,19 @@ async function applyOverlay(
 self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
   const { sources, orderedPages, overlays, metadata, exportOptions } = event.data;
 
+  const fontCache = new Map<StandardFonts, PDFFont>();
+  const sourceMap = new Map(sources.map((source) => [source.id, source]));
+  const pdfCache = new Map<string, PDFDocument>();
+
   try {
     const outDoc = await PDFDocument.create();
-    const helveticaFont = await outDoc.embedFont(StandardFonts.Helvetica);
-    const sourceMap = new Map(sources.map((source) => [source.id, source]));
-    const pdfCache = new Map<string, PDFDocument>();
 
     for (const orderedPage of orderedPages) {
       const page = await addCompiledPage(outDoc, pdfCache, sourceMap, orderedPage, exportOptions);
 
-      if (orderedPage.rotation !== 0) {
-        page.setRotation(degrees(orderedPage.rotation));
-      }
+      page.setRotation(degrees(orderedPage.rotation));
 
-      await applyOverlay(outDoc, page, orderedPage, overlays, helveticaFont);
+      await applyOverlay(outDoc, page, orderedPage, overlays, fontCache);
     }
 
     if (metadata?.title) outDoc.setTitle(metadata.title);
@@ -300,6 +342,10 @@ self.onmessage = async (event: MessageEvent<CompileWorkerRequest>) => {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     self.postMessage({ type: 'COMPILE_ERROR', error: errorMessage } as CompileWorkerResponse);
+  } finally {
+    fontCache.clear();
+    pdfCache.clear();
+    sourceMap.clear();
   }
 };
 

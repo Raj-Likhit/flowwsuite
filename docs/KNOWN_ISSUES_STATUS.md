@@ -11,14 +11,14 @@ This document tracks all 49 known bugs, vulnerabilities, and inconsistencies ide
 * [x] **6. Undo/redo and page reload in the editor are broken:** RESOLVED — Fabric 7 `loadFromJSON` promise resolution correctly awaited.
 
 ## 🔴 High
-* [ ] **7. Text overlays use Helvetica only:** (PDF Engine — Back Burner)
-* [ ] **8. WebP overlay image breaks export:** (PDF Engine — Back Burner)
-* [ ] **9. Rotating a page back to 0° is ignored:** (PDF Engine — Back Burner)
-* [ ] **10. Source-rotated PDFs are handled wrong (inferred):** (PDF Engine — Back Burner)
+* [x] **7. Text overlays use Helvetica only:** RESOLVED — Created `fontResolver.ts` dynamically resolving font families (Helvetica, Times Roman, Courier), weights, and styles into cached standard PDF fonts.
+* [x] **8. WebP overlay image breaks export:** RESOLVED — Extracted `imageTranscoder.ts` to detect WebP/non-standard image formats and transcode them via OffscreenCanvas/createImageBitmap to valid PNG bytes for `pdf-lib`.
+* [x] **9. Rotating a page back to 0° is ignored:** RESOLVED — Removed rotation !== 0 guard in `pdf.compile.worker.ts`, unconditionally burning in `page.setRotation(degrees(orderedPage.rotation))` for all angles including 0°.
+* [x] **10. Source-rotated PDFs are handled wrong (inferred):** RESOLVED — Swapped `widthPt`/`heightPt` on 90°/270° rotations in `usePdfStore.ts`, and implemented rotation-aware visual-to-unrotated coordinate transformations in `coordTranslate.ts` and `pdf.compile.worker.ts`.
 * [x] **11. Push notifications are non-functional (inferred):** RESOLVED — Push notifications authenticated against current user session and error swallowing removed.
 * [x] **12. `mark_announcement_seen` exploit:** RESOLVED — RPC hardened with profile password verification to prevent cross-profile spoofing.
 * [x] **13. Writes never check affected rows:** RESOLVED — ProfileRepository checks affected row counts on all updates and deletes, throwing on 0 affected rows.
-* [ ] **14. pdf.js CDN Dependencies:** (PDF Engine — Back Burner)
+* [x] **14. pdf.js CDN Dependencies:** RESOLVED — Localized CMaps and standard fonts into `public/cmaps` and `public/standard_fonts`, configured PWA CacheFirst runtime caching, and decoupled `pdfLoader.ts` from unpkg CDN.
 * [x] **15. Safe/Danger logic uses a rounded percentage:** RESOLVED — Exact percentage calculation with tolerance used; 0/0 fresh profile state properly handled.
 * [x] **16. Sync can lose data:** RESOLVED — Optimistic concurrency with `last_active_at` prevents silent overwrites; conflict divergence surfaced.
 * [x] **17. Avatar moderation can be bypassed:** RESOLVED — Client and server MIME/size validation (2MB limit), automated cleanup of replaced/deleted avatar files in Supabase storage, and `is_flagged: true` moderation preservation.
@@ -28,18 +28,18 @@ This document tracks all 49 known bugs, vulnerabilities, and inconsistencies ide
 * [x] **19. Third-party requests contradict “privacy-focused”:** RESOLVED — Replaced remote `api.dicebear.com` and `grainy-gradients` network calls with 16 bespoke inline local SVGs and native CSS. Removed remote domains from CSP.
 * [x] **20. Edge function (send-push) flaws:** RESOLVED — Enforced 4KB RFC 8030 payload size limit, capped target profiles at 500, implemented automated pruning of 410 Gone / 404 Not Found expired push subscriptions, pinned `@supabase/supabase-js` to `2.97.0`, and standardized JSON/CORS headers.
 * [x] **21. Auth store issues:** RESOLVED — Removed duplicate localStorage role persistence to prevent role tampering, derived roles directly from session metadata, initialized session lifecycle reactively, and wired live auth state listeners.
-* [ ] **22. Memory and performance leaks:** (PDF Engine — Back Burner)
-* [ ] **23. Compressed export inefficiencies:** (PDF Engine — Back Burner)
-* [ ] **24. "Export as JPEG ZIP" is broken:** (PDF Engine — Back Burner)
-* [ ] **25. Export fidelity loss:** (PDF Engine — Back Burner)
+* [x] **22. Memory and performance leaks:** RESOLVED — Ensured `pdfDoc.destroy()` and `page.cleanup()` run in `finally` blocks across metadata loading, eager rendering, on-demand thumbnails, and hi-res rendering in `usePdfDocument.ts` and `pdfLoader.ts`; closed `ImageBitmap`s in `CanvasEditor.tsx` and compile worker; added compile worker termination on `usePdfExport` unmount and message cache clearing.
+* [x] **23. Compressed export inefficiencies:** RESOLVED — Implemented dynamic on-demand rasterization of missing pages in `usePdfExport.ts`, eliminating the blocking error toast when pages are lazy-loaded; guarded referenced source fallback; and wrapped `OffscreenCanvas` bitmap compression in try-finally.
+* [x] **24. "Export as JPEG ZIP" is broken:** RESOLVED — Enabled on-demand page rasterization for JPEG ZIP export to prevent blocking on unscrolled pages; preserved `overlay.previewDataUrl` annotations and signatures instead of dropping them; and maintained memory-safe document destruction.
+* [x] **25. Export fidelity loss:** RESOLVED — Preserved Fabric opacity across text, svg paths, and image overlays; added `lineHeight` scaling for multi-line text blocks; implemented WinAnsi text glyph sanitization in `pdf.compile.worker.ts` preventing encoding crashes on smart quotes and em-dashes; and ensured `opacity`, `lineHeight`, and `textAlign` serialize in `useFabricCanvas.ts`.
 * [x] **26. Custom goal of 100% gives Infinity/NaN:** RESOLVED — Pure mathematical calculations in `attendanceCalculations.ts`, division-by-zero handled, and impossibility indicator rendered.
 * [x] **27. Attendance report PDF formatting:** RESOLVED — Unified attendance metrics calculation via `calculateAttendanceMetrics`, sanitized WinAnsi text glyphs, and sanitized export PDF filenames against injection and path traversal.
 * [x] **28. Notes autosave data loss:** RESOLVED — Pending debounced notes automatically flushed on unmount and textarea blur.
 * [x] **29. Theme persistence fails:** RESOLVED — Saved theme applied to `document.documentElement` immediately on reload via early hydration script and store subscription.
-* [ ] **30. DropZone checks are weak:** (PDF Engine — Back Burner)
+* [x] **30. DropZone checks are weak:** RESOLVED — Added `validateFile` in `DropZone.tsx` verifying file size constraints (max 50MB per file, rejecting 0-byte files), validating file extensions alongside MIME types to handle empty type headers, and surfacing descriptive toast feedback on rejected files.
 * [x] **31. Signatures sit in plaintext `localStorage`:** RESOLVED — Added `clearStoredSignatures()` and `clearSignatures()`, automatically purging saved handwritten signatures on user sign-out and profile deletion, and aligned documented keys and limits (max 5 with FIFO eviction).
 * [x] **32. Delete-profile inconsistencies:** RESOLVED — Orphaned avatars deleted from Supabase storage on profile deletion; consistent deletion verification.
-* [ ] **33. Bundle bloat:** (PDF Engine — Back Burner)
+* [x] **33. Bundle bloat:** RESOLVED — Split `jspdf` and `html2canvas` out from `pdf-lib` into dedicated dynamic chunks in `vite.config.ts`, reducing initial load size for PDF engine users and avoiding duplicate library payloads across unrelated feature views.
 
 ## 📝 Documentation and Claims
 * [x] **34. “Zero ESLint errors” is false:** RESOLVED — Replaced cascading effect setState in `AttendanceControls.tsx` with React-idiomatic render-time prop synchronization and added displayName. 0 ESLint errors and warnings across the component.

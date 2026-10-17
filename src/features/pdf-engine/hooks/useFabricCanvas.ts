@@ -57,6 +57,9 @@ function serializeCanvas(canvas: fabric.Canvas): string {
     'originY',
     'width',
     'height',
+    'opacity',
+    'lineHeight',
+    'textAlign',
   ]);
 
   return JSON.stringify({

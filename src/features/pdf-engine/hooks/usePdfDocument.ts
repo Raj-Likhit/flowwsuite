@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { usePdfStore } from '../store/usePdfStore';
 import type { PdfPage, PdfSource } from '../types/pdf.types';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
+import { destroyPdfDocument, loadPdfDocument, renderPageToImageBitmap } from '../utils/pdfLoader';
 
 const THUMBNAIL_SCALE = 1.5;
 const EAGER_RENDER_COUNT = 10; // Render only this many pages immediately; rest are lazy
@@ -134,27 +134,32 @@ export function usePdfDocument() {
       const buffer = await file.arrayBuffer();
 
       const pdfDoc = await loadPdfDocument(buffer.slice(0));
-
-      const numPages = pdfDoc.numPages;
+      const newPages: PdfPage[] = [];
       const sourceId = crypto.randomUUID();
       const existingPageCount = usePdfStore.getState().pages.length;
-      const newPages: PdfPage[] = [];
+      let numPages = 0;
 
-      for (let i = 0; i < numPages; i++) {
-        const page = await pdfDoc.getPage(i + 1);
-        const viewport = page.getViewport({ scale: 1 });
-        newPages.push({
-          id: crypto.randomUUID(),
-          sourceId,
-          sourceType: 'pdf',
-          originalIndex: i,
-          currentIndex: existingPageCount + i,
-          widthPt: viewport.width,
-          heightPt: viewport.height,
-          rotation: (page.rotate as 0 | 90 | 180 | 270) || 0,
-          isSelected: false,
-          thumbnailDataUrl: null,
-        });
+      try {
+        numPages = pdfDoc.numPages;
+
+        for (let i = 0; i < numPages; i++) {
+          const page = await pdfDoc.getPage(i + 1);
+          const viewport = page.getViewport({ scale: 1 });
+          newPages.push({
+            id: crypto.randomUUID(),
+            sourceId,
+            sourceType: 'pdf',
+            originalIndex: i,
+            currentIndex: existingPageCount + i,
+            widthPt: viewport.width,
+            heightPt: viewport.height,
+            rotation: (page.rotate as 0 | 90 | 180 | 270) || 0,
+            isSelected: false,
+            thumbnailDataUrl: null,
+          });
+        }
+      } finally {
+        await destroyPdfDocument(pdfDoc);
       }
 
       const source: PdfSource = {
@@ -165,9 +170,6 @@ export function usePdfDocument() {
         name: file.name,
         pageCount: numPages,
         arrayBuffer: buffer,
-        // Store ONE parsed document for reuse across ALL thumbnail renders.
-        // Previously this was null and each page render loaded its own document
-        // instance, causing ~N × (full PDF) memory usage for N pages.
         pdfDocument: null,
       };
 
@@ -175,23 +177,31 @@ export function usePdfDocument() {
       usePdfStore.getState().setPages([...usePdfStore.getState().pages, ...newPages]);
 
       // Re-load the document ONCE and share it for all eager renders.
-      // We do a fresh load (not the metadata one above) so pdfjs internals
-      // don't get corrupted between metadata extraction and rendering.
+      // Clean up the document proxy once all eager render tasks finish.
       const sharedDoc = await loadPdfDocument(buffer.slice(0));
 
-      // Eagerly render the first EAGER_RENDER_COUNT pages so the grid
-      // looks populated immediately. The rest are lazy (via usePageThumbnail).
       const eagerPages = newPages.slice(0, EAGER_RENDER_COUNT);
-      for (const p of eagerPages) {
-        enqueueRender(async () => {
-          try {
-            const bitmap = await renderPageToImageBitmap(sharedDoc, p.originalIndex, THUMBNAIL_SCALE);
-            const dataUrl = await bitmapToDataUrl(bitmap);
-            setPageThumbnail(p.id, dataUrl);
-          } catch (e) {
-            console.error(`Thumbnail render failed for page ${p.id}:`, e);
-          }
-        });
+      let remainingEagerCount = eagerPages.length;
+
+      if (remainingEagerCount === 0) {
+        await destroyPdfDocument(sharedDoc);
+      } else {
+        for (const p of eagerPages) {
+          enqueueRender(async () => {
+            try {
+              const bitmap = await renderPageToImageBitmap(sharedDoc, p.originalIndex, THUMBNAIL_SCALE);
+              const dataUrl = await bitmapToDataUrl(bitmap);
+              setPageThumbnail(p.id, dataUrl);
+            } catch (e) {
+              console.error(`Thumbnail render failed for page ${p.id}:`, e);
+            } finally {
+              remainingEagerCount--;
+              if (remainingEagerCount <= 0) {
+                await destroyPdfDocument(sharedDoc);
+              }
+            }
+          });
+        }
       }
     } catch (err) {
       const error = err as Error;
@@ -223,7 +233,7 @@ export function usePdfDocument() {
   /**
    * Lazily renders a thumbnail for a single page on demand.
    * Called by the usePageThumbnail hook when a page card scrolls into view.
-   * Uses the source's stored arrayBuffer to load a document for rendering.
+   * Cleans up the document instance after extraction.
    */
   const renderThumbnailOnDemand = useCallback(async (
     sourceId: string,
@@ -235,13 +245,14 @@ export function usePdfDocument() {
       const source = sources.find(s => s.id === sourceId);
       if (!source || source.type !== 'pdf') return;
 
-      // Load one document per lazy render call. This is still far cheaper
-      // than the previous approach of loading N docs simultaneously for N pages:
-      // lazy loading renders at most ~2-3 docs at a time as the user scrolls.
       const doc: PDFDocumentProxy = await loadPdfDocument(source.arrayBuffer.slice(0));
-      const bitmap = await renderPageToImageBitmap(doc, originalIndex, THUMBNAIL_SCALE);
-      const dataUrl = await bitmapToDataUrl(bitmap);
-      setPageThumbnail(pageId, dataUrl);
+      try {
+        const bitmap = await renderPageToImageBitmap(doc, originalIndex, THUMBNAIL_SCALE);
+        const dataUrl = await bitmapToDataUrl(bitmap);
+        setPageThumbnail(pageId, dataUrl);
+      } finally {
+        await destroyPdfDocument(doc);
+      }
     } catch (e) {
       console.error(`Lazy thumbnail render failed for page ${pageId}:`, e);
     }
@@ -259,7 +270,11 @@ export function usePdfDocument() {
       if (source.type !== 'pdf') return null;
 
       const pdfDoc = await loadPdfDocument(source.arrayBuffer.slice(0));
-      return await renderPageToImageBitmap(pdfDoc, pageIndex, scale);
+      try {
+        return await renderPageToImageBitmap(pdfDoc, pageIndex, scale);
+      } finally {
+        await destroyPdfDocument(pdfDoc);
+      }
     } catch (e) {
       console.error(e);
       return null;

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { canvasToPdfCoords, pxToPt, hexToRgb } from './coordTranslate';
+import {
+  canvasToPdfCoords,
+  pxToPt,
+  hexToRgb,
+  applyRotationToPdfCoords,
+  transformPointToUnrotated,
+} from './coordTranslate';
 
 describe('coordTranslate Utilities', () => {
   describe('canvasToPdfCoords', () => {
@@ -81,6 +87,59 @@ describe('coordTranslate Utilities', () => {
       expect(rgb.r).toBe(0);
       expect(rgb.g).toBe(0);
       expect(rgb.b).toBe(0);
+    });
+  });
+
+  describe('applyRotationToPdfCoords', () => {
+    const baseCoords = { x: 50, y: 100, width: 200, height: 80, rotation: 0 };
+    const visualW = 600;
+    const visualH = 400;
+
+    it('returns unmodified coordinates for 0 degrees rotation', () => {
+      const result = applyRotationToPdfCoords(baseCoords, visualW, visualH, 0);
+      expect(result).toEqual(baseCoords);
+    });
+
+    it('translates coordinates correctly for 90 degrees rotation', () => {
+      const result = applyRotationToPdfCoords(baseCoords, visualW, visualH, 90);
+      expect(result.x).toBe(visualH - baseCoords.y); // 400 - 100 = 300
+      expect(result.y).toBe(baseCoords.x); // 50
+      expect(result.rotation).toBe(90);
+    });
+
+    it('translates coordinates correctly for 180 degrees rotation', () => {
+      const result = applyRotationToPdfCoords(baseCoords, visualW, visualH, 180);
+      expect(result.x).toBe(visualW - baseCoords.x); // 600 - 50 = 550
+      expect(result.y).toBe(visualH - baseCoords.y); // 400 - 100 = 300
+      expect(result.rotation).toBe(180);
+    });
+
+    it('translates coordinates correctly for 270 degrees rotation', () => {
+      const result = applyRotationToPdfCoords(baseCoords, visualW, visualH, 270);
+      expect(result.x).toBe(baseCoords.y); // 100
+      expect(result.y).toBe(visualW - baseCoords.x); // 600 - 50 = 550
+      expect(result.rotation).toBe(270);
+    });
+  });
+
+  describe('transformPointToUnrotated', () => {
+    const visualW = 800;
+    const visualH = 600;
+
+    it('preserves point at 0 degrees', () => {
+      expect(transformPointToUnrotated(100, 200, visualW, visualH, 0)).toEqual({ x: 100, y: 200 });
+    });
+
+    it('maps point correctly for 90 degrees', () => {
+      expect(transformPointToUnrotated(100, 200, visualW, visualH, 90)).toEqual({ x: 200, y: 700 });
+    });
+
+    it('maps point correctly for 180 degrees', () => {
+      expect(transformPointToUnrotated(100, 200, visualW, visualH, 180)).toEqual({ x: 700, y: 400 });
+    });
+
+    it('maps point correctly for 270 degrees', () => {
+      expect(transformPointToUnrotated(100, 200, visualW, visualH, 270)).toEqual({ x: 400, y: 100 });
     });
   });
 });

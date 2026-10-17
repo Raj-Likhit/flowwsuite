@@ -149,3 +149,75 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     b: (intVal & 255) / 255,
   };
 }
+
+/**
+ * Translates visual PDF coordinates onto unrotated page coordinates based on page rotation.
+ * Ensures overlays on rotated pages land in the exact visual position seen in the canvas editor.
+ */
+export function applyRotationToPdfCoords(
+  coords: PdfCoords,
+  visualWidthPt: number,
+  visualHeightPt: number,
+  rotation: number
+): PdfCoords {
+  const normRot = ((rotation % 360) + 360) % 360;
+
+  if (normRot === 90) {
+    return {
+      x: visualHeightPt - coords.y,
+      y: coords.x,
+      width: coords.width,
+      height: coords.height,
+      rotation: coords.rotation + 90,
+    };
+  }
+
+  if (normRot === 180) {
+    return {
+      x: visualWidthPt - coords.x,
+      y: visualHeightPt - coords.y,
+      width: coords.width,
+      height: coords.height,
+      rotation: coords.rotation + 180,
+    };
+  }
+
+  if (normRot === 270) {
+    return {
+      x: coords.y,
+      y: visualWidthPt - coords.x,
+      width: coords.width,
+      height: coords.height,
+      rotation: coords.rotation + 270,
+    };
+  }
+
+  return coords;
+}
+
+/**
+ * Transforms an arbitrary point (x, y) in visual PDF space into unrotated PDF page coordinates.
+ */
+export function transformPointToUnrotated(
+  x: number,
+  y: number,
+  visualWidthPt: number,
+  visualHeightPt: number,
+  rotation: number
+): { x: number; y: number } {
+  const normRot = ((rotation % 360) + 360) % 360;
+
+  if (normRot === 90) {
+    return { x: y, y: visualWidthPt - x };
+  }
+
+  if (normRot === 180) {
+    return { x: visualWidthPt - x, y: visualHeightPt - y };
+  }
+
+  if (normRot === 270) {
+    return { x: visualHeightPt - y, y: x };
+  }
+
+  return { x, y };
+}

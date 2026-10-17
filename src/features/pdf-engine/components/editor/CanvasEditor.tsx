@@ -131,18 +131,27 @@ export const CanvasEditor: React.FC<CanvasEditorProps> = ({ pageId }) => {
 
       const bitmap = await renderPageHiRes(currentPage.sourceId, currentPage.originalIndex, hiResScale);
 
-      if (isCancelled || !bitmap) return;
+      if (isCancelled || !bitmap) {
+        if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+        return;
+      }
 
-      const offscreen = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const ctx = offscreen.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(bitmap, 0, 0);
-        const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (!isCancelled) setBackground(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
+      try {
+        const offscreen = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = offscreen.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(bitmap, 0, 0);
+          const blob = await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (!isCancelled) setBackground(reader.result as string);
+          };
+          reader.readAsDataURL(blob);
+        }
+      } finally {
+        if (typeof bitmap.close === 'function') {
+          bitmap.close();
+        }
       }
     };
 

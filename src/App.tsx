@@ -30,7 +30,8 @@ function MainApp() {
   const { user, role } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdminPage = location.pathname.startsWith('/admin-portal');
+  const ADMIN_PORTAL_PATH = '/admin-portal-floww-security';
+  const isAdminPage = location.pathname === ADMIN_PORTAL_PATH || location.pathname.startsWith(`${ADMIN_PORTAL_PATH}/`);
 
   return (
     <div className="min-h-screen text-white selection:bg-primary-500/30 overflow-x-hidden pb-[env(safe-area-inset-bottom,24px)]" style={{ background: 'var(--bg-base)' }}>
@@ -94,6 +95,7 @@ function MainApp() {
                   <ErrorBoundary><PdfEngineView /></ErrorBoundary>
                 </motion.div>
               } />
+              <Route path="*" element={<Navigate to="/attendance" replace />} />
             </Routes>
           )}
         </Suspense>

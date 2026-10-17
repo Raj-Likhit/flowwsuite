@@ -79,10 +79,10 @@ describe('planSync', () => {
         expect(planSync(input({ local: { ...base, updated_at: 3_000 } }))).toEqual({ kind: 'in-sync' });
     });
 
-    it('never conflicts before the first sync (no baseline to compare against)', () => {
+    it('reports conflict when local edits exist before first sync (null lastSyncedAt) and cloud differs', () => {
         const decision = planSync(
             input({ local: { ...base, updated_at: 3_000 }, cloud: { attended: 6, total: 9 }, lastSyncedAt: null }),
         );
-        expect(decision.kind).toBe('pull');
+        expect(decision.kind).toBe('conflict');
     });
 });

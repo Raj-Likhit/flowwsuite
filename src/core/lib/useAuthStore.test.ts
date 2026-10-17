@@ -37,7 +37,7 @@ describe('useAuthStore (Issue #21)', () => {
             expect(deriveUserRole(session)).toBe('admin');
         });
 
-        it('returns editor when app_metadata.role is editor or undefined', () => {
+        it('returns editor when app_metadata.role is editor, and guest when undefined', () => {
             const editorSession = {
                 user: { id: 'u2', app_metadata: { role: 'editor' } },
             } as any;
@@ -46,7 +46,7 @@ describe('useAuthStore (Issue #21)', () => {
             const defaultSession = {
                 user: { id: 'u3', app_metadata: {} },
             } as any;
-            expect(deriveUserRole(defaultSession)).toBe('editor');
+            expect(deriveUserRole(defaultSession)).toBe('guest');
         });
     });
 

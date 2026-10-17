@@ -130,7 +130,7 @@ describe('SettingsMenu', () => {
             fireEvent.click(confirmDeleteBtn);
         });
 
-        expect(mockSettingsActions.handleDeleteProfile).toHaveBeenCalledWith('p1', 'hash', 'password123');
+        expect(mockSettingsActions.handleDeleteProfile).toHaveBeenCalledWith('p1', undefined, 'password123');
         expect(screen.queryByText('App Settings')).not.toBeInTheDocument();
     });
 

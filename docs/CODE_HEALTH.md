@@ -8,8 +8,8 @@
 - **Details:** The Vite production build successfully compiles the TypeScript codebase without errors and bundles assets with gzip compression. PWA service workers generate cleanly with full precache coverage and offline runtime caching for Dicebear avatars.
 
 ## 2. Test Suite & Coverage
-- **Status:** 🟢 **Passing (314/314 tests)**
-- **Summary:** 100% passing across 32 test files with comprehensive unit, integration, and architecture coverage.
+- **Status:** 🟢 **Passing (584/584 tests)**
+- **Summary:** 100% passing across 75 test files with comprehensive unit, integration, and architecture coverage.
 - **Key Suites Verified:**
   - `src/features/attendance/domain/attendance.test.ts` (25 tests, exhaustive combinatorics)
   - `src/features/attendance/domain/sync.test.ts` (13 tests)
@@ -56,4 +56,10 @@
 10. **Memory & Performance Leaks Remediated (Issue #22)**: Destroyed all `PDFDocumentProxy` instances, closed all `ImageBitmap` buffers, cleaned up individual page operator lists via `page.cleanup()`, and terminated compilation workers on hook unmount.
 11. **Compressed Export Optimization (Issue #23)**: Render missing raster base pages dynamically on-demand, preventing export blocking on lazy-loaded pages, and wrapped compression bitmaps in try-finally.
 12. **High-Fidelity JPEG ZIP Export (Issue #24)**: Enabled on-demand page rasterization for JPEG ZIP export, preserving `overlay.previewDataUrl` annotations and signatures instead of dropping user edits.
+13. **Backend Security RLS & Synthetic Identity Architecture**: Created `profile_directory` public view, strict Supabase RLS (`auth.uid() = id`), unique `(profile_id, endpoint)` constraints on push subscriptions, synthetic email auth (`${profileId}@attendance.local`), and owner-folder 2MB storage bucket limits.
+14. **Local WASM Decoders**: Localized `openjpeg.wasm`, `jbig2.wasm`, `qcms_bg.wasm`, and `quickjs-eval.wasm` into `public/wasm/`, configured `wasmUrl` in `pdfLoader.ts`, and updated CSP with `'wasm-unsafe-eval'`.
+15. **Rotation Rectification**: Initialized client rotation delta to 0° in `usePdfDocument.ts` (eliminating double-rotation from pdf.js intrinsic rotation) and unified vector vs raster rotation compiler logic in `pdf.compile.worker.ts`.
+16. **Export Quality & Non-Latin Script Rendering**: Upgraded raster scaling to target high dimensions (1600px) instead of downsampling, and implemented canvas-based font shaping for non-Latin / Indic glyphs in `useAttendanceReport.ts`.
+17. **Dynamic Bundle Optimization**: Dynamically imported `jsPDF` and `jspdf-autotable` inside `generateReport`, splitting 620 kB out of the main application bundle.
+18. **CI Workflow Expansion**: Added `npm run lint` and `npm audit --omit=dev --audit-level=high` gates to GitHub Actions CI workflow.
 

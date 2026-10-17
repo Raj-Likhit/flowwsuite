@@ -359,4 +359,41 @@ describe('compilePdfDocument', () => {
       error: 'Missing source for page export',
     });
   });
+
+  it('correctly calculates final rotation without double-rotating intrinsic rotated pages', async () => {
+    const rotDoc = await PDFDocument.create();
+    const p = rotDoc.addPage([600, 800]);
+    p.setRotation({ angle: 90, type: 'degrees' as any });
+    const rotPdfBytes = await rotDoc.save();
+
+    const request: CompileWorkerRequest = {
+      type: 'COMPILE_PDF',
+      sources: [
+        {
+          id: 'rot-source',
+          type: 'pdf',
+          name: 'rotated.pdf',
+          mimeType: 'application/pdf',
+          arrayBuffer: rotPdfBytes.buffer.slice(rotPdfBytes.byteOffset, rotPdfBytes.byteOffset + rotPdfBytes.byteLength) as ArrayBuffer,
+        },
+      ],
+      orderedPages: [
+        {
+          id: 'p-rot-0',
+          sourceId: 'rot-source',
+          sourceType: 'pdf',
+          originalIndex: 0,
+          widthPt: 600,
+          heightPt: 800,
+          rotation: 0,
+        },
+      ],
+      overlays: [],
+      exportOptions: {},
+    };
+
+    const resultBytes = await compilePdfDocument(request);
+    const resultDoc = await PDFDocument.load(resultBytes);
+    expect(resultDoc.getPage(0).getRotation().angle).toBe(90);
+  });
 });

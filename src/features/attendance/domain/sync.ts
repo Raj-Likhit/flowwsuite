@@ -43,7 +43,7 @@ function differs(local: SyncableState, cloud: SyncableState): boolean {
 }
 
 function hasUnsyncedLocalEdits(local: { updated_at?: number }, lastSyncedAt: number | null): boolean {
-    return Boolean(local.updated_at && lastSyncedAt && local.updated_at > lastSyncedAt);
+    return Boolean(local.updated_at && (!lastSyncedAt || local.updated_at > lastSyncedAt));
 }
 
 /** Only fields the cloud actually provided overwrite local values. */

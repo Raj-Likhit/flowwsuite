@@ -10,7 +10,7 @@
 
 Flowwsuite is a high-performance, privacy-focused Progressive Web Application (PWA). It unifies attendance tracking, administrative management, and a robust PDF conversion engine into a single, blazing-fast experience. 
 
-Through aggressive chunk splitting, asynchronous script injection, and granular lazy loading, Flowwsuite guarantees near-instant cached loading, delivering a near-native mobile experience. The codebase is heavily tested with 235+ passing unit and integration tests across 26 test suites and is fully type-safe with zero TypeScript or ESLint errors.
+Through aggressive chunk splitting, asynchronous script injection, and granular lazy loading, Flowwsuite guarantees near-instant cached loading, delivering a near-native mobile experience. The codebase is heavily tested with 584 passing unit and integration tests across 75 test files and is fully type-safe with zero TypeScript or ESLint errors.
 
 ---
 
@@ -20,15 +20,15 @@ Through aggressive chunk splitting, asynchronous script injection, and granular 
 - **Smart Tracking**: Monitor attendance goals (75% target) via interactive Progress Rings.
 - **Cloud Sync**: Concurrency-safe cloud synchronization powered by Supabase with optimistic conflict handling.
 - **Audit Trails**: Maintain a verifiable log of all attendance modifications.
-- **Export**: Generate attendance reports natively on the device.
+- **Export**: Generate attendance reports natively on the device with full non-Latin and Indic script support.
 
 ### 🛡️ Admin Security Portal
 - **Centralized Control**: Manage users, roles, and profiles.
 - **Broadcast System**: Create and broadcast announcements directly to students via in-app modals.
-- **Secure Backend**: Built securely over Supabase Row Level Security (RLS) with dedicated RPC functions.
+- **Secure Backend**: Built securely over Supabase Row Level Security (RLS) with dedicated RPC functions, synthetic auth, and storage bucket controls.
 
 ### 📄 PDF Engine (Studio)
-- **100% Client-Side**: Powered by Web Workers, Fabric.js, and PDF.js. No files are ever uploaded to a server, ensuring maximum data privacy.
+- **100% Client-Side**: Powered by Web Workers, Fabric.js, localized WASM decoders (`openjpeg.wasm`, `jbig2.wasm`), and PDF.js. No files are ever uploaded to a server, ensuring maximum data privacy.
 - **Memory Efficient**: Zero-copy transfers with `ArrayBuffer`.
 - **Format Support**: Seamlessly handles JPG, PNG, and WebP formats natively in the browser.
 

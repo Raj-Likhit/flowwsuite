@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { calculateAttendanceMetrics } from '../utils/attendanceCalculations';
 
@@ -23,6 +22,34 @@ export const sanitizePdfText = (str: string): string => {
         .replace(/['']/g, "'");
 };
 
+export function renderTextToCanvasImage(text: string, fontSize = 24, fontColor = '#1F2634'): string | null {
+    if (typeof document === 'undefined') return null;
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        const dpr = 2;
+        const fontStr = `bold ${fontSize * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Telugu", "Noto Sans Devanagari", sans-serif`;
+        ctx.font = fontStr;
+        const metrics = ctx.measureText(text);
+        const width = Math.ceil(metrics.width) + 20;
+        const height = Math.ceil(fontSize * 1.5 * dpr);
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.font = fontStr;
+        ctx.fillStyle = fontColor;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 4, height / 2);
+
+        return canvas.toDataURL('image/png');
+    } catch {
+        return null;
+    }
+}
+
 export const useAttendanceReport = () => {
     const activeProfile = useAttendanceStore(state => state.activeProfile);
 
@@ -30,6 +57,11 @@ export const useAttendanceReport = () => {
         if (!activeProfile) return;
 
         try {
+            const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ]);
+
             const doc = new jsPDF();
             const { name, attended, total, logs, targetGoal } = activeProfile;
             const goal = targetGoal ?? 75;
@@ -49,10 +81,24 @@ export const useAttendanceReport = () => {
             doc.text(`Generated: ${new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}`, 20, 33);
 
             // ── Student Info ─────────────────────────────────────────────
-            doc.setTextColor(31, 38, 52);
-            doc.setFontSize(15);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Student: ${sanitizePdfText(name)}`, 20, 60);
+            const hasNonAscii = /[^\x20-\x7E\t\r\n]/.test(name);
+            if (hasNonAscii) {
+                const textImg = renderTextToCanvasImage(`Student: ${name}`, 15);
+                const docWithImage = doc as unknown as { addImage?: (data: string, format: string, x: number, y: number, w: number, h: number) => void };
+                if (textImg && typeof docWithImage.addImage === 'function') {
+                    docWithImage.addImage(textImg, 'PNG', 20, 52, 90, 10);
+                } else {
+                    doc.setTextColor(31, 38, 52);
+                    doc.setFontSize(15);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`Student: ${sanitizePdfText(name)}`, 20, 60);
+                }
+            } else {
+                doc.setTextColor(31, 38, 52);
+                doc.setFontSize(15);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Student: ${sanitizePdfText(name)}`, 20, 60);
+            }
 
             // ── Summary Stats ────────────────────────────────────────────
             const statusText = metrics.isSafe ? 'On Track (Safe Zone)' : 'Needs Attention (Danger Zone)';

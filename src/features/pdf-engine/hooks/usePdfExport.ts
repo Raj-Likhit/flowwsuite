@@ -39,9 +39,10 @@ async function createBlankPageDataUrl(widthPt: number, heightPt: number): Promis
 
 async function ensurePageRasterBase(
   page: PdfPage,
-  source?: PdfSource
+  source: PdfSource | undefined,
+  maxDimension = 1600
 ): Promise<string | null> {
-  if (page.thumbnailDataUrl) {
+  if (page.sourceType === 'image') {
     return page.thumbnailDataUrl;
   }
   if (page.sourceType === 'blank') {
@@ -51,13 +52,15 @@ async function ensurePageRasterBase(
     try {
       const doc = await loadPdfDocument(source.arrayBuffer.slice(0));
       try {
-        const bitmap = await renderPageToImageBitmap(doc, page.originalIndex, 1.5);
+        const maxPt = Math.max(page.widthPt || 595, page.heightPt || 842);
+        const targetScale = Math.min(3.0, Math.max(2.0, maxDimension / (maxPt || 1)));
+        const bitmap = await renderPageToImageBitmap(doc, page.originalIndex, targetScale);
         const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(bitmap, 0, 0);
           bitmap.close();
-          const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+          const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.88 });
           return await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -78,7 +81,12 @@ async function ensurePageRasterBase(
 export function usePdfExport() {
   const [isExporting, setIsExporting] = useState(false);
   const compileWorkerRef = useRef<Worker | null>(null);
-  const { pages, overlays, sources, metadata } = usePdfStore();
+
+  const pages = usePdfStore((state) => state.pages);
+  const overlays = usePdfStore((state) => state.overlays);
+  const sources = usePdfStore((state) => state.sources);
+  const metadata = usePdfStore((state) => state.metadata);
+  const setPageThumbnail = usePdfStore((state) => state.setPageThumbnail);
 
   useEffect(() => {
     return () => {
@@ -142,18 +150,24 @@ export function usePdfExport() {
       return;
     }
 
+    const rasterBaseMap = new Map<string, string>();
     if (options.compression?.enabled) {
-      // Resolve any missing thumbnails on-demand to avoid blocking export
+      const maxDim = options.compression.maxDimensionPx || 1600;
       for (const page of pages) {
-        if (page.sourceType !== 'blank' && !page.thumbnailDataUrl) {
+        if (page.sourceType !== 'blank') {
           const source = sources.find((s) => s.id === page.sourceId);
-          const dataUrl = await ensurePageRasterBase(page, source);
+          const dataUrl = await ensurePageRasterBase(page, source, maxDim);
           if (dataUrl) {
-            page.thumbnailDataUrl = dataUrl;
+            rasterBaseMap.set(page.id, dataUrl);
+            setPageThumbnail(page.id, dataUrl);
+          } else if (page.thumbnailDataUrl) {
+            rasterBaseMap.set(page.id, page.thumbnailDataUrl);
           }
         }
       }
-      const missingThumbnails = pages.some((page) => page.sourceType !== 'blank' && !page.thumbnailDataUrl);
+      const missingThumbnails = pages.some(
+        (page) => page.sourceType !== 'blank' && !rasterBaseMap.has(page.id) && !page.thumbnailDataUrl
+      );
       if (missingThumbnails) {
         toast.error('Some pages are still rendering. Try compressed export again in a moment.');
         return;
@@ -177,7 +191,7 @@ export function usePdfExport() {
         rotation: p.rotation,
         widthPt: p.widthPt,
         heightPt: p.heightPt,
-        rasterBaseDataUrl: options.compression?.enabled ? p.thumbnailDataUrl : null,
+        rasterBaseDataUrl: options.compression?.enabled ? (rasterBaseMap.get(p.id) || p.thumbnailDataUrl) : null,
       }));
 
       const referencedSourceIds = new Set(
@@ -231,7 +245,7 @@ export function usePdfExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [sources, pages, overlays, metadata, getOrCreateCompileWorker, triggerDownload]);
+  }, [sources, pages, overlays, metadata, getOrCreateCompileWorker, triggerDownload, setPageThumbnail]);
 
   const exportAsJpegZip = useCallback(async (): Promise<void> => {
     if (pages.length === 0) {
@@ -239,18 +253,21 @@ export function usePdfExport() {
       return;
     }
 
-    // Resolve any missing thumbnails on-demand to avoid blocking export
+    const rasterBaseMap = new Map<string, string>();
     for (const page of pages) {
       if (page.sourceType !== 'blank' && !page.thumbnailDataUrl) {
         const source = sources.find((s) => s.id === page.sourceId);
-        const dataUrl = await ensurePageRasterBase(page, source);
+        const dataUrl = await ensurePageRasterBase(page, source, 1600);
         if (dataUrl) {
-          page.thumbnailDataUrl = dataUrl;
+          rasterBaseMap.set(page.id, dataUrl);
+          setPageThumbnail(page.id, dataUrl);
         }
       }
     }
 
-    const missingThumbnails = pages.some((page) => page.sourceType !== 'blank' && !page.thumbnailDataUrl);
+    const missingThumbnails = pages.some(
+      (page) => page.sourceType !== 'blank' && !rasterBaseMap.has(page.id) && !page.thumbnailDataUrl
+    );
     if (missingThumbnails) {
       toast.error('Some pages are still rendering. Try again in a moment.');
       return;
@@ -266,7 +283,11 @@ export function usePdfExport() {
 
       for (const [index, page] of pages.entries()) {
         const overlay = overlays.find((o) => o.pageId === page.id);
-        const dataUrl = overlay?.previewDataUrl || page.thumbnailDataUrl || await createBlankPageDataUrl(page.widthPt, page.heightPt);
+        const dataUrl =
+          overlay?.previewDataUrl ||
+          rasterBaseMap.get(page.id) ||
+          page.thumbnailDataUrl ||
+          (await createBlankPageDataUrl(page.widthPt, page.heightPt));
         const base64 = dataUrl.split(',')[1];
         zip.file(`page-${String(index + 1).padStart(3, '0')}.jpg`, base64, { base64: true });
       }
@@ -293,7 +314,7 @@ export function usePdfExport() {
     } finally {
       setIsExporting(false);
     }
-  }, [pages, overlays, sources, metadata.title]);
+  }, [pages, overlays, sources, metadata.title, setPageThumbnail]);
 
   return {
     exportPdf,

@@ -20,6 +20,7 @@ vi.mock('../../features/pdf-engine/hooks/useSignatureStore');
 const mockRepo = {
     update: vi.fn(),
     delete: vi.fn(),
+    verifyAndUnlock: vi.fn(),
 };
 
 vi.mock('../../features/attendance/repository/profileRepository', () => ({
@@ -41,12 +42,16 @@ describe('useSettingsActions', () => {
         mockUploadAvatar = vi.fn();
         mockDeleteProfile = vi.fn();
 
-        vi.mocked(useAttendanceStore).mockReturnValue({
+        const mockState = {
             profiles: [{ id: 'p1', name: 'Alice', avatar_url: 'https://example.com/avatar.jpg' }],
             updateProfile: mockUpdateProfile,
             uploadAvatar: mockUploadAvatar,
             deleteProfile: mockDeleteProfile,
-        } as any);
+        };
+
+        vi.mocked(useAttendanceStore).mockImplementation(((selector?: (state: any) => any) => {
+            return typeof selector === 'function' ? selector(mockState) : mockState;
+        }) as any);
     });
 
     describe('handleUpdateName', () => {
@@ -119,7 +124,6 @@ describe('useSettingsActions', () => {
             expect(success).toBe(true);
             expect(ProfileRepository.hashPassword).toHaveBeenCalledWith('newSecret123');
             expect(mockRepo.update).toHaveBeenCalledWith('p1', { password: 'hashed_pwd_123' });
-            expect(mockUpdateProfile).toHaveBeenCalledWith('p1', { password: 'hashed_pwd_123' });
             expect(toast.success).toHaveBeenCalledWith('Password updated!');
         });
 
@@ -200,7 +204,7 @@ describe('useSettingsActions', () => {
 
         it('rejects if password verification fails', async () => {
             const { result } = renderHook(() => useSettingsActions());
-            vi.mocked(ProfileRepository.verifyPassword).mockResolvedValueOnce({ correct: false, needsMigration: false });
+            mockRepo.verifyAndUnlock.mockResolvedValueOnce({ success: false });
 
             let success = false;
             await act(async () => {
@@ -213,7 +217,7 @@ describe('useSettingsActions', () => {
 
         it('deletes profile from repo, store, and clears stored signatures when password is correct', async () => {
             const { result } = renderHook(() => useSettingsActions());
-            vi.mocked(ProfileRepository.verifyPassword).mockResolvedValueOnce({ correct: true, needsMigration: false });
+            mockRepo.verifyAndUnlock.mockResolvedValueOnce({ success: true });
             mockRepo.delete.mockResolvedValueOnce(undefined);
 
             let success = false;
@@ -230,7 +234,7 @@ describe('useSettingsActions', () => {
 
         it('handles deletion error', async () => {
             const { result } = renderHook(() => useSettingsActions());
-            vi.mocked(ProfileRepository.verifyPassword).mockResolvedValueOnce({ correct: true, needsMigration: false });
+            mockRepo.verifyAndUnlock.mockResolvedValueOnce({ success: true });
             mockRepo.delete.mockRejectedValueOnce(new Error('DB delete constraint'));
 
             let success = false;

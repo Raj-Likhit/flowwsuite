@@ -88,7 +88,7 @@ describe('AttendanceView', () => {
                 deleteLog: mockDeleteLog,
                 hideProfileName: false,
                 syncFromCloud: mockSyncFromCloud,
-                lastSyncedAt: Date.now() - 60000,
+                lastSyncedAt: { p1: Date.now() - 60000 },
                 updateProfile: mockUpdateProfile,
                 setLoading: mockSetLoading,
             };

@@ -28,6 +28,10 @@ function makeDb(overrides: Partial<Record<string, unknown>> = {}) {
     storage: {
       from: vi.fn().mockReturnValue(storageBucketMethods),
     },
+    auth: {
+      signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: new Error('not found') }),
+      signUp: vi.fn().mockResolvedValue({ data: { user: { id: 'new-id' } }, error: null }),
+    },
     ...overrides,
     _chain: chainMethods,
   } as unknown as SupabaseClient & { _chain: typeof chainMethods };
@@ -45,22 +49,35 @@ describe('ProfileRepository', () => {
 
   // ── fetchAll ────────────────────────────────────────────────────────────
   describe('fetchAll', () => {
-    it('returns profiles array on success without selecting sensitive password columns', async () => {
+    it('returns profiles array on success from profile_directory view', async () => {
+      const directoryRows = [{ id: 'p1', name: 'Alice', avatar_url: 'a.png', is_suspended: false, created_at: '2026-01-01' }];
+      (db as any)._chain.order.mockResolvedValueOnce({ data: directoryRows, error: null });
+
+      const result = await repo.fetchAll();
+
+      expect(db.from).toHaveBeenCalledWith('profile_directory');
+      expect((db as any)._chain.select).toHaveBeenCalledWith('id, name, avatar_url, is_suspended, created_at');
+      expect(result).toEqual([
+        { id: 'p1', name: 'Alice', avatar_url: 'a.png', is_suspended: false, created_at: '2026-01-01', attended: 0, total: 0 }
+      ]);
+    });
+
+    it('falls back to profiles table if profile_directory view errors', async () => {
       const profiles = [{ id: 'p1', name: 'Alice', attended: 10, total: 12 }];
-      (db as any)._chain.order.mockResolvedValueOnce({ data: profiles, error: null });
+      (db as any)._chain.order
+        .mockResolvedValueOnce({ data: null, error: { message: 'relation profile_directory does not exist' } })
+        .mockResolvedValueOnce({ data: profiles, error: null });
 
       const result = await repo.fetchAll();
 
       expect(db.from).toHaveBeenCalledWith('profiles');
-      expect((db as any)._chain.select).toHaveBeenCalledWith(
-        'id, name, avatar_url, attended, total, target_goal, last_active_at, is_flagged, is_suspended, created_at'
-      );
-      expect((db as any)._chain.select).not.toHaveBeenCalledWith('*');
       expect(result).toEqual(profiles);
     });
 
-    it('throws when Supabase returns an error', async () => {
-      (db as any)._chain.order.mockResolvedValueOnce({ data: null, error: { message: 'network error' } });
+    it('throws when fallback returns an error', async () => {
+      (db as any)._chain.order
+        .mockResolvedValueOnce({ data: null, error: { message: 'view error' } })
+        .mockResolvedValueOnce({ data: null, error: { message: 'network error' } });
 
       await expect(repo.fetchAll()).rejects.toMatchObject({ message: 'network error' });
     });
@@ -68,14 +85,15 @@ describe('ProfileRepository', () => {
 
   // ── create ──────────────────────────────────────────────────────────────
   describe('create', () => {
-    it('inserts a profile row and returns it', async () => {
-      const profile = { id: 'new-id', name: 'Bob', attended: 0, total: 0, avatar_url: '', password: 'hash' };
-      (db as any)._chain.single.mockResolvedValueOnce({ data: profile, error: null });
+    it('inserts a profile row and returns it without password in domain object', async () => {
+      const profileRow = { id: 'new-id', name: 'Bob', attended: 0, total: 0, avatar_url: '', password: 'hash' };
+      (db as any)._chain.single.mockResolvedValueOnce({ data: profileRow, error: null });
 
       const result = await repo.create({ name: 'Bob', avatar_url: '', password: 'hash', attended: 0, total: 0 });
 
       expect(db.from).toHaveBeenCalledWith('profiles');
-      expect(result).toEqual(profile);
+      expect(result).toEqual({ id: 'new-id', name: 'Bob', attended: 0, total: 0, avatar_url: '' });
+      expect(result).not.toHaveProperty('password');
     });
 
     it('throws on insert error', async () => {
@@ -345,8 +363,31 @@ describe('ProfileRepository', () => {
 
   // ── verifyAndUnlock ────────────────────────────────────────────────────────
   describe('verifyAndUnlock', () => {
-    it('returns success and profile when password is valid', async () => {
-      const mockProfile = { id: 'p1', name: 'Alice', password: '123' };
+    it('authenticates via synthetic Supabase Auth when session succeeds', async () => {
+      const mockProfile = { id: 'p1', name: 'Alice', attended: 2, total: 3 };
+      (db as any).auth.signInWithPassword.mockResolvedValueOnce({
+        data: { session: { access_token: 'xyz' } },
+        error: null,
+      });
+      (db as any)._chain.single.mockResolvedValueOnce({ data: mockProfile, error: null });
+
+      const result = await repo.verifyAndUnlock('p1', 'password123');
+
+      expect((db as any).auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'p1@attendance.local',
+        password: 'password123',
+      });
+      expect(result.success).toBe(true);
+      expect(result.profile).toEqual(mockProfile);
+      expect(result.profile).not.toHaveProperty('password');
+    });
+
+    it('falls back to legacy password verification when Supabase Auth fails', async () => {
+      const mockProfile = { id: 'p1', name: 'Alice', attended: 0, total: 0, password: '123' };
+      (db as any).auth.signInWithPassword.mockResolvedValueOnce({
+        data: null,
+        error: new Error('User not found'),
+      });
       (db as any)._chain.single.mockResolvedValueOnce({ data: mockProfile, error: null });
 
       const result = await repo.verifyAndUnlock('p1', '123');
@@ -354,7 +395,8 @@ describe('ProfileRepository', () => {
       expect(db.from).toHaveBeenCalledWith('profiles');
       expect((db as any)._chain.eq).toHaveBeenCalledWith('id', 'p1');
       expect(result.success).toBe(true);
-      expect(result.profile).toEqual(mockProfile);
+      expect(result.profile).toEqual({ id: 'p1', name: 'Alice', attended: 0, total: 0 });
+      expect(result.profile).not.toHaveProperty('password');
     });
 
     it('returns failure when password does not match', async () => {

@@ -325,7 +325,14 @@ export async function compilePdfDocument(data: CompileWorkerRequest): Promise<Ui
     for (const orderedPage of orderedPages) {
       const page = await addCompiledPage(outDoc, pdfCache, sourceMap, orderedPage, exportOptions);
 
-      page.setRotation(degrees(orderedPage.rotation));
+      if (exportOptions?.compression?.enabled && orderedPage.rasterBaseDataUrl) {
+        page.setRotation(degrees(orderedPage.rotation));
+      } else if (orderedPage.sourceType === 'pdf') {
+        const intrinsicAngle = page.getRotation().angle || 0;
+        page.setRotation(degrees((intrinsicAngle + orderedPage.rotation) % 360));
+      } else {
+        page.setRotation(degrees(orderedPage.rotation));
+      }
 
       await applyOverlay(outDoc, page, orderedPage, overlays, fontCache);
     }

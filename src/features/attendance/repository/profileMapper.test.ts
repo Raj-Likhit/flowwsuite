@@ -33,6 +33,11 @@ describe('toProfile', () => {
         expect(profile).toMatchObject({ avatar_url: 'https://x/y.png', notes: 'hi', is_suspended: false });
         expect(profile).not.toHaveProperty('is_flagged');
     });
+
+    it('never includes password on the domain Profile even if present on database row', () => {
+        const profile = toProfile({ ...row, password: 'secret-hash' });
+        expect(profile).not.toHaveProperty('password');
+    });
 });
 
 describe('toSyncableState', () => {

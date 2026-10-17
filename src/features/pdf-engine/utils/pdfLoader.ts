@@ -38,8 +38,9 @@ export async function loadPdfDocument(buffer: ArrayBuffer): Promise<PDFDocumentP
       cMapUrl: `${normalizedBase}cmaps/`,
       cMapPacked: true,
       standardFontDataUrl: `${normalizedBase}standard_fonts/`,
+      wasmUrl: `${normalizedBase}wasm/`,
       enableHWA: true,
-    });
+    } as unknown as Parameters<typeof lib.getDocument>[0]);
     return await loadingTask.promise;
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'PasswordException') {

@@ -42,7 +42,6 @@ export function toProfile(row: ProfileRow): Profile {
         attended: row.attended,
         total: row.total,
         ...optional('avatar_url', row.avatar_url),
-        ...optional('password', row.password),
         ...optional('created_at', row.created_at),
         ...optional('is_suspended', row.is_suspended),
         ...optional('logs', row.logs),

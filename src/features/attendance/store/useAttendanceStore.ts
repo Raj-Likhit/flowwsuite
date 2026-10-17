@@ -11,7 +11,6 @@ export type { AttendanceLog, Profile };
 export const sanitize = (str: string, maxLength = 50): string =>
     str
         .replace(/<[^>]*>/g, '')
-        .replace(/[<>"'&`]/g, '')
         .slice(0, maxLength)
         .trim();
 
@@ -19,7 +18,7 @@ export type AttendanceAccessMode = 'editable' | 'readOnly';
 
 export type SyncOutcome = 'updated' | 'in-sync' | 'failed' | 'offline' | 'conflict';
 
-type ProfileUpdates = Partial<Pick<Profile, 'name' | 'avatar_url' | 'password' | 'notes' | 'last_active_at'>>;
+type ProfileUpdates = Partial<Pick<Profile, 'name' | 'avatar_url' | 'notes' | 'last_active_at'>>;
 
 interface AttendanceStore {
     // State
@@ -29,7 +28,7 @@ interface AttendanceStore {
     loading: boolean;
     error: string | null;
     isCloudSyncEnabled: boolean;
-    lastSyncedAt: number | null;
+    lastSyncedAt: Record<string, number>;
     hideProfileName: boolean;
 
     // Actions
@@ -39,6 +38,7 @@ interface AttendanceStore {
     setError: (error: string | null) => void;
     setHideProfileName: (hide: boolean) => void;
     toggleHideProfileName: () => void;
+    setLastSyncedAt: (profileId: string, timestamp?: number) => void;
 
     updateAttendance: (attended: number, total: number, title?: string) => string | undefined;
     deleteLog: (logId: string) => void;
@@ -70,7 +70,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             loading: false,
             error: null as string | null,
             isCloudSyncEnabled: isSupabaseAvailable(),
-            lastSyncedAt: null as number | null,
+            lastSyncedAt: {} as Record<string, number>,
             hideProfileName: false,
 
             setProfiles: (profiles) => set({ profiles }),
@@ -84,6 +84,14 @@ export const useAttendanceStore = create<AttendanceStore>()(
             setError: (error) => set({ error }),
             setHideProfileName: (hideProfileName) => set({ hideProfileName }),
             toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
+            setLastSyncedAt: (profileId, timestamp = Date.now()) => {
+                set((state) => ({
+                    lastSyncedAt: {
+                        ...(typeof state.lastSyncedAt === 'object' && state.lastSyncedAt ? state.lastSyncedAt : {}),
+                        [profileId]: timestamp,
+                    },
+                }));
+            },
 
             updateAttendance: (attended, total, title) => {
                 const { activeProfile, accessMode } = get();
@@ -177,30 +185,41 @@ export const useAttendanceStore = create<AttendanceStore>()(
                     if (!cloud) return 'failed';
 
                     const { activeProfile, lastSyncedAt } = get();
-                    const decision = planSync({ local: activeProfile, cloud, lastSyncedAt, force });
+                    const profileSyncTimestamp = typeof lastSyncedAt === 'object' && lastSyncedAt ? lastSyncedAt[profileId] ?? null : typeof lastSyncedAt === 'number' ? lastSyncedAt : null;
+                    const decision = planSync({ local: activeProfile, cloud, lastSyncedAt: profileSyncTimestamp, force });
 
                     switch (decision.kind) {
                         case 'conflict':
                             return 'conflict';
-                        case 'pull':
+                        case 'pull': {
+                            const nextSyncRecord = {
+                                ...(typeof get().lastSyncedAt === 'object' && get().lastSyncedAt ? get().lastSyncedAt : {}),
+                                [profileId]: Date.now(),
+                            };
                             set((state) => ({
                                 ...patchProfile(state, profileId, {
                                     ...decision.patch,
                                     ...(cloud.last_active_at ? { last_active_at: cloud.last_active_at } : {}),
                                 }),
-                                lastSyncedAt: Date.now(),
+                                lastSyncedAt: nextSyncRecord,
                             }));
                             return 'updated';
-                        case 'in-sync':
+                        }
+                        case 'in-sync': {
+                            const nextSyncRecord = {
+                                ...(typeof get().lastSyncedAt === 'object' && get().lastSyncedAt ? get().lastSyncedAt : {}),
+                                [profileId]: Date.now(),
+                            };
                             if (cloud.last_active_at && activeProfile && activeProfile.last_active_at !== cloud.last_active_at) {
                                 set((state) => ({
                                     ...patchProfile(state, profileId, { last_active_at: cloud.last_active_at }),
-                                    lastSyncedAt: Date.now(),
+                                    lastSyncedAt: nextSyncRecord,
                                 }));
                             } else {
-                                set({ lastSyncedAt: Date.now() });
+                                set({ lastSyncedAt: nextSyncRecord });
                             }
                             return 'in-sync';
+                        }
                     }
                 } catch {
                     return 'failed';
@@ -213,6 +232,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             partialize: (state) => ({
                 profiles: state.profiles,
                 activeProfile: state.activeProfile,
+                accessMode: state.accessMode,
                 isCloudSyncEnabled: state.isCloudSyncEnabled,
                 lastSyncedAt: state.lastSyncedAt,
                 hideProfileName: state.hideProfileName,
@@ -221,7 +241,9 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 if (state) {
                     state.loading = false;
                     state.error = null;
-                    state.accessMode = 'editable';
+                    if (!state.accessMode) {
+                        state.accessMode = 'readOnly';
+                    }
                 }
             },
         }

@@ -114,6 +114,8 @@ describe('evaluateGoal', () => {
     it('marks recovery as unrealistic beyond the class cap', () => {
         expect(evaluateGoal({ attended: 0, total: 10 }, 75)).toMatchObject({ classesNeeded: 30, recoverable: true });
         expect(evaluateGoal({ attended: 0, total: 400 }, 75)).toMatchObject({ classesNeeded: 1200, recoverable: false });
+        expect(evaluateGoal({ attended: 299, total: 400 }, 75)).toMatchObject({ classesNeeded: 4, recoverable: true });
+        expect(evaluateGoal({ attended: 370, total: 500 }, 75)).toMatchObject({ classesNeeded: 20, recoverable: true });
     });
 
     it('defaults to 75% and repairs invalid goals', () => {

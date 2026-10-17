@@ -217,7 +217,6 @@ describe('useProfileAuth', () => {
         expect(mockSetActiveProfile).toHaveBeenCalledWith(dummyProfile, 'editable');
         expect(ProfileRepository.hashPassword).toHaveBeenCalledWith('plaintext-pass');
         expect(mockRepo.update).toHaveBeenCalledWith('prof-123', { password: 'hashed-pass' });
-        expect(mockUpdateProfile).toHaveBeenCalledWith('prof-123', { password: 'hashed-pass' });
     });
 
     it('catches and logs migration errors cleanly', async () => {

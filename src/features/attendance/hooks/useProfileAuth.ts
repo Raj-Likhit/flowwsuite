@@ -6,7 +6,6 @@ import { useAttendanceStore, type Profile } from '../store/useAttendanceStore';
 
 export function useProfileAuth() {
     const setActiveProfile = useAttendanceStore(state => state.setActiveProfile);
-    const updateProfile = useAttendanceStore(state => state.updateProfile);
 
     const [passwordPromptProfile, setPasswordPromptProfile] = useState<Profile | null>(null);
     const [enteredPassword, setEnteredPassword] = useState('');
@@ -29,9 +28,11 @@ export function useProfileAuth() {
             return;
         }
 
+        let currentAttempts = loginAttempts;
         if (lockoutUntil && Date.now() >= lockoutUntil) {
             setLockoutUntil(null);
             setLoginAttempts(0);
+            currentAttempts = 0;
         }
 
         const repo = createProfileRepository(supabase);
@@ -46,7 +47,7 @@ export function useProfileAuth() {
             setPasswordError(true);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             
-            const newAttempts = loginAttempts + 1;
+            const newAttempts = currentAttempts + 1;
             setLoginAttempts(newAttempts);
             if (newAttempts >= 5) {
                 setLockoutUntil(Date.now() + 5 * 60 * 1000);
@@ -65,12 +66,11 @@ export function useProfileAuth() {
             try {
                 const hashed = await ProfileRepository.hashPassword(enteredPassword);
                 await repo.update(result.profile.id, { password: hashed });
-                updateProfile(result.profile.id, { password: hashed });
             } catch (err) {
                 console.error('Password migration failed:', err);
             }
         }
-    }, [passwordPromptProfile, enteredPassword, loginAttempts, lockoutUntil, setActiveProfile, closePasswordPrompt, updateProfile]);
+    }, [passwordPromptProfile, enteredPassword, loginAttempts, lockoutUntil, setActiveProfile, closePasswordPrompt]);
 
     const viewAttendance = useCallback(async () => {
         if (!passwordPromptProfile) return;

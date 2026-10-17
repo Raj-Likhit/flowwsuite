@@ -71,8 +71,9 @@ describe('usePdfExport', () => {
     };
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        vi.mocked(usePdfStore).mockReturnValue(mockState as any);
+        vi.mocked(usePdfStore).mockImplementation(((selector?: (state: typeof mockState) => unknown) => {
+            return typeof selector === 'function' ? selector(mockState) : mockState;
+        }) as any);
         mockWorker.postMessage.mockClear();
         mockWorker.onmessage = null;
         mockWorker.onerror = null;

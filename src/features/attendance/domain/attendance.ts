@@ -104,7 +104,7 @@ export function evaluateGoal(count: AttendanceCount, rawGoal: unknown = DEFAULT_
     }
 
     const needed = classesNeeded(count, goal);
-    if (needed !== null && count.total + needed <= RECOVERY_CAP_CLASSES) {
+    if (needed !== null && needed <= RECOVERY_CAP_CLASSES) {
         return { state: 'below', goal, recoverable: true, classesNeeded: needed };
     }
     return { state: 'below', goal, recoverable: false, classesNeeded: needed };

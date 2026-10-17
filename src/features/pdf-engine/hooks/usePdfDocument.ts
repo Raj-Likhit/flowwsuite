@@ -53,36 +53,85 @@ function pageSizeFromImage(widthPx: number, heightPx: number) {
   };
 }
 
+async function canvasToBlob(
+  width: number,
+  height: number,
+  draw: (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => void,
+  type = 'image/jpeg',
+  quality = 0.90
+): Promise<Blob> {
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2d context from OffscreenCanvas');
+    draw(ctx);
+    return await canvas.convertToBlob({ type, quality });
+  }
+  if (typeof document !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2d context from canvas');
+    draw(ctx);
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Canvas toBlob conversion failed'));
+      }, type, quality);
+    });
+  }
+  throw new Error('No canvas rendering environment available');
+}
+
 async function normalizeImageForPdf(file: File, buffer: ArrayBuffer) {
+  const isPng = file.type === 'image/png';
   const bitmap = await createImageBitmap(new Blob([buffer], { type: file.type }));
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Could not prepare image for PDF export');
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(bitmap, 0, 0);
   const pageSize = pageSizeFromImage(bitmap.width, bitmap.height);
-  bitmap.close();
 
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+  let finalBlob: Blob;
+  if (isPng || file.type === 'image/jpeg') {
+    // Preserve PNG (including alpha channel) and JPEG losslessly without re-encoding
+    finalBlob = new Blob([buffer], { type: file.type });
+    bitmap.close();
+  } else {
+    // For WebP or other formats, convert to PNG to preserve transparency
+    finalBlob = await canvasToBlob(
+      bitmap.width,
+      bitmap.height,
+      (ctx) => {
+        ctx.drawImage(bitmap, 0, 0);
+      },
+      'image/png'
+    );
+    bitmap.close();
+  }
 
   return {
-    arrayBuffer: await blob.arrayBuffer(),
-    dataUrl: await blobToDataUrl(blob),
+    arrayBuffer: await finalBlob.arrayBuffer(),
+    dataUrl: await blobToDataUrl(finalBlob),
+    mimeType: finalBlob.type || (isPng ? 'image/png' : 'image/jpeg'),
     ...pageSize,
   };
 }
 
 export function usePdfDocument() {
-  const { addSource, setPageThumbnail, setLoading, setError } = usePdfStore();
+  const addSource = usePdfStore((state) => state.addSource);
+  const setPageThumbnail = usePdfStore((state) => state.setPageThumbnail);
+  const setLoading = usePdfStore((state) => state.setLoading);
+  const setError = usePdfStore((state) => state.setError);
 
   const bitmapToDataUrl = useCallback(async (bitmap: ImageBitmap): Promise<string> => {
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(bitmap, 0, 0);
-    bitmap.close();
-    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+    const blob = await canvasToBlob(
+      bitmap.width,
+      bitmap.height,
+      (ctx) => {
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+      },
+      'image/jpeg',
+      0.85
+    );
     return blobToDataUrl(blob);
   }, []);
 
@@ -97,7 +146,7 @@ export function usePdfDocument() {
         id: sourceId,
         type: 'image',
         file,
-        mimeType: 'image/jpeg',
+        mimeType: normalized.mimeType || 'image/jpeg',
         name: file.name,
         pageCount: 1,
         arrayBuffer: normalized.arrayBuffer,
@@ -153,7 +202,7 @@ export function usePdfDocument() {
             currentIndex: existingPageCount + i,
             widthPt: viewport.width,
             heightPt: viewport.height,
-            rotation: (page.rotate as 0 | 90 | 180 | 270) || 0,
+            rotation: 0,
             isSelected: false,
             thumbnailDataUrl: null,
           });

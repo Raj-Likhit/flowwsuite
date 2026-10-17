@@ -39,6 +39,7 @@ export const AttendanceView: React.FC = () => {
     const hideProfileName = useAttendanceStore(state => state.hideProfileName);
     const syncFromCloud = useAttendanceStore(state => state.syncFromCloud);
     const lastSyncedAt = useAttendanceStore(state => state.lastSyncedAt);
+    const setLastSyncedAt = useAttendanceStore(state => state.setLastSyncedAt);
     const updateProfile = useAttendanceStore(state => state.updateProfile);
 
     const [syncSuccess, setSyncSuccess] = useState(false);
@@ -48,6 +49,9 @@ export const AttendanceView: React.FC = () => {
     const isSyncing = useRef(false);
     const isReadOnly = accessMode === 'readOnly';
     const activeProfileId = activeProfile?.id;
+    const lastSyncedTimestamp = activeProfileId && lastSyncedAt
+        ? (typeof lastSyncedAt === 'object' ? lastSyncedAt[activeProfileId] : lastSyncedAt)
+        : undefined;
     const { activeAnnouncement, dismiss: handleDismissAnnouncement } = useAnnouncement(activeProfileId, isReadOnly);
 
     // Fetch cloud data on mount
@@ -108,10 +112,13 @@ export const AttendanceView: React.FC = () => {
                     cloud.last_active_at !== activeProfile.last_active_at
                 );
 
+                const hasLocalEdits = Boolean(activeProfile.updated_at);
                 if (hasCloudDiverged && (cloudAttended !== activeProfile.attended || cloudTotal !== activeProfile.total)) {
-                    toast.warning('Cloud changes detected from another session. Pulling updates.');
-                    await syncFromCloud(activeProfile.id, true);
-                    return;
+                    if (!hasLocalEdits) {
+                        toast.warning('Cloud changes detected from another session. Pulling updates.');
+                        await syncFromCloud(activeProfile.id, true);
+                        return;
+                    }
                 }
             }
 
@@ -130,6 +137,7 @@ export const AttendanceView: React.FC = () => {
             if (result?.last_active_at) {
                 updateProfile(activeProfile.id, { last_active_at: result.last_active_at });
             }
+            setLastSyncedAt?.(activeProfile.id, Date.now());
 
             setSyncSuccess(true);
             setSyncError(null);
@@ -306,9 +314,9 @@ export const AttendanceView: React.FC = () => {
                         )}
                     </PremiumButton>
 
-                    {lastSyncedAt && (
+                    {lastSyncedTimestamp && (
                         <p className="text-center text-[10px] text-white/25 font-medium tracking-wider">
-                            Last synced {formatRelativeTime(lastSyncedAt)}
+                            Last synced {formatRelativeTime(lastSyncedTimestamp)}
                         </p>
                     )}
 

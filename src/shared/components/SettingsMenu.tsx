@@ -57,7 +57,7 @@ export const SettingsMenu: React.FC = () => {
         if (!activeProfile) return;
         const success = await handleDeleteProfile(
             activeProfile.id,
-            activeProfile.password,
+            undefined,
             deletePassword
         );
         if (success) {

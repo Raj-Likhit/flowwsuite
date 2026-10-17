@@ -109,20 +109,19 @@ describe('useFabricCanvas', () => {
         mockSetOverlay = vi.fn();
         mockSetActiveTool = vi.fn();
         
-        // Setup default store state
-        (usePdfStore as any).mockReturnValue({
+        const defaultStoreState = {
             setOverlay: mockSetOverlay,
             activeTool: 'select',
             overlays: [],
             setActiveTool: mockSetActiveTool,
+        };
+
+        // Setup default store state
+        (usePdfStore as any).mockImplementation((selector?: (state: any) => any) => {
+            return typeof selector === 'function' ? selector(defaultStoreState) : defaultStoreState;
         });
 
-        (usePdfStore.getState as any).mockReturnValue({
-            setOverlay: mockSetOverlay,
-            activeTool: 'select',
-            overlays: [],
-            setActiveTool: mockSetActiveTool,
-        });
+        (usePdfStore.getState as any).mockReturnValue(defaultStoreState);
         
         // Mock requestAnimationFrame for initCanvas
         vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -466,12 +465,15 @@ describe('useFabricCanvas', () => {
         const canvasRef = { current: document.createElement('canvas') };
         
         let currentActiveTool = 'select';
-        (usePdfStore as any).mockImplementation(() => ({
-            setOverlay: mockSetOverlay,
-            activeTool: currentActiveTool,
-            overlays: [],
-            setActiveTool: mockSetActiveTool,
-        }));
+        (usePdfStore as any).mockImplementation((selector?: (state: any) => any) => {
+            const state = {
+                setOverlay: mockSetOverlay,
+                activeTool: currentActiveTool,
+                overlays: [],
+                setActiveTool: mockSetActiveTool,
+            };
+            return typeof selector === 'function' ? selector(state) : state;
+        });
         
         const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 

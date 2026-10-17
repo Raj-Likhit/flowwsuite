@@ -83,7 +83,8 @@ export function useFabricCanvas(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   pageId: string
 ) {
-  const { setOverlay, activeTool } = usePdfStore();
+  const setOverlay = usePdfStore((state) => state.setOverlay);
+  const activeTool = usePdfStore((state) => state.activeTool);
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
@@ -105,8 +106,8 @@ export function useFabricCanvas(
     try {
       return canvas.toDataURL({
         format: 'jpeg',
-        quality: 0.86,
-        multiplier: 0.45,
+        quality: 0.90,
+        multiplier: 1.0,
       });
     } catch (error) {
       console.warn('Could not create edited page preview', error);

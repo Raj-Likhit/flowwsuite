@@ -6,7 +6,10 @@ import { clearStoredSignatures } from '../../features/pdf-engine/hooks/useSignat
 import { toast } from 'sonner';
 
 export function useSettingsActions() {
-    const { profiles, updateProfile, uploadAvatar, deleteProfile } = useAttendanceStore();
+    const profiles = useAttendanceStore((state) => state.profiles);
+    const updateProfile = useAttendanceStore((state) => state.updateProfile);
+    const uploadAvatar = useAttendanceStore((state) => state.uploadAvatar);
+    const deleteProfile = useAttendanceStore((state) => state.deleteProfile);
     const repo = useMemo(() => createProfileRepository(supabase), []);
 
     const handleUpdateName = useCallback(async (profileId: string, newName: string): Promise<boolean> => {
@@ -41,7 +44,6 @@ export function useSettingsActions() {
             if (repo) {
                 await repo.update(profileId, { password: hashedPassword });
             }
-            updateProfile(profileId, { password: hashedPassword });
             toast.success('Password updated!');
             return true;
         } catch (err: unknown) {
@@ -49,7 +51,7 @@ export function useSettingsActions() {
             toast.error('Password update failed: ' + error.message);
             return false;
         }
-    }, [repo, updateProfile]);
+    }, [repo]);
 
     const handleUpdateAvatar = useCallback(async (profileId: string, blob: Blob): Promise<boolean> => {
         const loadingToast = toast.loading('Uploading avatar...');
@@ -84,10 +86,17 @@ export function useSettingsActions() {
 
         const loadingToast = toast.loading('Deleting profile...');
         try {
-            const { correct } = await ProfileRepository.verifyPassword(
-                enteredPassword,
-                storedPassword || ''
-            );
+            let correct = false;
+            if (repo && typeof repo.verifyAndUnlock === 'function') {
+                const verifyResult = await repo.verifyAndUnlock(profileId, enteredPassword);
+                correct = Boolean(verifyResult.success);
+            } else if (storedPassword) {
+                const res = await ProfileRepository.verifyPassword(enteredPassword, storedPassword);
+                correct = res.correct;
+            } else {
+                correct = false;
+            }
+
             if (!correct) {
                 toast.error('Incorrect password', { id: loadingToast });
                 return false;

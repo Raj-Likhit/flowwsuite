@@ -14,6 +14,7 @@ vi.mock('jspdf', () => {
             this.setFontSize = vi.fn();
             this.setFont = vi.fn();
             this.text = vi.fn();
+            this.addImage = vi.fn();
             this.save = vi.fn();
             this.lastAutoTable = { finalY: 100 };
             return this;
@@ -76,6 +77,23 @@ describe('useAttendanceReport (Issue #27)', () => {
 
             expect(res).toBeUndefined();
             expect(jsPDF).not.toHaveBeenCalled();
+        });
+
+        it('handles non-Latin names like Telugu/Hindi with canvas-based rendering', async () => {
+            useAttendanceStore.setState({
+                activeProfile: {
+                    id: 'p2',
+                    name: 'రాజేష్ (Rajesh)',
+                    attended: 10,
+                    total: 10,
+                    targetGoal: 75,
+                },
+            });
+            const { result } = renderHook(() => useAttendanceReport());
+            const filename = await result.current.generateReport();
+
+            expect(filename).toBe('Rajesh_attendance_report.pdf');
+            expect(jsPDF).toHaveBeenCalled();
         });
     });
 });

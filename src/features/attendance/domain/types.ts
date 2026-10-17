@@ -20,7 +20,6 @@ export interface Profile {
     attended: number;
     total: number;
     avatar_url?: string;
-    password?: string;
     created_at?: string;
     updated_at?: number;
     is_suspended?: boolean;

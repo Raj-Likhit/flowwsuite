@@ -10,7 +10,7 @@ export const deriveUserRole = (session: Session | null): UserRole => {
     const role = session.user.app_metadata?.role;
     if (role === 'admin') return 'admin';
     if (role === 'editor') return 'editor';
-    return 'editor';
+    return 'guest';
 };
 
 interface AuthState {

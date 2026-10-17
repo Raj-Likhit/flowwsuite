@@ -72,21 +72,53 @@ export class ProfileRepository {
     this.db = db;
   }
 
-  /** Fetch all public profile summaries ordered by creation date. Excludes sensitive fields like passwords and notes. */
+  /** Fetch all public profile summaries ordered by creation date from profile_directory view. */
   async fetchAll(): Promise<Profile[]> {
+    // 1. Query the public profile_directory view which exposes only id, name, avatar_url, is_suspended, created_at
     const { data, error } = await this.db
+      .from('profile_directory')
+      .select('id, name, avatar_url, is_suspended, created_at')
+      .order('created_at', { ascending: true });
+
+    if (!error && data) {
+      return (data as ProfileRow[]).map(row => toProfile({
+        ...row,
+        attended: 0,
+        total: 0,
+      }));
+    }
+
+    // Fallback to profiles table if view is not yet created
+    const fallback = await this.db
       .from('profiles')
       .select('id, name, avatar_url, attended, total, target_goal, last_active_at, is_flagged, is_suspended, created_at')
       .order('created_at', { ascending: true });
-    if (error) throw error;
-    return ((data ?? []) as ProfileRow[]).map(toProfile);
+    if (fallback.error) throw fallback.error;
+    return ((fallback.data ?? []) as ProfileRow[]).map(toProfile);
   }
 
-  /** Verify password for a single profile and return full profile if authentic */
+  /** Verify password for a single profile using synthetic Supabase Auth with legacy fallback */
   async verifyAndUnlock(
     profileId: string,
     candidatePassword: string
   ): Promise<{ success: boolean; profile?: Profile; needsMigration?: boolean }> {
+    const syntheticEmail = `${profileId}@attendance.local`;
+    let authenticatedViaAuth = false;
+
+    // 1. Attempt server-side verification using Supabase Auth synthetic user
+    try {
+      const { data: authData, error: authError } = await this.db.auth.signInWithPassword({
+        email: syntheticEmail,
+        password: candidatePassword,
+      });
+      if (!authError && authData?.session) {
+        authenticatedViaAuth = true;
+      }
+    } catch {
+      // In mock/test environments or offline, proceed to fallback
+    }
+
+    // 2. Fetch profile data
     const { data, error } = await this.db
       .from('profiles')
       .select('*')
@@ -97,10 +129,29 @@ export class ProfileRepository {
       return { success: false };
     }
 
+    if (authenticatedViaAuth) {
+      return {
+        success: true,
+        profile: toProfile(data as ProfileRow),
+        needsMigration: false,
+      };
+    }
+
+    // 3. Fallback for legacy profiles not yet migrated to synthetic Supabase Auth
     const stored = data.password || '123';
     const { correct, needsMigration } = await ProfileRepository.verifyPassword(candidatePassword, stored);
     if (!correct) {
       return { success: false };
+    }
+
+    // Automatically provision synthetic auth user on first successful legacy unlock
+    try {
+      await this.db.auth.signUp({
+        email: syntheticEmail,
+        password: candidatePassword,
+      });
+    } catch {
+      // Non-blocking in case email already exists or auth is unavailable
     }
 
     return {
@@ -122,7 +173,7 @@ export class ProfileRepository {
     return toProfile(data as ProfileRow);
   }
 
-  /** Insert a new profile row and return it. */
+  /** Insert a new profile row and provision synthetic Supabase Auth identity. */
   async create(payload: {
     name: string;
     avatar_url: string;
@@ -130,9 +181,31 @@ export class ProfileRepository {
     attended: number;
     total: number;
   }): Promise<Profile> {
+    let assignedId = crypto.randomUUID();
+    const syntheticEmail = `${assignedId}@attendance.local`;
+
+    try {
+      const { data: authData } = await this.db.auth.signUp({
+        email: syntheticEmail,
+        password: payload.password,
+      });
+      if (authData?.user?.id) {
+        assignedId = authData.user.id as `${string}-${string}-${string}-${string}-${string}`;
+      }
+    } catch {
+      // Non-blocking fallback for offline/mock environments
+    }
+
     const { data, error } = await this.db
       .from('profiles')
-      .insert([payload])
+      .insert([{
+        id: assignedId,
+        name: payload.name,
+        avatar_url: payload.avatar_url,
+        password: payload.password,
+        attended: payload.attended,
+        total: payload.total,
+      }])
       .select()
       .single();
     if (error) throw error;
@@ -164,11 +237,8 @@ export class ProfileRepository {
     }
   }
 
-  /** Delete a profile row by id. Cleans up avatar from storage if provided and verifies affected rows. */
+  /** Delete a profile row by id. Deletes row first, then cleans up storage avatar. */
   async delete(profileId: string, avatarUrl?: string): Promise<void> {
-    if (avatarUrl) {
-      await this.deleteAvatarFile(avatarUrl);
-    }
     const { data, error } = await this.db
       .from('profiles')
       .delete()
@@ -177,6 +247,9 @@ export class ProfileRepository {
     if (error) throw error;
     if (data && data.length === 0) {
       throw new Error(`Profile deletion failed: row ${profileId} not found or permission denied`);
+    }
+    if (avatarUrl) {
+      await this.deleteAvatarFile(avatarUrl);
     }
   }
 
@@ -230,13 +303,9 @@ export class ProfileRepository {
   }
 
   /** Upload a file to the 'avatars' storage bucket and return the public URL.
-   *  Validates file size/type and deletes old custom avatar if provided. */
+   *  Uploads the new avatar first, then cleans up the old avatar to avoid dangling URLs. */
   async uploadAvatar(profileId: string, file: Blob, oldAvatarUrl?: string): Promise<AvatarUploadResult> {
     validateAvatarFile(file);
-
-    if (oldAvatarUrl) {
-      await this.deleteAvatarFile(oldAvatarUrl);
-    }
 
     const ext = file.type === 'image/gif' ? 'gif'
       : file.type === 'image/png' ? 'png'
@@ -245,6 +314,7 @@ export class ProfileRepository {
     const contentType = file.type || 'image/jpeg';
     const fileName = `${profileId}-${Date.now()}.${ext}`;
 
+    // 1. Upload new avatar first
     const { data, error } = await this.db.storage
       .from('avatars')
       .upload(fileName, file, { contentType, upsert: true });
@@ -253,6 +323,11 @@ export class ProfileRepository {
     const { data: { publicUrl } } = this.db.storage
       .from('avatars')
       .getPublicUrl(data.path);
+
+    // 2. Delete old avatar only after new avatar upload succeeds
+    if (oldAvatarUrl) {
+      await this.deleteAvatarFile(oldAvatarUrl);
+    }
 
     return { publicUrl };
   }

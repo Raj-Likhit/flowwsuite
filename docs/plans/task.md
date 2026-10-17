@@ -235,3 +235,47 @@
 | Task 113 | Restore `bottts-neutral` preset URLs and generator in `constants.ts` | Completed |
 | Task 114 | Update unit tests in `constants.test.ts` & `profileRepository.test.ts` | Completed |
 | Task 115 | Verification Gate (vitest, tsc, lint, build) and push to remote | Completed |
+
+## Phase 1: Critical Security & Supabase Schema (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 116 | Create migration `20261018000000_secure_rls_and_storage.sql` (`profile_directory` view, strict RLS, push_subscriptions constraints, storage bucket limits) | Completed |
+| Task 117 | Update `profileRepository.ts` & `profileMapper.ts` (synthetic auth, strip password column, safe avatar upload order, public directory view) | Completed |
+| Task 118 | Update unit tests in `profileRepository.test.ts` & `profileMapper.test.ts` | Completed |
+| Task 119 | Verification Gate (vitest, tsc, lint, build) | Completed |
+
+## Phase 2: High-Priority Functional Bug Fixes (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 120 | Fix `accessMode` persistence & rehydration in `useAttendanceStore.ts` | Completed |
+| Task 121 | Fix cloud sync data loss & per-profile `lastSyncedAt` tracking in store & `AttendanceView` | Completed |
+| Task 122 | Fix lockout stale closure in `useProfileAuth.ts` | Completed |
+| Task 123 | Fix `sanitize()` to strip only `<[^>]*>` without deleting quotes/ampersands | Completed |
+| Task 124 | Fix recovery cap in `attendance.ts` to check `needed <= RECOVERY_CAP_CLASSES` | Completed |
+| Task 125 | Add/update unit tests across domain, store, and auth hooks | Completed |
+| Task 126 | Verification Gate (vitest, tsc, lint, build) | Completed |
+
+## Phase 3: PDF Engine & Rendering Remediation (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 127 | Localize PDF.js WASM decoders (`openjpeg.wasm`, `jbig2.wasm`) & add `'wasm-unsafe-eval'` to CSP | Completed |
+| Task 128 | Fix double rotation in `usePdfDocument.ts` & `pdf.compile.worker.ts` | Completed |
+| Task 129 | Fix export rasterization resolution & quality in `useFabricCanvas.ts` and `usePdfExport.ts` | Completed |
+| Task 130 | Support non-Latin & Indic text via canvas-based rendering in `useAttendanceReport.ts` | Completed |
+| Task 131 | Fix SPA wildcard 404 route & `/admin-portal-floww-security` path matching in `App.tsx` | Completed |
+| Task 132 | Fix image import transparency preservation & OffscreenCanvas feature detection in `usePdfDocument.ts` | Completed |
+| Task 133 | Verification Gate (vitest, tsc -b, lint, build) | Completed |
+
+## Phase 4: Performance, CI & Documentation Alignment (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 134 | Dynamic `jsPDF` import in `useAttendanceReport.ts` to eliminate bundle bloat | Completed |
+| Task 135 | Fix store selector usage in `usePdfExport.ts`, `usePdfDocument.ts`, `useFabricCanvas.ts`, `useSettingsActions.ts` | Completed |
+| Task 136 | Fix `deriveUserRole` least-privilege default to `'guest'` in `useAuthStore.ts` | Completed |
+| Task 137 | Add lint & audit check to CI workflow in `.github/workflows/ci.yml` | Completed |
+| Task 138 | Reconcile `docs/KNOWN_ISSUES_STATUS.md` and `README.md` with true codebase status | Completed |
+| Task 139 | Final Verification Gate & Git push | Completed |

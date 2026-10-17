@@ -68,11 +68,14 @@ describe('usePdfDocument', () => {
         mockSetError = vi.fn();
         mockSetPages = vi.fn();
 
-        (usePdfStore as any).mockReturnValue({
+        const storeMock = {
             addSource: mockAddSource,
             setPageThumbnail: mockSetPageThumbnail,
             setLoading: mockSetLoading,
             setError: mockSetError,
+        };
+        (usePdfStore as any).mockImplementation((selector?: any) => {
+            return typeof selector === 'function' ? selector(storeMock) : storeMock;
         });
 
         (usePdfStore.getState as any).mockReturnValue({
@@ -259,6 +262,7 @@ describe('usePdfDocument', () => {
         });
 
         const mockBitmap = { width: 1000, height: 1000 };
+        vi.mocked(pdfLoader.loadPdfDocument).mockResolvedValueOnce({} as any);
         vi.mocked(pdfLoader.renderPageToImageBitmap).mockResolvedValueOnce(mockBitmap as any);
         
         let res: any;

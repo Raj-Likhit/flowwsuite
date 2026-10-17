@@ -338,22 +338,25 @@ describe('useAttendanceStore', () => {
             const parsed = JSON.parse(storedRaw!);
             expect(parsed.state).toBeDefined();
 
-            // Should persist business state
+            // Business state and accessMode must persist across reloads
             expect(parsed.state.profiles).toHaveLength(1);
             expect(parsed.state.profiles[0].name).toBe('Alice');
+            expect(parsed.state.accessMode).toBe('readOnly');
 
             // Must NOT persist transient UI states
             expect(parsed.state.loading).toBeUndefined();
             expect(parsed.state.error).toBeUndefined();
-            expect(parsed.state.accessMode).toBeUndefined();
         });
     });
 
     describe('sanitize utility and input restrictions', () => {
-        it('strips HTML tags and special markup characters', async () => {
+        it('strips HTML tags while preserving legitimate characters like quotes and ampersands', async () => {
             const { sanitize } = await import('./useAttendanceStore');
-            expect(sanitize('<script>alert("xss")</script>Hello')).toBe('alert(xss)Hello');
-            expect(sanitize('<b>Bold & "Brash"</b>')).toBe('Bold  Brash');
+            expect(sanitize('<script>alert("xss")</script>Hello')).toBe('alert("xss")Hello');
+            expect(sanitize('<b>Bold & "Brash"</b>')).toBe('Bold & "Brash"');
+            expect(sanitize("Logged today's class")).toBe("Logged today's class");
+            expect(sanitize("O'Brien")).toBe("O'Brien");
+            expect(sanitize("AT&T")).toBe("AT&T");
         });
 
         it('enforces custom max length constraint', async () => {

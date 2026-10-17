@@ -71,6 +71,7 @@ describe('pdfLoader utilities', () => {
                 cMapUrl: '/cmaps/',
                 cMapPacked: true,
                 standardFontDataUrl: '/standard_fonts/',
+                wasmUrl: '/wasm/',
                 enableHWA: true,
             }));
         });

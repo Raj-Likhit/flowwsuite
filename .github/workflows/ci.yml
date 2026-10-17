@@ -32,7 +32,9 @@ jobs:
         run: npx tsc -b
 
       - name: Run Vitest Unit & Integration Tests
-        run: npm test
+        run: npx vitest run --reporter=verbose
+        env:
+          CI: true
 
       - name: Production Build
         run: npm run build

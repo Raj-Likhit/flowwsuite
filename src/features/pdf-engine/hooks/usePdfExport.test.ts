@@ -9,6 +9,11 @@ import type { PdfPage, PdfSource } from '../types/pdf.types';
 vi.mock('../store/usePdfStore');
 vi.mock('sonner');
 vi.mock('jszip');
+vi.mock('../utils/pdfLoader', () => ({
+    loadPdfDocument: vi.fn(),
+    renderPageToImageBitmap: vi.fn(),
+    destroyPdfDocument: vi.fn(),
+}));
 
 const mockWorker = {
     postMessage: vi.fn(),

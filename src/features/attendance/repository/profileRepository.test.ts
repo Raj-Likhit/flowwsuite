@@ -246,7 +246,7 @@ describe('ProfileRepository', () => {
 
     it('does not attempt storage deletion for dicebear or blob URLs', async () => {
       const file = new Blob(['jpg-data'], { type: 'image/jpeg' });
-      const dicebearUrl = 'https://api.dicebear.com/7.x/bottts/svg?seed=Test';
+      const dicebearUrl = 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=Test';
 
       await repo.uploadAvatar('p1', file, dicebearUrl);
 

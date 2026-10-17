@@ -226,3 +226,12 @@
 | Task 109 | Remove obsolete artifacts & scripts (`.vite-dev.log`, `benchmark.js`, stale reports) | Completed |
 | Task 110 | Prune unused devDependencies (`puppeteer`, `@vitest/ui`, `@testing-library/dom`) | Completed |
 | Task 111 | Verification Gate (vitest, tsc, lint, build) and push to remote | Completed |
+
+## Restore Beloved Dicebear bottts-neutral Avatar Assets (Single-Flow Execution)
+
+| Task | Description | Status |
+| --- | --- | --- |
+| Task 112 | Restore all 16 `bottts-neutral` avatar SVG assets in `public/avatars/` | Completed |
+| Task 113 | Restore `bottts-neutral` preset URLs and generator in `constants.ts` | Completed |
+| Task 114 | Update unit tests in `constants.test.ts` & `profileRepository.test.ts` | Completed |
+| Task 115 | Verification Gate (vitest, tsc, lint, build) and push to remote | Completed |

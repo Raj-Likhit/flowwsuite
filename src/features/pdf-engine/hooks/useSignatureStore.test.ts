@@ -134,4 +134,32 @@ describe('useSignatureStore', () => {
             );
         });
     });
+
+    describe('clearSignatures and legacy migration', () => {
+        it('should read from legacy flowwsuite-signatures key if primary key is absent', () => {
+            const legacy = [{ id: 'legacy-1', dataUrl: 'legacy-data', createdAt: 456 }];
+            localStorage.setItem('flowwsuite-signatures', JSON.stringify(legacy));
+
+            const { result } = renderHook(() => useSignatureStore());
+            expect(result.current.signatures).toEqual(legacy);
+        });
+
+        it('should clear signatures in state and purge all localStorage keys', () => {
+            const stored = [{ id: '1', dataUrl: 'data', createdAt: 123 }];
+            localStorage.setItem('pdf-engine-signatures', JSON.stringify(stored));
+            localStorage.setItem('flowwsuite-signatures', JSON.stringify(stored));
+
+            const { result } = renderHook(() => useSignatureStore());
+            expect(result.current.signatures).toHaveLength(1);
+
+            act(() => {
+                result.current.clearSignatures();
+            });
+
+            expect(result.current.signatures).toEqual([]);
+            expect(localStorage.getItem('pdf-engine-signatures')).toBeNull();
+            expect(localStorage.getItem('flowwsuite-signatures')).toBeNull();
+        });
+    });
 });
+

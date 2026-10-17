@@ -137,7 +137,8 @@ export const AddProfileModal: React.FC<AddProfileModalProps> = ({
                                 autoFocus
                                 type="text"
                                 value={newName}
-                                onChange={(e) => setNewName(e.target.value.slice(0, 15))}
+                                maxLength={30}
+                                onChange={(e) => setNewName(e.target.value.slice(0, 30))}
                                 placeholder="Enter name..."
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg outline-none focus:border-primary-500 focus:bg-white/10 transition-all font-bold"
                             />

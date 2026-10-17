@@ -9,6 +9,7 @@ vi.mock('sonner', () => ({
     toast: {
         success: vi.fn(),
         error: vi.fn(),
+        warning: vi.fn(),
     }
 }));
 
@@ -50,7 +51,10 @@ describe('useAdminDashboard', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         
-        (supabase as any) = { from: vi.fn() };
+        (supabase as any) = {
+            from: vi.fn(),
+            functions: { invoke: vi.fn().mockResolvedValue({ data: { success: true }, error: null }) },
+        };
         
         ((supabase as any).from as any).mockImplementation((table: string) => {
             const chain = createPromiseChain({ data: [], error: null });
@@ -286,6 +290,43 @@ describe('useAdminDashboard', () => {
         });
 
         expect(success).toBe(true);
+        expect(toast.success).toHaveBeenCalledWith('Announcement broadcasted successfully!');
+    });
+
+    it('should warn when push notification delivery fails rather than swallowing error', async () => {
+        (supabase as any).functions.invoke.mockResolvedValue({
+            data: null,
+            error: new Error('Push delivery failed'),
+        });
+
+        const { result } = renderHook(() => useAdminDashboard());
+
+        let success = false;
+        await act(async () => {
+            success = await result.current.publishAnnouncement('Hello', 'all', '', null);
+        });
+
+        expect(success).toBe(true);
+        expect(toast.warning).toHaveBeenCalledWith(
+            expect.stringContaining('push notification delivery failed: Push delivery failed')
+        );
+        expect(toast.success).toHaveBeenCalledWith('Announcement broadcasted successfully!');
+    });
+
+    it('should warn when push service throws an exception rather than crashing or swallowing', async () => {
+        (supabase as any).functions.invoke.mockRejectedValue(new Error('Network offline'));
+
+        const { result } = renderHook(() => useAdminDashboard());
+
+        let success = false;
+        await act(async () => {
+            success = await result.current.publishAnnouncement('Hello', 'all', '', null);
+        });
+
+        expect(success).toBe(true);
+        expect(toast.warning).toHaveBeenCalledWith(
+            expect.stringContaining('push notification service is unavailable')
+        );
         expect(toast.success).toHaveBeenCalledWith('Announcement broadcasted successfully!');
     });
 

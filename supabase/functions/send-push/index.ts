@@ -1,53 +1,125 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.97.0";
 import webPush from "npm:web-push@3.6.7";
 
-// CORS configuration
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Standard CORS and JSON headers
+const getCorsHeaders = (origin: string | null) => {
+    const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") || "*";
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin === "*" ? (origin || "*") : allowedOrigin,
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Content-Type": "application/json",
+    };
 };
 
-serve(async (req) => {
+const MAX_PAYLOAD_BYTES = 4000;
+const MAX_TARGET_IDS = 500;
+
+serve(async (req: Request) => {
+    const origin = req.headers.get("Origin");
+    const headers = getCorsHeaders(origin);
+
     // Handle CORS preflight requests
     if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
+        return new Response("ok", { headers });
+    }
+
+    if (req.method !== "POST") {
+        return new Response(JSON.stringify({ error: "Method not allowed" }), {
+            status: 405,
+            headers,
+        });
     }
 
     try {
-        const supabaseClient = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        );
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-        // Verify the user is an admin before sending push
+        if (!supabaseUrl || !supabaseServiceKey) {
+            return new Response(JSON.stringify({ error: "Server configuration missing" }), {
+                status: 500,
+                headers,
+            });
+        }
+
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Verify authorization token
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) {
             return new Response(JSON.stringify({ error: "Missing Auth Token" }), {
                 status: 401,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                headers,
             });
         }
-        
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
+
+        const token = authHeader.replace(/^Bearer\s+/i, "");
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
         if (authError || !user) {
-            return new Response(JSON.stringify({ error: "Invalid Token" }), { status: 401, headers: corsHeaders });
+            return new Response(JSON.stringify({ error: "Invalid Token" }), {
+                status: 401,
+                headers,
+            });
         }
 
         // Verify Admin Role via app_metadata
         if (user.app_metadata?.role !== 'admin') {
-            return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: corsHeaders });
+            return new Response(JSON.stringify({ error: "Unauthorized: Admin privileges required" }), {
+                status: 403,
+                headers,
+            });
         }
 
-        const body = await req.json();
-        const { content, targetProfileIds } = body;
+        // Parse and validate payload
+        let body: any;
+        try {
+            body = await req.json();
+        } catch {
+            return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+                status: 400,
+                headers,
+            });
+        }
 
-        if (!content) {
-            return new Response(JSON.stringify({ error: "Content is required" }), { status: 400, headers: corsHeaders });
+        const { content, targetProfileIds } = body || {};
+
+        if (!content || typeof content !== "string" || content.trim().length === 0) {
+            return new Response(JSON.stringify({ error: "Content is required" }), {
+                status: 400,
+                headers,
+            });
+        }
+
+        // Enforce push payload limit (RFC 8030 max payload size 4096 bytes)
+        const payloadString = JSON.stringify({
+            title: "New Announcement",
+            body: content.trim(),
+        });
+
+        if (new TextEncoder().encode(payloadString).length > MAX_PAYLOAD_BYTES) {
+            return new Response(JSON.stringify({
+                error: `Payload exceeds maximum limit of ${MAX_PAYLOAD_BYTES} bytes`,
+            }), {
+                status: 413,
+                headers,
+            });
+        }
+
+        // Validate targetProfileIds length
+        if (targetProfileIds && Array.isArray(targetProfileIds)) {
+            if (targetProfileIds.length > MAX_TARGET_IDS) {
+                return new Response(JSON.stringify({
+                    error: `Target profiles exceed limit of ${MAX_TARGET_IDS}`,
+                }), {
+                    status: 400,
+                    headers,
+                });
+            }
         }
 
         // Fetch subscriptions
-        let query = supabaseClient.from("push_subscriptions").select("subscription, profile_id");
+        let query = supabaseClient.from("push_subscriptions").select("id, subscription, profile_id");
         if (targetProfileIds && Array.isArray(targetProfileIds) && targetProfileIds.length > 0) {
             query = query.in("profile_id", targetProfileIds);
         }
@@ -55,6 +127,19 @@ serve(async (req) => {
 
         if (subError) {
             throw subError;
+        }
+
+        if (!subscriptions || subscriptions.length === 0) {
+            return new Response(JSON.stringify({
+                success: true,
+                delivered: 0,
+                failed: 0,
+                pruned: 0,
+                message: "No active subscriptions found",
+            }), {
+                status: 200,
+                headers,
+            });
         }
 
         const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -67,26 +152,48 @@ serve(async (req) => {
 
         webPush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
-        const payload = JSON.stringify({
-            title: "New Announcement",
-            body: content,
-        });
+        const expiredSubIds: string[] = [];
 
         const results = await Promise.allSettled(
-            (subscriptions || []).map((sub) => 
-                webPush.sendNotification(sub.subscription, payload)
-            )
+            subscriptions.map(async (sub: { id: string; subscription: any }) => {
+                try {
+                    await webPush.sendNotification(sub.subscription, payloadString);
+                } catch (err: any) {
+                    // Check for 410 Gone (unsubscribed) or 404 Not Found (expired)
+                    if (err?.statusCode === 410 || err?.statusCode === 404) {
+                        expiredSubIds.push(sub.id);
+                    }
+                    throw err;
+                }
+            })
         );
+
+        // Prune expired / dead subscriptions to keep DB healthy and avoid wasting push quotas
+        let prunedCount = 0;
+        if (expiredSubIds.length > 0) {
+            const { error: pruneError } = await supabaseClient
+                .from("push_subscriptions")
+                .delete()
+                .in("id", expiredSubIds);
+
+            if (!pruneError) {
+                prunedCount = expiredSubIds.length;
+            } else {
+                console.error("Failed to prune expired subscriptions:", pruneError);
+            }
+        }
 
         const successCount = results.filter((r) => r.status === "fulfilled").length;
         const failedCount = results.filter((r) => r.status === "rejected").length;
 
-        // Optionally, remove failed subscriptions (e.g. 410 Gone)
-        // This can be done by parsing the rejection reason and deleting from DB.
-
-        return new Response(JSON.stringify({ success: true, delivered: successCount, failed: failedCount }), {
+        return new Response(JSON.stringify({
+            success: true,
+            delivered: successCount,
+            failed: failedCount,
+            pruned: prunedCount,
+        }), {
             status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers,
         });
 
     } catch (error: unknown) {
@@ -94,7 +201,7 @@ serve(async (req) => {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers,
         });
     }
 });

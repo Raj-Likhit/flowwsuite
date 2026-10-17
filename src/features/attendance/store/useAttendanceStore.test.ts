@@ -98,7 +98,7 @@ describe('useAttendanceStore', () => {
             expect(updatedProfile?.total).toBe(1);
             expect(updatedProfile?.logs?.[0]).toEqual(expect.objectContaining({
                 id: 'mock-uuid',
-                title: 'scriptAlert/script',
+                title: 'Alert',
                 diffAttended: 1,
                 diffTotal: 1,
             }));
@@ -152,7 +152,7 @@ describe('useAttendanceStore', () => {
             useAttendanceStore.getState().updateProfile('p1', { name: '<script>Jane</script>', notes: 'My notes' });
             
             const state = useAttendanceStore.getState();
-            expect(state.activeProfile?.name).toBe('scriptJane/script');
+            expect(state.activeProfile?.name).toBe('Jane');
             expect(state.activeProfile?.notes).toBe('My notes');
         });
     });
@@ -323,4 +323,107 @@ describe('useAttendanceStore', () => {
             expect(result).toBe('failed');
         });
     });
+
+    describe('persistence hygiene (Issue #49)', () => {
+        it('should exclude transient states (loading, error, accessMode) from localStorage persistence', () => {
+            useAttendanceStore.setState({
+                loading: true,
+                error: 'Transient network failure',
+                accessMode: 'readOnly',
+                profiles: [{ id: 'p1', name: 'Alice', attended: 10, total: 12 }],
+            });
+
+            const storedRaw = localStorage.getItem('attendance-profile-metrics-storage');
+            expect(storedRaw).toBeTruthy();
+            const parsed = JSON.parse(storedRaw!);
+            expect(parsed.state).toBeDefined();
+
+            // Should persist business state
+            expect(parsed.state.profiles).toHaveLength(1);
+            expect(parsed.state.profiles[0].name).toBe('Alice');
+
+            // Must NOT persist transient UI states
+            expect(parsed.state.loading).toBeUndefined();
+            expect(parsed.state.error).toBeUndefined();
+            expect(parsed.state.accessMode).toBeUndefined();
+        });
+    });
+
+    describe('sanitize utility and input restrictions', () => {
+        it('strips HTML tags and special markup characters', async () => {
+            const { sanitize } = await import('./useAttendanceStore');
+            expect(sanitize('<script>alert("xss")</script>Hello')).toBe('alert(xss)Hello');
+            expect(sanitize('<b>Bold & "Brash"</b>')).toBe('Bold  Brash');
+        });
+
+        it('enforces custom max length constraint', async () => {
+            const { sanitize } = await import('./useAttendanceStore');
+            const longName = 'A'.repeat(50);
+            expect(sanitize(longName, 30)).toHaveLength(30);
+        });
+
+        it('restricts profile name updates to 30 characters', () => {
+            const profile = { id: 'p1', name: 'Original', attended: 0, total: 0 };
+            useAttendanceStore.setState({ activeProfile: profile, profiles: [profile] });
+
+            const store = useAttendanceStore.getState();
+            store.updateProfile('p1', { name: 'A'.repeat(50) });
+
+            const updated = useAttendanceStore.getState().activeProfile;
+            expect(updated?.name).toHaveLength(30);
+        });
+    });
+
+    describe('architecture refactor & reducer purity', () => {
+        it('rejects invalid target goals (<= 0, > 100, floats)', () => {
+            const profile = { id: 'p1', name: 'John', attended: 5, total: 5, targetGoal: 75 };
+            useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
+
+            const store = useAttendanceStore.getState();
+            store.updateTargetGoal('p1', 0);
+            expect(useAttendanceStore.getState().activeProfile?.targetGoal).toBe(75);
+
+            store.updateTargetGoal('p1', 101);
+            expect(useAttendanceStore.getState().activeProfile?.targetGoal).toBe(75);
+
+            store.updateTargetGoal('p1', 82.5);
+            expect(useAttendanceStore.getState().activeProfile?.targetGoal).toBe(75);
+
+            store.updateTargetGoal('p1', 85);
+            expect(useAttendanceStore.getState().activeProfile?.targetGoal).toBe(85);
+            expect(useAttendanceStore.getState().profiles[0].targetGoal).toBe(85);
+        });
+
+        it('enforces attended <= total invariant during deleteLog', () => {
+            const profile = {
+                id: 'p1',
+                name: 'John',
+                attended: 5,
+                total: 5,
+                logs: [{ id: 'l1', timestamp: 0, title: '', diffAttended: 0, diffTotal: 3 }],
+            };
+            useAttendanceStore.setState({ profiles: [profile], activeProfile: profile });
+
+            useAttendanceStore.getState().deleteLog('l1');
+            const state = useAttendanceStore.getState();
+            expect(state.activeProfile?.attended).toBe(2);
+            expect(state.activeProfile?.total).toBe(2);
+            expect(state.activeProfile?.attended).toBeLessThanOrEqual(state.activeProfile!.total);
+        });
+
+        it('syncFromCloud handles mapped cloud data without spurious changes', async () => {
+            const profile = { id: 'p1', name: 'John', attended: 5, total: 5, targetGoal: 75 };
+            useAttendanceStore.setState({ profiles: [profile], activeProfile: profile, lastSyncedAt: 1000 });
+
+            // Supabase returns cloud profile where notes is null and target_goal is 75
+            vi.mocked(supabase!.single).mockResolvedValue({
+                data: { attended: 5, total: 5, target_goal: 75, logs: null, notes: null },
+                error: null,
+            } as any);
+
+            const result = await useAttendanceStore.getState().syncFromCloud('p1');
+            expect(result).toBe('in-sync');
+        });
+    });
 });
+

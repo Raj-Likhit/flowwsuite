@@ -18,6 +18,10 @@ coverage
 # Production
 dist
 dist-ssr
+dev-dist
+
+# Supabase Local
+supabase/.temp/
 
 # Misc
 .DS_Store

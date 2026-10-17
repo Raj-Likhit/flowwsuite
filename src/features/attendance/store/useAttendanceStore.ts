@@ -2,33 +2,24 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { supabase, isSupabaseAvailable } from '../../../core/lib/supabase';
 import { createProfileRepository } from '../repository/profileRepository';
+import type { AttendanceLog, Profile } from '../domain/types';
+import { applyAttendanceChange, isValidGoal, revertLog } from '../domain/attendance';
+import { planSync } from '../domain/sync';
 
-const sanitize = (str: string) => str.replace(/[<>]/g, '').slice(0, 100).trim();
+export type { AttendanceLog, Profile };
 
-export interface AttendanceLog {
-    id: string;
-    timestamp: number;
-    title: string;
-    diffAttended: number;
-    diffTotal: number;
-}
-
-export interface Profile {
-    id: string;
-    name: string;
-    attended: number;
-    total: number;
-    avatar_url?: string;
-    password?: string;
-    created_at?: string;
-    updated_at?: number;
-    is_suspended?: boolean;
-    logs?: AttendanceLog[];
-    targetGoal?: number;
-    notes?: string;
-}
+export const sanitize = (str: string, maxLength = 50): string =>
+    str
+        .replace(/<[^>]*>/g, '')
+        .replace(/[<>"'&`]/g, '')
+        .slice(0, maxLength)
+        .trim();
 
 export type AttendanceAccessMode = 'editable' | 'readOnly';
+
+export type SyncOutcome = 'updated' | 'in-sync' | 'failed' | 'offline' | 'conflict';
+
+type ProfileUpdates = Partial<Pick<Profile, 'name' | 'avatar_url' | 'password' | 'notes' | 'last_active_at'>>;
 
 interface AttendanceStore {
     // State
@@ -42,7 +33,6 @@ interface AttendanceStore {
     hideProfileName: boolean;
 
     // Actions
-
     setProfiles: (profiles: Profile[]) => void;
     setActiveProfile: (profile: Profile | null, accessMode?: AttendanceAccessMode) => void;
     setLoading: (loading: boolean) => void;
@@ -54,21 +44,33 @@ interface AttendanceStore {
     deleteLog: (logId: string) => void;
     updateTargetGoal: (profileId: string, goal: number) => void;
     deleteProfile: (profileId: string) => void;
-    updateProfile: (profileId: string, updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'password' | 'notes'>>) => void;
+    updateProfile: (profileId: string, updates: ProfileUpdates) => void;
     uploadAvatar: (profileId: string, file: Blob) => Promise<string | null>;
-    syncFromCloud: (profileId: string, force?: boolean) => Promise<'updated' | 'in-sync' | 'failed' | 'offline' | 'conflict'>;
+    syncFromCloud: (profileId: string, force?: boolean) => Promise<SyncOutcome>;
 }
+
+type ProfileSlice = Pick<AttendanceStore, 'profiles' | 'activeProfile'>;
+
+/**
+ * The single place that applies a patch to a profile.
+ * `activeProfile` is a denormalised copy of one list entry, so every mutation
+ * must touch both; funnelling them through here keeps the two from diverging.
+ */
+const patchProfile = (state: ProfileSlice, id: string, patch: Partial<Profile>): ProfileSlice => ({
+    profiles: state.profiles.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    activeProfile: state.activeProfile?.id === id ? { ...state.activeProfile, ...patch } : state.activeProfile,
+});
 
 export const useAttendanceStore = create<AttendanceStore>()(
     persist(
-        (set) => ({
-            profiles: [],
-            activeProfile: null,
-            accessMode: 'editable',
+        (set, get) => ({
+            profiles: [] as Profile[],
+            activeProfile: null as Profile | null,
+            accessMode: 'editable' as AttendanceAccessMode,
             loading: false,
-            error: null,
+            error: null as string | null,
             isCloudSyncEnabled: isSupabaseAvailable(),
-            lastSyncedAt: null,
+            lastSyncedAt: null as number | null,
             hideProfileName: false,
 
             setProfiles: (profiles) => set({ profiles }),
@@ -83,178 +85,123 @@ export const useAttendanceStore = create<AttendanceStore>()(
             setHideProfileName: (hideProfileName) => set({ hideProfileName }),
             toggleHideProfileName: () => set((state) => ({ hideProfileName: !state.hideProfileName })),
 
-            updateAttendance: (rawAttended, rawTotal, title) => {
-                let generatedId: string | undefined;
-                set((state) => {
-                    if (!state.activeProfile || state.accessMode === 'readOnly') return state;
+            updateAttendance: (attended, total, title) => {
+                const { activeProfile, accessMode } = get();
+                if (!activeProfile || accessMode === 'readOnly') return undefined;
 
-                    // Clamping and Sanitization logic for robustness
-                    const safeRawTotal = isNaN(rawTotal) ? 0 : rawTotal;
-                    const safeRawAttended = isNaN(rawAttended) ? 0 : rawAttended;
+                const sanitizedTitle = title ? sanitize(title) : undefined;
 
-                    const total = Math.max(0, safeRawTotal);
-                    const attended = Math.max(0, Math.min(safeRawAttended, total));
+                const change = applyAttendanceChange(
+                    activeProfile,
+                    { attended, total, title: sanitizedTitle },
+                    { now: Date.now(), newId: () => crypto.randomUUID() },
+                );
+                if (change.kind === 'unchanged') return undefined;
 
-                    const diffAttended = attended - state.activeProfile.attended;
-                    const diffTotal = total - state.activeProfile.total;
-
-                    if (diffAttended === 0 && diffTotal === 0) return state;
-
-                    // Auto-detect title if not provided
-                    let finalTitle = title ? sanitize(title) : 'Manual Edit';
-                    if (!title && diffAttended === 1 && diffTotal === 1) {
-                        finalTitle = 'Logged +1 class';
-                    }
-
-                    const newLog: AttendanceLog = {
-                        id: crypto.randomUUID(),
-                        timestamp: Date.now(),
-                        title: finalTitle,
-                        diffAttended,
-                        diffTotal,
-                    };
-
-                    generatedId = newLog.id;
-
-                    const updatedProfile = {
-                        ...state.activeProfile,
-                        attended,
-                        total,
+                set((state) =>
+                    patchProfile(state, activeProfile.id, {
+                        attended: change.attended,
+                        total: change.total,
+                        logs: change.logs,
                         updated_at: Date.now(),
-                        logs: [newLog, ...(state.activeProfile.logs || [])].slice(0, 50) // keep last 50 logs
-                    };
-                    return {
-                        activeProfile: updatedProfile,
-                        profiles: state.profiles.map((p) =>
-                            p.id === updatedProfile.id ? updatedProfile : p
-                        ),
-                    };
-                });
-                return generatedId;
+                    }),
+                );
+                return change.log.id;
             },
 
-            updateTargetGoal: (profileId, goal) => set((state) => ({
-                profiles: state.profiles.map((p) => p.id === profileId ? { ...p, targetGoal: goal, updated_at: Date.now() } : p),
-                activeProfile: state.activeProfile?.id === profileId ? { ...state.activeProfile, targetGoal: goal, updated_at: Date.now() } : state.activeProfile
-            })),
+            deleteLog: (logId) => {
+                const { activeProfile, accessMode } = get();
+                if (!activeProfile || accessMode === 'readOnly') return;
+
+                const reverted = revertLog(activeProfile, logId);
+                if (!reverted) return;
+
+                set((state) =>
+                    patchProfile(state, activeProfile.id, {
+                        ...reverted,
+                        updated_at: Date.now(),
+                    }),
+                );
+            },
+
+            updateTargetGoal: (profileId, goal) => {
+                if (!isValidGoal(goal)) return;
+                set((state) =>
+                    patchProfile(state, profileId, {
+                        targetGoal: goal,
+                        updated_at: Date.now(),
+                    }),
+                );
+            },
 
             deleteProfile: (profileId) =>
                 set((state) => {
-                    const profiles = state.profiles.filter((p) => p.id !== profileId);
+                    const wasActive = state.activeProfile?.id === profileId;
                     return {
-                        profiles,
-                        activeProfile:
-                            state.activeProfile?.id === profileId ? null : state.activeProfile,
-                        accessMode:
-                            state.activeProfile?.id === profileId ? 'editable' : state.accessMode,
+                        profiles: state.profiles.filter((p) => p.id !== profileId),
+                        activeProfile: wasActive ? null : state.activeProfile,
+                        accessMode: wasActive ? 'editable' : state.accessMode,
                     };
                 }),
 
-            updateProfile: (profileId, updates) =>
-                set((state) => {
-                    const sanitizedUpdates: Partial<Profile> = { ...updates, updated_at: Date.now() };
-                    if (updates.name) sanitizedUpdates.name = sanitize(updates.name);
+            updateProfile: (profileId, updates) => {
+                const patch: Partial<Profile> = { ...updates, updated_at: Date.now() };
+                if (updates.name) patch.name = sanitize(updates.name, 30);
+                set((state) => patchProfile(state, profileId, patch));
+            },
 
-                    const updatedProfiles = state.profiles.map((p) =>
-                        p.id === profileId ? { ...p, ...sanitizedUpdates } : p
-                    );
-                    const updatedActive =
-                        state.activeProfile?.id === profileId
-                            ? { ...state.activeProfile, ...sanitizedUpdates }
-                            : state.activeProfile;
-                    return { profiles: updatedProfiles, activeProfile: updatedActive };
-                }),
-
-            deleteLog: (logId) =>
-                set((state) => {
-                    if (!state.activeProfile || !state.activeProfile.logs || state.accessMode === 'readOnly') return state;
-                    const logToRevert = state.activeProfile.logs.find((l) => l.id === logId);
-                    if (!logToRevert) return state;
-
-                    const newAttended = Math.max(0, state.activeProfile.attended - logToRevert.diffAttended);
-                    const newTotal = Math.max(0, state.activeProfile.total - logToRevert.diffTotal);
-
-                    const updatedProfile = {
-                        ...state.activeProfile,
-                        attended: newAttended,
-                        total: newTotal,
-                        updated_at: Date.now(),
-                        logs: state.activeProfile.logs.filter((l) => l.id !== logId),
-                    };
-
-                    return {
-                        activeProfile: updatedProfile,
-                        profiles: state.profiles.map((p) =>
-                            p.id === updatedProfile.id ? updatedProfile : p
-                        ),
-                    };
-                }),
-
-            uploadAvatar: async (profileId, file) => {
+            uploadAvatar: async (profileId: string, file: Blob) => {
                 const repo = createProfileRepository(supabase);
                 if (!repo) return null;
 
                 try {
-                    const { publicUrl } = await repo.uploadAvatar(profileId, file);
-                    useAttendanceStore.getState().updateProfile(profileId, { avatar_url: publicUrl });
+                    const currentProfile = get().profiles.find((p) => p.id === profileId);
+                    const { publicUrl } = currentProfile?.avatar_url
+                        ? await repo.uploadAvatar(profileId, file, currentProfile.avatar_url)
+                        : await repo.uploadAvatar(profileId, file);
+                    get().updateProfile(profileId, { avatar_url: publicUrl });
                     return publicUrl;
                 } catch (error) {
                     console.error('Upload failed:', error);
                     return null;
                 }
             },
-            
-            syncFromCloud: async (profileId, force = false) => {
+
+            syncFromCloud: async (profileId: string, force = false) => {
                 if (!isSupabaseAvailable()) return 'offline';
                 const repo = createProfileRepository(supabase);
                 if (!repo) return 'offline';
 
                 try {
-                    const cloudData = await repo.fetchOne(profileId);
-                    if (!cloudData) return 'failed';
+                    const cloud = await repo.fetchOne(profileId);
+                    if (!cloud) return 'failed';
 
-                    const state = useAttendanceStore.getState();
-                    const local = state.activeProfile;
+                    const { activeProfile, lastSyncedAt } = get();
+                    const decision = planSync({ local: activeProfile, cloud, lastSyncedAt, force });
 
-                    // Determine which data source wins (cloud is truth on fresh mount)
-                    const cloudTargetGoal = cloudData.target_goal;
-                    const cloudLogs = cloudData.logs;
-                    const cloudNotes = cloudData.notes;
-
-                    const hasChanges =
-                        local?.attended !== cloudData.attended ||
-                        local?.total !== cloudData.total ||
-                        (cloudTargetGoal !== undefined && local?.targetGoal !== cloudTargetGoal) ||
-                        (cloudLogs !== undefined && JSON.stringify(local?.logs) !== JSON.stringify(cloudLogs)) ||
-                        (cloudNotes !== undefined && local?.notes !== cloudNotes);
-
-                    const hasLocalChanges = local?.updated_at && state.lastSyncedAt && local.updated_at > state.lastSyncedAt;
-
-                    if (hasChanges && hasLocalChanges && !force) {
-                        return 'conflict';
+                    switch (decision.kind) {
+                        case 'conflict':
+                            return 'conflict';
+                        case 'pull':
+                            set((state) => ({
+                                ...patchProfile(state, profileId, {
+                                    ...decision.patch,
+                                    ...(cloud.last_active_at ? { last_active_at: cloud.last_active_at } : {}),
+                                }),
+                                lastSyncedAt: Date.now(),
+                            }));
+                            return 'updated';
+                        case 'in-sync':
+                            if (cloud.last_active_at && activeProfile && activeProfile.last_active_at !== cloud.last_active_at) {
+                                set((state) => ({
+                                    ...patchProfile(state, profileId, { last_active_at: cloud.last_active_at }),
+                                    lastSyncedAt: Date.now(),
+                                }));
+                            } else {
+                                set({ lastSyncedAt: Date.now() });
+                            }
+                            return 'in-sync';
                     }
-
-                    if (hasChanges && local) {
-                        const mergedProfile = {
-                            ...local,
-                            attended: cloudData.attended,
-                            total: cloudData.total,
-                            ...(cloudTargetGoal !== undefined ? { targetGoal: cloudTargetGoal } : {}),
-                            ...(cloudLogs !== undefined ? { logs: cloudLogs } : {}),
-                            ...(cloudNotes !== undefined ? { notes: cloudNotes } : {}),
-                        };
-                        set((s) => ({
-                            activeProfile: mergedProfile,
-                            profiles: s.profiles.map((p) =>
-                                p.id === profileId ? mergedProfile : p
-                            ),
-                            lastSyncedAt: Date.now(),
-                        }));
-                        return 'updated';
-                    }
-
-                    set({ lastSyncedAt: Date.now() });
-                    return 'in-sync';
                 } catch {
                     return 'failed';
                 }
@@ -263,6 +210,20 @@ export const useAttendanceStore = create<AttendanceStore>()(
         {
             name: 'attendance-profile-metrics-storage',
             storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                profiles: state.profiles,
+                activeProfile: state.activeProfile,
+                isCloudSyncEnabled: state.isCloudSyncEnabled,
+                lastSyncedAt: state.lastSyncedAt,
+                hideProfileName: state.hideProfileName,
+            }),
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.loading = false;
+                    state.error = null;
+                    state.accessMode = 'editable';
+                }
+            },
         }
     )
 );

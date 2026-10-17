@@ -174,7 +174,7 @@
 - **Error Handling**: Password-protected PDFs show "not yet supported" message
 
 #### Image Loading (`loadImageFile`)
-- **Formats**: JPG, PNG, WEBP (HEIC library installed but not actively used)
+- **Formats**: JPG, PNG, WEBP
 - **Normalization**:
   1. Create ImageBitmap from file
   2. Draw to OffscreenCanvas with white background
@@ -304,9 +304,9 @@ ExportOptions {
 
 ### 2.8 Signature Library
 **Implementation**: `src/features/pdf-engine/hooks/useSignatureStore.ts`
-- **Storage**: localStorage key `flowwsuite-signatures`
+- **Storage**: localStorage key `pdf-engine-signatures` (legacy fallback `flowwsuite-signatures`)
 - **Format**: Base64 PNG dataUrls
-- **Max Count**: 10 signatures (FIFO deletion)
+- **Max Count**: 5 signatures (FIFO deletion; purged on sign-out/profile delete)
 - **Creation**: Draw on canvas → `toDataURL('image/png')` → save
 - **Usage**: Insert as Fabric.Image object on any page
 
@@ -577,9 +577,9 @@ if (!hasAccess) {
 
 #### 5. useSignatureStore
 **Location**: `src/features/pdf-engine/hooks/useSignatureStore.ts`
-- **Persisted**: Yes (localStorage key: `flowwsuite-signatures`)
+- **Persisted**: Yes (localStorage key: `pdf-engine-signatures`, fallback: `flowwsuite-signatures`)
 - **State**: SavedSignature[] (dataUrl, createdAt)
-- **Max**: 10 signatures (FIFO deletion)
+- **Max**: 5 signatures (FIFO deletion; purged on sign-out/profile delete)
 
 ### 5.2 Store Patterns
 
@@ -607,16 +607,15 @@ next.has(id) ? next.delete(id) : next.add(id)
 ### 5.3 Data Persistence Strategy
 
 #### localStorage Keys
-- `flowwsuite-auth-storage`
 - `attendance-profile-metrics-storage`
-- `flowwsuite-signatures`
-- Theme store (likely `theme-storage`)
+- `pdf-engine-signatures` (legacy fallback: `flowwsuite-signatures`)
+- Theme store (`flowsuite-theme`)
 
 #### Persistence Rules
 - **Attendance**: All profiles + logs (capped at 50 logs per profile)
-- **Auth**: Session + role
+- **Auth**: Managed directly via Supabase Auth SDK; client roles dynamically derived
 - **PDF**: NOT persisted (large ArrayBuffers, intentional)
-- **Signatures**: Permanent until manually deleted
+- **Signatures**: Max 5 entries, purged automatically on user sign-out and profile deletion
 
 #### Cloud Sync
 - **Attendance**: Optional Supabase sync, cloud as source of truth
@@ -1410,7 +1409,6 @@ test: {
 - **Fabric**: 7.4.0 (canvas editing, annotations)
 
 ### 10.5 Image Processing
-- **heic2any**: 0.0.4 (HEIC to JPEG conversion, installed but not actively used)
 - **react-easy-crop**: 5.5.6 (image cropping UI)
 
 ### 10.6 Utilities

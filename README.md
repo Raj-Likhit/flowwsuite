@@ -6,11 +6,11 @@
 [![React](https://img.shields.io/badge/react-19.x-cyan.svg)](https://react.dev)
 [![Vite](https://img.shields.io/badge/vite-7.x-yellow.svg)](https://vitejs.dev)
 [![TypeScript](https://img.shields.io/badge/typescript-5.x-blue.svg)](https://www.typescriptlang.org)
-[![Security](https://img.shields.io/badge/security-audited-green.svg)](SECURITY.md)
+[![Security Policy](https://img.shields.io/badge/security-policy-green.svg)](SECURITY.md)
 
 Flowwsuite is a high-performance, privacy-focused Progressive Web Application (PWA). It unifies attendance tracking, administrative management, and a robust PDF conversion engine into a single, blazing-fast experience. 
 
-Through aggressive chunk splitting, asynchronous script injection, and granular lazy loading, Flowwsuite guarantees sub-50ms DOMContentLoaded metrics from cache, delivering a near-native mobile experience. The codebase is heavily tested with 100% unit test coverage for core business logic and is fully type-safe with zero TypeScript or ESLint errors.
+Through aggressive chunk splitting, asynchronous script injection, and granular lazy loading, Flowwsuite guarantees near-instant cached loading, delivering a near-native mobile experience. The codebase is heavily tested with 235+ passing unit and integration tests across 26 test suites and is fully type-safe with zero TypeScript or ESLint errors.
 
 ---
 
@@ -18,22 +18,22 @@ Through aggressive chunk splitting, asynchronous script injection, and granular 
 
 ### 🎓 Attendance Tracker
 - **Smart Tracking**: Monitor attendance goals (75% target) via interactive Progress Rings.
-- **Real-Time Syncing**: Cloud synchronization powered by Supabase.
+- **Cloud Sync**: Concurrency-safe cloud synchronization powered by Supabase with optimistic conflict handling.
 - **Audit Trails**: Maintain a verifiable log of all attendance modifications.
 - **Export**: Generate attendance reports natively on the device.
 
 ### 🛡️ Admin Security Portal
 - **Centralized Control**: Manage users, roles, and profiles.
-- **Broadcast System**: Create and broadcast rich-text announcements directly to students via in-app modals.
-- **Real-Time Database**: Built securely over Supabase Row Level Security (RLS).
+- **Broadcast System**: Create and broadcast announcements directly to students via in-app modals.
+- **Secure Backend**: Built securely over Supabase Row Level Security (RLS) with dedicated RPC functions.
 
 ### 📄 PDF Engine (Studio)
-- **100% Client-Side**: Powered by Web Workers, WebAssembly, and OffscreenCanvas. No files are ever uploaded to a server, ensuring maximum data privacy.
+- **100% Client-Side**: Powered by Web Workers, Fabric.js, and PDF.js. No files are ever uploaded to a server, ensuring maximum data privacy.
 - **Memory Efficient**: Zero-copy transfers with `ArrayBuffer`.
-- **Format Support**: Seamlessly handles JPG, PNG, and Apple HEIC formats natively in the browser.
+- **Format Support**: Seamlessly handles JPG, PNG, and WebP formats natively in the browser.
 
 ### ⚡ Performance & Mobile First
-- **Sub-50ms Hydration**: Customized Vite configuration unblocks the main thread for instantaneous loading.
+- **Instant Hydration**: Customized Vite configuration unblocks the main thread for instantaneous loading.
 - **Bento-grid & Glassmorphism UI**: Beautiful, micro-interaction rich, and responsive mobile-first aesthetic.
 
 ---
@@ -101,10 +101,14 @@ graph TD
     ```
 
 3.  **Set Up Environment Variables**
-    Create a `.env` file based on `.env.example` to configure the cloud backend:
+    Copy `.env.example` to `.env` and configure your credentials:
+    ```bash
+    cp .env.example .env
+    ```
     ```env
-    VITE_SUPABASE_URL=your_url
-    VITE_SUPABASE_ANON_KEY=your_key
+    VITE_SUPABASE_URL=https://your-project.supabase.co
+    VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+    VITE_VAPID_PUBLIC_KEY=your-vapid-public-key # Optional for Web Push
     ```
 
 4.  **Start Development**

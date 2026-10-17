@@ -2,14 +2,15 @@ import { useMemo, useCallback } from 'react';
 import { supabase } from '../../core/lib/supabase';
 import { createProfileRepository, ProfileRepository } from '../../features/attendance/repository/profileRepository';
 import { useAttendanceStore } from '../../features/attendance/store/useAttendanceStore';
+import { clearStoredSignatures } from '../../features/pdf-engine/hooks/useSignatureStore';
 import { toast } from 'sonner';
 
 export function useSettingsActions() {
-    const { updateProfile, uploadAvatar, deleteProfile } = useAttendanceStore();
+    const { profiles, updateProfile, uploadAvatar, deleteProfile } = useAttendanceStore();
     const repo = useMemo(() => createProfileRepository(supabase), []);
 
     const handleUpdateName = useCallback(async (profileId: string, newName: string): Promise<boolean> => {
-        const trimmed = newName.trim();
+        const trimmed = newName.trim().slice(0, 30);
         if (!trimmed) {
             toast.error('Name cannot be empty');
             return false;
@@ -93,9 +94,11 @@ export function useSettingsActions() {
             }
 
             if (repo) {
-                await repo.delete(profileId);
+                const profileToDelete = profiles.find((p) => p.id === profileId);
+                await repo.delete(profileId, profileToDelete?.avatar_url);
             }
             deleteProfile(profileId);
+            clearStoredSignatures();
             toast.success('Profile deleted successfully', { id: loadingToast });
             return true;
         } catch (err: unknown) {
@@ -103,7 +106,7 @@ export function useSettingsActions() {
             toast.error('Deletion failed: ' + error.message, { id: loadingToast });
             return false;
         }
-    }, [repo, deleteProfile]);
+    }, [repo, profiles, deleteProfile]);
 
     return {
         handleUpdateName,

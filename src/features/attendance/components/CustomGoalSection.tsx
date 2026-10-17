@@ -3,7 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, TrendingDown, TrendingUp, ChevronDown, Pencil, Check } from 'lucide-react';
 import SpotlightCard from '../../../shared/components/ui/reactbits/SpotlightCard';
 import { useAttendanceStore } from '../store/useAttendanceStore';
+import { calculateAttendanceMetrics } from '../utils/attendanceCalculations';
 import { toast } from 'sonner';
+import {
+    DEFAULT_GOAL_PERCENT,
+    MIN_GOAL_PERCENT,
+    MAX_GOAL_PERCENT,
+    isValidGoal,
+    normalizeGoal,
+} from '../domain/attendance';
 
 interface CustomGoalSectionProps {
     percentage: number;
@@ -21,26 +29,22 @@ export const CustomGoalSection: React.FC<CustomGoalSectionProps> = ({
     const activeProfile = useAttendanceStore(state => state.activeProfile);
     const updateTargetGoal = useAttendanceStore(state => state.updateTargetGoal);
 
-    const targetGoal = activeProfile?.targetGoal ?? 75;
+    const targetGoal = normalizeGoal(activeProfile?.targetGoal);
 
     // Don't render if goal is the default 75%
-    if (targetGoal === 75 || !activeProfile) return null;
+    if (targetGoal === DEFAULT_GOAL_PERCENT || !activeProfile) return null;
 
-    const targetFraction = targetGoal / 100;
-    const isSafe = percentage >= targetGoal;
-    const safeToSkip = Math.max(0, Math.floor(attendedCount / targetFraction - totalCount));
-    const classesNeeded = Math.max(0, Math.ceil((targetFraction * totalCount - attendedCount) / (1 - targetFraction)));
-
-    // Progress towards goal (0 to 1, capped at 1)
-    const progressToGoal = targetGoal > 0 ? Math.min(1, percentage / targetGoal) : 0;
+    const metrics = calculateAttendanceMetrics(attendedCount, totalCount, targetGoal);
 
     return (
         <CustomGoalSectionInner
             targetGoal={targetGoal}
-            isSafe={isSafe}
-            safeToSkip={safeToSkip}
-            classesNeeded={classesNeeded}
-            progressToGoal={progressToGoal}
+            isSafe={metrics.isSafe}
+            safeToSkip={metrics.safeToSkip}
+            classesNeeded={metrics.classesNeeded}
+            recoveryImpossible={metrics.recoveryImpossible}
+            recoveryMessage={metrics.recoveryMessage}
+            progressToGoal={metrics.progressToGoal}
             percentage={percentage}
             totalCount={totalCount}
             profileId={activeProfile.id}
@@ -56,6 +60,8 @@ const CustomGoalSectionInner: React.FC<{
     isSafe: boolean;
     safeToSkip: number;
     classesNeeded: number;
+    recoveryImpossible: boolean;
+    recoveryMessage?: string;
     progressToGoal: number;
     percentage: number;
     totalCount: number;
@@ -67,9 +73,10 @@ const CustomGoalSectionInner: React.FC<{
     isSafe,
     safeToSkip,
     classesNeeded,
+    recoveryImpossible,
+    recoveryMessage,
     progressToGoal,
     percentage,
-    totalCount,
     profileId,
     updateTargetGoal,
     readOnly,
@@ -93,14 +100,14 @@ const CustomGoalSectionInner: React.FC<{
 
     const handleSaveGoal = () => {
         const parsed = parseInt(editValue, 10);
-        if (isNaN(parsed) || parsed < 1 || parsed > 100) {
-            toast.error('Goal must be between 1% and 100%');
+        if (!isValidGoal(parsed)) {
+            toast.error(`Goal must be between ${MIN_GOAL_PERCENT}% and ${MAX_GOAL_PERCENT}%`);
             setEditValue(String(targetGoal));
             setIsEditing(false);
             return;
         }
-        if (parsed === 75) {
-            toast.info('Set to 75% — using the main section');
+        if (parsed === DEFAULT_GOAL_PERCENT) {
+            toast.info(`Set to ${DEFAULT_GOAL_PERCENT}% — using the main section`);
         } else {
             toast.success(`Goal updated to ${parsed}%`);
         }
@@ -301,9 +308,9 @@ const CustomGoalSectionInner: React.FC<{
                                                     Recovery
                                                 </span>
                                             </div>
-                                            <div className="text-3xl font-black text-white">{(totalCount + classesNeeded > 400) ? '—' : classesNeeded}</div>
+                                            <div className="text-3xl font-black text-white">{recoveryImpossible ? '—' : classesNeeded}</div>
                                             <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-                                                {(totalCount + classesNeeded > 400) ? `Not realistic — would need ${classesNeeded} more classes` : `classes to reach ${targetGoal}%`}
+                                                {recoveryImpossible ? (recoveryMessage || 'Recovery impossible') : `classes to reach ${targetGoal}%`}
                                             </p>
                                         </SpotlightCard>
                                     </>

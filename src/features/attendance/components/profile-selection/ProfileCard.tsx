@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { Profile } from '../../store/useAttendanceStore';
 
+import { getDicebearAvatar } from '../../constants';
+
 const ProfileAvatar: React.FC<{ profile: Profile }> = ({ profile }) => {
     const [loaded, setLoaded] = useState(false);
+    const [imgError, setImgError] = useState(false);
     
-    if (!profile.avatar_url) {
-        return <User className="w-14 h-14 text-white/10 group-hover:text-white/40 transition-colors" />;
-    }
+    const avatarUrl = profile.avatar_url && !imgError
+        ? profile.avatar_url
+        : getDicebearAvatar(profile.name);
 
     return (
         <>
@@ -17,11 +19,17 @@ const ProfileAvatar: React.FC<{ profile: Profile }> = ({ profile }) => {
                 <div className="absolute inset-0 bg-white/5 animate-pulse" />
             )}
             <img
-                src={profile.avatar_url}
+                src={avatarUrl}
                 alt={profile.name}
                 loading="lazy"
                 draggable="false"
                 onLoad={() => setLoaded(true)}
+                onError={() => {
+                    if (!imgError) {
+                        setImgError(true);
+                    }
+                    setLoaded(true);
+                }}
                 className={clsx(
                     "w-full h-full object-cover group-hover:scale-110 transition-all duration-500 select-none pointer-events-none no-touch-menu",
                     loaded ? "opacity-100" : "opacity-0"

@@ -1,6 +1,27 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAttendanceStore } from '../store/useAttendanceStore';
+import { calculateAttendanceMetrics } from '../utils/attendanceCalculations';
+
+export const sanitizeReportFilename = (name: string): string => {
+    const cleanName = name
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 50);
+    return `${cleanName || 'student'}_attendance_report.pdf`;
+};
+
+export const sanitizePdfText = (str: string): string => {
+    // Replace WinAnsi-unsupported glyphs with safe ASCII equivalents
+    return str
+        .replace(/[✓✔]/g, '[OK]')
+        .replace(/[⚠⚡]/g, '[!]')
+        .replace(/[—–]/g, '-')
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'");
+};
 
 export const useAttendanceReport = () => {
     const activeProfile = useAttendanceStore(state => state.activeProfile);
@@ -11,9 +32,8 @@ export const useAttendanceReport = () => {
         try {
             const doc = new jsPDF();
             const { name, attended, total, logs, targetGoal } = activeProfile;
-            const percentage = total > 0 ? (attended / total) * 100 : 0;
             const goal = targetGoal ?? 75;
-            const isOnTrack = percentage >= goal;
+            const metrics = calculateAttendanceMetrics(attended, total, goal);
 
             // ── Header ──────────────────────────────────────────────────
             doc.setFillColor(31, 38, 52);
@@ -32,18 +52,24 @@ export const useAttendanceReport = () => {
             doc.setTextColor(31, 38, 52);
             doc.setFontSize(15);
             doc.setFont('helvetica', 'bold');
-            doc.text(`Student: ${name}`, 20, 60);
+            doc.text(`Student: ${sanitizePdfText(name)}`, 20, 60);
 
             // ── Summary Stats ────────────────────────────────────────────
+            const statusText = metrics.isSafe ? 'On Track (Safe Zone)' : 'Needs Attention (Danger Zone)';
+            const recoveryText = metrics.isSafe
+                ? `${metrics.safeToSkip} class${metrics.safeToSkip === 1 ? '' : 'es'}`
+                : (metrics.recoveryImpossible ? 'Recovery Impossible' : `${metrics.classesNeeded} class${metrics.classesNeeded === 1 ? '' : 'es'}`);
+
             autoTable(doc, {
                 startY: 70,
                 head: [['Metric', 'Value']],
                 body: [
                     ['Total Sessions', total.toString()],
                     ['Attended Sessions', attended.toString()],
-                    ['Attendance Percentage', `${percentage.toFixed(1)}%`],
-                    ['Target Goal', `${goal}%`],
-                    ['Status', isOnTrack ? '✓ On Track' : '⚠ Needs Improvement'],
+                    ['Attendance Percentage', `${metrics.percentage.toFixed(1)}%`],
+                    ['Target Goal', `${metrics.targetGoal}%`],
+                    ['Status', statusText],
+                    [metrics.isSafe ? 'Safe to Miss' : 'Classes to Reach Goal', recoveryText],
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [79, 70, 229], fontStyle: 'bold' },
@@ -94,7 +120,9 @@ export const useAttendanceReport = () => {
                 });
             }
 
-            doc.save(`${name}_attendance_report.pdf`);
+            const filename = sanitizeReportFilename(name);
+            doc.save(filename);
+            return filename;
         } catch (err) {
             console.error('PDF Generation Failed:', err);
             throw new Error('Failed to generate PDF report. Please try again.');

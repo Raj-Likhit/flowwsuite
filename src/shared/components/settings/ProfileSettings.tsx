@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Plus, Lock } from 'lucide-react';
 import type { Profile } from '../../../features/attendance/store/useAttendanceStore';
+import { getDicebearAvatar } from '../../../features/attendance/constants';
 
 interface ProfileSettingsProps {
     activeProfile: Profile;
@@ -35,9 +36,12 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                     <div className="relative group">
                         <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-primary-500 transition-colors">
                             <img 
-                                src={activeProfile.avatar_url} 
+                                src={activeProfile.avatar_url || getDicebearAvatar(activeProfile.name)} 
                                 alt={activeProfile.name} 
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.currentTarget.src = getDicebearAvatar(activeProfile.name);
+                                }}
                             />
                         </div>
                         <button 
@@ -61,9 +65,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                         <input
                             type="text"
                             placeholder="Profile name..."
+                            maxLength={30}
                             className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-primary-500 outline-none transition-all"
                             value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
+                            onChange={(e) => setNewName(e.target.value.slice(0, 30))}
                         />
                         <button
                             onClick={onUpdateName}

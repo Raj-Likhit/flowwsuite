@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, RefreshCw, FileDown, RotateCcw, User, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileDown, RotateCcw, Plus, CheckCircle2, X, AlertTriangle, Eye } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useAttendanceStore } from '../store/useAttendanceStore';
+import { getDicebearAvatar } from '../constants';
 import { ProgressRing } from '../../../shared/components/ProgressRing';
 import { PremiumButton } from '../../../shared/components/PremiumButton';
 import { AttendanceControls } from './AttendanceControls';
@@ -38,6 +39,7 @@ export const AttendanceView: React.FC = () => {
     const hideProfileName = useAttendanceStore(state => state.hideProfileName);
     const syncFromCloud = useAttendanceStore(state => state.syncFromCloud);
     const lastSyncedAt = useAttendanceStore(state => state.lastSyncedAt);
+    const updateProfile = useAttendanceStore(state => state.updateProfile);
 
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
@@ -96,13 +98,38 @@ export const AttendanceView: React.FC = () => {
                 return;
             }
 
-            await repo.syncUp(activeProfile.id, {
-                attended: activeProfile.attended,
-                total: activeProfile.total,
-                targetGoal: activeProfile.targetGoal ?? 75,
-                logs: activeProfile.logs ?? [],
-                notes: activeProfile.notes ?? '',
-            });
+            const cloud = await repo.fetchOne(activeProfile.id);
+            if (cloud) {
+                const cloudAttended = cloud.attended ?? 0;
+                const cloudTotal = cloud.total ?? 0;
+                const hasCloudDiverged = Boolean(
+                    activeProfile.last_active_at &&
+                    cloud.last_active_at &&
+                    cloud.last_active_at !== activeProfile.last_active_at
+                );
+
+                if (hasCloudDiverged && (cloudAttended !== activeProfile.attended || cloudTotal !== activeProfile.total)) {
+                    toast.warning('Cloud changes detected from another session. Pulling updates.');
+                    await syncFromCloud(activeProfile.id, true);
+                    return;
+                }
+            }
+
+            const result = await repo.syncUp(
+                activeProfile.id,
+                {
+                    attended: activeProfile.attended,
+                    total: activeProfile.total,
+                    targetGoal: activeProfile.targetGoal ?? 75,
+                    logs: activeProfile.logs ?? [],
+                    notes: activeProfile.notes ?? '',
+                },
+                { expectedLastActiveAt: activeProfile.last_active_at ?? null }
+            );
+
+            if (result?.last_active_at) {
+                updateProfile(activeProfile.id, { last_active_at: result.last_active_at });
+            }
 
             setSyncSuccess(true);
             setSyncError(null);
@@ -165,13 +192,14 @@ export const AttendanceView: React.FC = () => {
 
             <div className="flex justify-center mb-8 max-w-md mx-auto">
                 <div className="w-9 h-9 rounded-lg overflow-hidden ring-1 ring-white/10">
-                    {activeProfile.avatar_url ? (
-                        <img src={activeProfile.avatar_url} alt={activeProfile.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                            <User className="w-4 h-4 text-white/20" />
-                        </div>
-                    )}
+                    <img 
+                        src={activeProfile.avatar_url || getDicebearAvatar(activeProfile.name)} 
+                        alt={activeProfile.name} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            e.currentTarget.src = getDicebearAvatar(activeProfile.name);
+                        }}
+                    />
                 </div>
             </div>
 

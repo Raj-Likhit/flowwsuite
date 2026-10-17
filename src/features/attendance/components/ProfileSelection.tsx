@@ -149,7 +149,7 @@ export const ProfileSelection: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 pb-44 pt-12 sm:pt-24 bg-gradient-to-b from-primary-600/10 to-transparent">
+        <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:px-6 pt-12 sm:pt-24 pb-44 sm:pb-36 bg-gradient-to-b from-primary-600/10 to-transparent">
             {/* Header */}
             <div className="w-full max-w-5xl flex items-start justify-between mb-10 sm:mb-16">
                 <div className="flex-1" />

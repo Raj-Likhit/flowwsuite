@@ -34,10 +34,15 @@ export function useProfileAuth() {
             setLoginAttempts(0);
         }
 
-        const stored = passwordPromptProfile.password || '123';
-        const { correct, needsMigration } = await ProfileRepository.verifyPassword(enteredPassword, stored);
+        const repo = createProfileRepository(supabase);
+        if (!repo) {
+            toast.error('Database connection unavailable');
+            return;
+        }
 
-        if (!correct) {
+        const result = await repo.verifyAndUnlock(passwordPromptProfile.id, enteredPassword);
+
+        if (!result.success || !result.profile) {
             setPasswordError(true);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             
@@ -53,25 +58,31 @@ export function useProfileAuth() {
         setLoginAttempts(0);
         setLockoutUntil(null);
 
-        setActiveProfile(passwordPromptProfile, 'editable');
+        setActiveProfile(result.profile, 'editable');
         closePasswordPrompt();
 
-        if (needsMigration) {
-            const repo = createProfileRepository(supabase);
-            if (repo) {
-                try {
-                    const hashed = await ProfileRepository.hashPassword(enteredPassword);
-                    await repo.update(passwordPromptProfile.id, { password: hashed });
-                    updateProfile(passwordPromptProfile.id, { password: hashed });
-                } catch (err) {
-                    console.error('Password migration failed:', err);
-                }
+        if (result.needsMigration) {
+            try {
+                const hashed = await ProfileRepository.hashPassword(enteredPassword);
+                await repo.update(result.profile.id, { password: hashed });
+                updateProfile(result.profile.id, { password: hashed });
+            } catch (err) {
+                console.error('Password migration failed:', err);
             }
         }
     }, [passwordPromptProfile, enteredPassword, loginAttempts, lockoutUntil, setActiveProfile, closePasswordPrompt, updateProfile]);
 
-    const viewAttendance = useCallback(() => {
+    const viewAttendance = useCallback(async () => {
         if (!passwordPromptProfile) return;
+        const repo = createProfileRepository(supabase);
+        if (repo) {
+            const fullProfile = await repo.fetchProfileAttendance(passwordPromptProfile.id);
+            if (fullProfile) {
+                setActiveProfile(fullProfile, 'readOnly');
+                closePasswordPrompt();
+                return;
+            }
+        }
         setActiveProfile(passwordPromptProfile, 'readOnly');
         closePasswordPrompt();
     }, [passwordPromptProfile, setActiveProfile, closePasswordPrompt]);

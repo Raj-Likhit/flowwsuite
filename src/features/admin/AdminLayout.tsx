@@ -1,26 +1,23 @@
-﻿import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useAuthStore } from '../../core/lib/useAuthStore';
+import { supabase } from '../../core/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '../../shared/components/GlassCard';
-
-const UNLOCK_KEY = 'admin_portal_unlocked';
-const UNLOCK_PASSWORD = 'AdminUnlock';
 
 interface AdminLayoutProps {
     children: ReactNode;
 }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
-    const { role, loading, user } = useAuthStore();
+    const { role, loading, user, signOut } = useAuthStore();
     const navigate = useNavigate();
 
-    const [isUnlocked, setIsUnlocked] = useState(
-        () => sessionStorage.getItem(UNLOCK_KEY) === 'true'
-    );
-    const [unlockPassword, setUnlockPassword] = useState('');
-    const [error, setError] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     if (loading) {
         return (
@@ -30,18 +27,37 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         );
     }
 
-    const hasAccess = (user && role === 'admin') || isUnlocked;
+    const hasAccess = Boolean(user && role === 'admin');
 
     if (!hasAccess) {
-        const handleUnlock = (e: React.FormEvent) => {
+        const handleLogin = async (e: React.FormEvent) => {
             e.preventDefault();
-            if (unlockPassword === UNLOCK_PASSWORD) {
-                sessionStorage.setItem(UNLOCK_KEY, 'true');
-                setIsUnlocked(true);
-                setError(false);
-            } else {
-                setError(true);
-                setUnlockPassword('');
+            if (!supabase) {
+                setErrorMsg('Supabase client unavailable.');
+                return;
+            }
+
+            setSubmitting(true);
+            setErrorMsg(null);
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) throw error;
+
+                const userRole = data.user?.app_metadata?.role;
+                if (userRole !== 'admin') {
+                    setErrorMsg('Account authenticated, but lacks administrator privileges.');
+                }
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : 'Invalid administrator credentials.';
+                setErrorMsg(message);
+                setPassword('');
+            } finally {
+                setSubmitting(false);
             }
         };
 
@@ -82,35 +98,46 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                                 </p>
                             </div>
 
-                            {/* Password form */}
-                            <form onSubmit={handleUnlock} className="w-full space-y-4 max-w-sm">
-                                <div className="relative">
+                            {/* Authentication form */}
+                            <form onSubmit={handleLogin} className="w-full space-y-4 max-w-sm">
+                                <div className="space-y-3">
                                     <input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        autoFocus
-                                        value={unlockPassword}
-                                        onChange={e => { setUnlockPassword(e.target.value); setError(false); }}
-                                        className={`w-full bg-white/5 border ${error ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-primary-500/60'} rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder:text-white/20 outline-none transition-all`}
+                                        type="email"
+                                        placeholder="admin@example.com"
+                                        value={email}
+                                        onChange={e => { setEmail(e.target.value); setErrorMsg(null); }}
+                                        required
+                                        className="w-full bg-white/5 border border-white/10 focus:border-primary-500/60 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none transition-all"
                                     />
-                                    <button
-                                        type="submit"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/40 hover:text-white transition-colors"
-                                        aria-label="Submit"
-                                    >
-                                        <ArrowRight size={16} />
-                                    </button>
+                                    <div className="relative">
+                                        <input
+                                            type="password"
+                                            placeholder="••••••••"
+                                            value={password}
+                                            onChange={e => { setPassword(e.target.value); setErrorMsg(null); }}
+                                            required
+                                            className={`w-full bg-white/5 border ${errorMsg ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-primary-500/60'} rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder:text-white/20 outline-none transition-all`}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={submitting}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/40 hover:text-white transition-colors disabled:opacity-50"
+                                            aria-label="Submit"
+                                        >
+                                            {submitting ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <AnimatePresence>
-                                    {error && (
+                                    {errorMsg && (
                                         <motion.p
                                             initial={{ opacity: 0, y: -4 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0 }}
                                             className="text-[11px] text-red-400 font-bold text-center"
                                         >
-                                            Incorrect password. Try again.
+                                            {errorMsg}
                                         </motion.p>
                                     )}
                                 </AnimatePresence>
@@ -154,8 +181,8 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                             <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Systems Stable</span>
                         </div>
                         <button
-                            onClick={() => {
-                                sessionStorage.removeItem(UNLOCK_KEY);
+                            onClick={async () => {
+                                await signOut();
                                 navigate('/');
                             }}
                             className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white transition-colors flex items-center gap-1.5 group"

@@ -31,7 +31,6 @@ export const usePushNotifications = (profileId?: string) => {
 
     useEffect(() => {
         if (isSupported) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             checkSubscription();
         }
     }, [isSupported]);
@@ -45,6 +44,11 @@ export const usePushNotifications = (profileId?: string) => {
         const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
         if (!publicVapidKey) {
             toast.error("Push notifications are not configured on this environment (missing VAPID key).");
+            return;
+        }
+
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            toast.error("Push notifications are not supported on this browser.");
             return;
         }
 

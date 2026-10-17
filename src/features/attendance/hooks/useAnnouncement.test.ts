@@ -34,12 +34,10 @@ describe('useAnnouncement', () => {
     it('fetches and sets the first unread announcement for the profile', async () => {
         const { result } = renderHook(() => useAnnouncement('prof-1', false));
 
-        // Wait for async fetch
         await vi.waitFor(() => {
-            expect(result.current.activeAnnouncement).not.toBeNull();
+            expect(result.current.activeAnnouncement?.id).toBe('ann-1');
         });
 
-        expect(result.current.activeAnnouncement?.id).toBe('ann-1');
         expect(mockRepo.fetchActiveAnnouncements).toHaveBeenCalledWith('prof-1');
     });
 

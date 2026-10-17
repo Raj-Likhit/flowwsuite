@@ -191,29 +191,35 @@ export function useFabricCanvas(
 
     if (existingOverlay) {
       isRestoringRef.current = true;
-      canvas.loadFromJSON(existingOverlay, () => {
-        const previousSize = getSavedCanvasDimensions(existingOverlay, width, height);
-        const scaleX = width / previousSize.width;
-        const scaleY = height / previousSize.height;
+      canvas.loadFromJSON(existingOverlay)
+        .then(() => {
+          const previousSize = getSavedCanvasDimensions(existingOverlay, width, height);
+          const scaleX = width / previousSize.width;
+          const scaleY = height / previousSize.height;
 
-        if (Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001) {
-          canvas.getObjects().forEach((obj) => {
-            obj.set({
-              left: (obj.left ?? 0) * scaleX,
-              top: (obj.top ?? 0) * scaleY,
-              scaleX: (obj.scaleX ?? 1) * scaleX,
-              scaleY: (obj.scaleY ?? 1) * scaleY,
+          if (Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001) {
+            canvas.getObjects().forEach((obj) => {
+              obj.set({
+                left: (obj.left ?? 0) * scaleX,
+                top: (obj.top ?? 0) * scaleY,
+                scaleX: (obj.scaleX ?? 1) * scaleX,
+                scaleY: (obj.scaleY ?? 1) * scaleY,
+              });
+              obj.setCoords();
             });
-            obj.setCoords();
-          });
-        }
+          }
 
-        canvas.requestRenderAll();
-        isRestoringRef.current = false;
-        setIsDirty(false);
-        // Push initial state to undo stack
-        undoStackRef.current = [serializeCanvas(canvas)];
-      });
+          canvas.requestRenderAll();
+          setIsDirty(false);
+          // Push initial state to undo stack
+          undoStackRef.current = [serializeCanvas(canvas)];
+        })
+        .catch((err) => {
+          console.error('Failed to restore canvas overlay from JSON:', err);
+        })
+        .finally(() => {
+          isRestoringRef.current = false;
+        });
     } else {
       undoStackRef.current = [serializeCanvas(canvas)];
     }
@@ -417,13 +423,19 @@ export function useFabricCanvas(
     const prevState = undoStackRef.current[undoStackRef.current.length - 1];
     
     isRestoringRef.current = true;
-    canvas.loadFromJSON(prevState, () => {
-      rescaleLoadedObjects(canvas, prevState);
-      canvas.renderAll();
-      isRestoringRef.current = false;
-      setOverlay(pageId, JSON.parse(prevState));
-      setIsDirty(true);
-    });
+    canvas.loadFromJSON(prevState)
+      .then(() => {
+        rescaleLoadedObjects(canvas, prevState);
+        canvas.renderAll();
+        setOverlay(pageId, JSON.parse(prevState));
+        setIsDirty(true);
+      })
+      .catch((err) => {
+        console.error('Failed to undo canvas state:', err);
+      })
+      .finally(() => {
+        isRestoringRef.current = false;
+      });
   }, [pageId, setOverlay, rescaleLoadedObjects]);
 
   const redo = useCallback((): void => {
@@ -436,13 +448,19 @@ export function useFabricCanvas(
     undoStackRef.current.push(nextState);
     
     isRestoringRef.current = true;
-    canvas.loadFromJSON(nextState, () => {
-      rescaleLoadedObjects(canvas, nextState);
-      canvas.renderAll();
-      isRestoringRef.current = false;
-      setOverlay(pageId, JSON.parse(nextState));
-      setIsDirty(true);
-    });
+    canvas.loadFromJSON(nextState)
+      .then(() => {
+        rescaleLoadedObjects(canvas, nextState);
+        canvas.renderAll();
+        setOverlay(pageId, JSON.parse(nextState));
+        setIsDirty(true);
+      })
+      .catch((err) => {
+        console.error('Failed to redo canvas state:', err);
+      })
+      .finally(() => {
+        isRestoringRef.current = false;
+      });
   }, [pageId, setOverlay, rescaleLoadedObjects]);
 
   const deleteSelected = useCallback((): void => {

@@ -9,22 +9,36 @@ create table if not exists public.push_subscriptions (
 -- Enable RLS
 alter table public.push_subscriptions enable row level security;
 
--- Create policies
-create policy "Users can view their own push subscriptions"
-    on public.push_subscriptions for select
-    using (auth.uid() = profile_id);
+-- Drop previous policies to avoid conflicts
+drop policy if exists "Users can view their own push subscriptions" on public.push_subscriptions;
+drop policy if exists "Users can insert their own push subscriptions" on public.push_subscriptions;
+drop policy if exists "Users can delete their own push subscriptions" on public.push_subscriptions;
+drop policy if exists "Admins can view all push subscriptions" on public.push_subscriptions;
+drop policy if exists "Allow profile holders or auth users to insert push subscriptions" on public.push_subscriptions;
+drop policy if exists "Allow profile holders or auth users to view push subscriptions" on public.push_subscriptions;
+drop policy if exists "Allow profile holders or auth users to delete push subscriptions" on public.push_subscriptions;
 
-create policy "Users can insert their own push subscriptions"
-    on public.push_subscriptions for insert
-    with check (auth.uid() = profile_id);
-
-create policy "Users can delete their own push subscriptions"
-    on public.push_subscriptions for delete
-    using (auth.uid() = profile_id);
-
--- Admins need read access to all subscriptions to send push notifications from Edge Functions (usually bypasses RLS if service_role key is used, but good to be explicit if invoked via client)
-create policy "Admins can view all push subscriptions"
+-- Create policies aligned with both Auth users and active profile holders
+create policy "Allow profile holders or auth users to view push subscriptions"
     on public.push_subscriptions for select
     using (
-        (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+        (auth.uid() is not null and auth.uid() = profile_id)
+        or exists (select 1 from public.profiles where id = profile_id)
+        or ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+    );
+
+create policy "Allow profile holders or auth users to insert push subscriptions"
+    on public.push_subscriptions for insert
+    with check (
+        (auth.uid() is not null and auth.uid() = profile_id)
+        or exists (select 1 from public.profiles where id = profile_id and is_suspended = false)
+        or ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+    );
+
+create policy "Allow profile holders or auth users to delete push subscriptions"
+    on public.push_subscriptions for delete
+    using (
+        (auth.uid() is not null and auth.uid() = profile_id)
+        or exists (select 1 from public.profiles where id = profile_id)
+        or ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
     );

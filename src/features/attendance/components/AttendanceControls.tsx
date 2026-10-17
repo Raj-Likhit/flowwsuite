@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Minus, Plus } from 'lucide-react';
 
@@ -15,18 +15,21 @@ export const AttendanceControls = React.memo(({
     onUpdate,
     readOnly = false,
 }: AttendanceControlsProps) => {
-    // Local state for the inputs so users can type freely without mid-input clamping
-    const [localTotal, setLocalTotal] = useState(String(totalCount || ''));
-    const [localAttended, setLocalAttended] = useState(String(attendedCount || ''));
+    // Track previous props to sync local input states when parent store changes
+    const [prevTotalCount, setPrevTotalCount] = useState(totalCount);
+    const [prevAttendedCount, setPrevAttendedCount] = useState(attendedCount);
+    const [localTotal, setLocalTotal] = useState(totalCount > 0 ? String(totalCount) : '');
+    const [localAttended, setLocalAttended] = useState(attendedCount > 0 ? String(attendedCount) : '');
 
-    // Keep local state in sync when parent store changes (e.g. cloud sync, undo)
-    useEffect(() => {
+    if (totalCount !== prevTotalCount) {
+        setPrevTotalCount(totalCount);
         setLocalTotal(totalCount > 0 ? String(totalCount) : '');
-    }, [totalCount]);
+    }
 
-    useEffect(() => {
+    if (attendedCount !== prevAttendedCount) {
+        setPrevAttendedCount(attendedCount);
         setLocalAttended(attendedCount > 0 ? String(attendedCount) : '');
-    }, [attendedCount]);
+    }
 
     const parsedTotal = parseInt(localTotal, 10);
     const parsedAttended = parseInt(localAttended, 10);
@@ -184,3 +187,5 @@ export const AttendanceControls = React.memo(({
         </div>
     );
 });
+
+AttendanceControls.displayName = 'AttendanceControls';

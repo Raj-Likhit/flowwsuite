@@ -157,18 +157,25 @@ export const useAdminDashboard = () => {
             if (error) throw error;
 
             // Trigger Web Push Notification via Edge Function
-            try {
-                const { error: invokeError } = await supabase.functions.invoke('send-push', {
-                    body: {
-                        content: content.trim(),
-                        targetProfileIds: targetType === 'single' ? [selectedProfileId] : null
+            if (supabase.functions?.invoke) {
+                try {
+                    const { data: pushData, error: invokeError } = await supabase.functions.invoke('send-push', {
+                        body: {
+                            content: content.trim(),
+                            targetProfileIds: targetType === 'single' ? [selectedProfileId] : null
+                        }
+                    });
+                    if (invokeError) {
+                        console.error("[Push Notification Failed]:", invokeError);
+                        toast.warning("Announcement saved, but push notification delivery failed: " + invokeError.message);
+                    } else if (pushData && typeof pushData === 'object' && 'failed' in pushData && (pushData as { failed: number; delivered: number }).failed > 0 && (pushData as { delivered: number }).delivered === 0) {
+                        toast.warning("Announcement saved, but push notification could not reach recipients.");
                     }
-                });
-                if (invokeError) {
-                    console.error("[Push Notification Failed]:", invokeError);
+                } catch (invokeErr: unknown) {
+                    const pushErr = invokeErr as Error;
+                    console.error("[Push Notification Error]:", pushErr);
+                    toast.warning("Announcement saved, but push notification service is unavailable.");
                 }
-            } catch (invokeErr) {
-                console.error("[Push Notification Error]:", invokeErr);
             }
 
             toast.success(`Announcement ${targetType === 'all' ? 'broadcasted' : 'sent'} successfully!`);

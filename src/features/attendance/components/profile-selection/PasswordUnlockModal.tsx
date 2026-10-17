@@ -4,6 +4,7 @@ import { Check, Eye } from 'lucide-react';
 import { GlassCard } from '../../../../shared/components/GlassCard';
 import { clsx } from 'clsx';
 import type { Profile } from '../../store/useAttendanceStore';
+import { getDicebearAvatar } from '../../constants';
 
 interface PasswordUnlockModalProps {
     profile: Profile | null;
@@ -43,12 +44,15 @@ export const PasswordUnlockModal: React.FC<PasswordUnlockModalProps> = ({
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
                 className="relative z-10 w-full max-w-sm p-8 sm:p-10 border border-white/5 text-center"
             >
-                <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden border-2 border-primary-500/30">
-                    <img 
-                        src={profile.avatar_url} 
-                        alt={profile.name} 
-                        className="w-full h-full object-cover"
-                    />
+                <div className="w-20 h-20 rounded-full mx-auto mb-6 overflow-hidden border-2 border-primary-500/30 flex items-center justify-center bg-white/5">
+                        <img 
+                            src={profile.avatar_url || getDicebearAvatar(profile.name)} 
+                            alt={profile.name} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.src = getDicebearAvatar(profile.name);
+                            }}
+                        />
                 </div>
                 <h3 className="text-xl font-black text-white mb-2 uppercase tracking-tighter">
                     Hello, {profile.name}

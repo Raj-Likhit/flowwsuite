@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { StickyNote, Check, Copy, Save, Sparkles } from 'lucide-react';
 import { useAttendanceStore } from '../store/useAttendanceStore';
 import { GlassCard } from '../../../shared/components/GlassCard';
+import { supabase } from '../../../core/lib/supabase';
+import { createProfileRepository } from '../repository/profileRepository';
 import { clsx } from 'clsx';
 import { toast } from 'sonner';
 
@@ -25,24 +27,15 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
     const activeProfileId = activeProfile?.id;
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const savedIndicatorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingNotesRef = useRef<{ profileId: string; notes: string } | null>(null);
 
     // Sync local state when active profile changes
     useEffect(() => {
         setNotesText(activeProfile?.notes || '');
     }, [activeProfileId, activeProfile?.notes]);
 
-    // Cleanup timeouts on unmount to prevent memory leaks
-    useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
-        };
-    }, []);
-
     const persistNotesToDb = useCallback(async (profileId: string, notes: string) => {
         try {
-            const { supabase } = await import('../../../core/lib/supabase');
-            const { createProfileRepository } = await import('../repository/profileRepository');
             const repo = createProfileRepository(supabase);
             if (!repo) return;
             await repo.update(profileId, { notes });
@@ -50,6 +43,26 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
             // Silent fail — data is already saved locally; user can still sync manually
         }
     }, []);
+
+    const flushPendingSave = useCallback(() => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        }
+        if (pendingNotesRef.current) {
+            const { profileId, notes } = pendingNotesRef.current;
+            pendingNotesRef.current = null;
+            void persistNotesToDb(profileId, notes);
+        }
+    }, [persistNotesToDb]);
+
+    // Unmount cleanup: immediately flush pending debounced notes to prevent data loss
+    useEffect(() => {
+        return () => {
+            flushPendingSave();
+            if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
+        };
+    }, [flushPendingSave]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         if (readOnly) return;
@@ -60,21 +73,34 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
         // Immediate local store update so it persists to localStorage
         if (activeProfileId) {
             updateProfile(activeProfileId, { notes: val });
+            pendingNotesRef.current = { profileId: activeProfileId, notes: val };
         }
 
-        // Debounced Supabase write + save indicator
+        // Debounced write + save indicator
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
         setIsSaving(true);
 
         saveTimeoutRef.current = setTimeout(async () => {
-            if (activeProfileId) {
-                await persistNotesToDb(activeProfileId, val);
+            if (pendingNotesRef.current) {
+                const { profileId, notes } = pendingNotesRef.current;
+                pendingNotesRef.current = null;
+                await persistNotesToDb(profileId, notes);
             }
             setIsSaving(false);
             setIsSaved(true);
             savedIndicatorRef.current = setTimeout(() => setIsSaved(false), 2000);
         }, AUTOSAVE_DELAY_MS);
+    };
+
+    const handleBlur = () => {
+        if (pendingNotesRef.current) {
+            flushPendingSave();
+            setIsSaving(false);
+            setIsSaved(true);
+            if (savedIndicatorRef.current) clearTimeout(savedIndicatorRef.current);
+            savedIndicatorRef.current = setTimeout(() => setIsSaved(false), 2000);
+        }
     };
 
     const handleCopy = () => {
@@ -166,6 +192,7 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
                         id="profile-private-notes-input"
                         value={notesText}
                         onChange={handleTextChange}
+                        onBlur={handleBlur}
                         disabled={readOnly}
                         rows={3}
                         maxLength={MAX_NOTES_LENGTH}
@@ -194,5 +221,3 @@ export const ProfileNotes: React.FC<ProfileNotesProps> = ({ readOnly = false }) 
         </section>
     );
 };
-
-

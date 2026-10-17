@@ -12,6 +12,10 @@ export class AnnouncementRepository {
      * Fetches active announcements eligible for the given profile and not yet expired.
      */
     async fetchActiveAnnouncements(profileId: string): Promise<Announcement[]> {
+        if (!profileId || typeof profileId !== 'string' || !profileId.trim()) {
+            throw new Error('A valid profileId is required to fetch announcements');
+        }
+
         const { data, error } = await this.db
             .from('announcements')
             .select('id, content, target_profile_ids, created_at, seen_by_profile_ids')
@@ -29,9 +33,16 @@ export class AnnouncementRepository {
      * Marks an announcement as seen for a specific profile via RPC.
      */
     async markSeen(announcementId: string, profileId: string): Promise<void> {
+        if (!announcementId || typeof announcementId !== 'string' || !announcementId.trim()) {
+            throw new Error('A valid announcementId is required');
+        }
+        if (!profileId || typeof profileId !== 'string' || !profileId.trim()) {
+            throw new Error('A valid profileId is required');
+        }
+
         const { error } = await this.db.rpc('mark_announcement_seen', {
-            announcement_id: announcementId,
-            p_id: profileId,
+            announcement_id: announcementId.trim(),
+            p_id: profileId.trim(),
         });
         if (error) throw error;
     }

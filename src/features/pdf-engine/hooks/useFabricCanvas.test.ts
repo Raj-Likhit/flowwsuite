@@ -27,7 +27,7 @@ const mockSetActiveObject = vi.fn();
 const mockDiscardActiveObject = vi.fn();
 const mockOn = vi.fn();
 const mockOff = vi.fn();
-const mockLoadFromJSON = vi.fn((json, cb) => cb());
+const mockLoadFromJSON = vi.fn((json, reviver) => Promise.resolve());
 let mockToJSONValue = { version: '1.0', objects: [], canvasWidth: 800, canvasHeight: 600 };
 const mockToJSON = vi.fn(() => mockToJSONValue);
 const mockToDataURL = vi.fn(() => 'data:image/jpeg;base64,mock');
@@ -160,7 +160,7 @@ describe('useFabricCanvas', () => {
             result.current.initCanvas(1600, 1200);
         });
 
-        expect(mockLoadFromJSON).toHaveBeenCalledWith(existingOverlay, expect.any(Function));
+        expect(mockLoadFromJSON).toHaveBeenCalledWith(existingOverlay);
     });
 
     it('should handle object events and mark as dirty', () => {
@@ -378,7 +378,7 @@ describe('useFabricCanvas', () => {
         expect(mockDiscardActiveObject).toHaveBeenCalled();
     });
 
-    it('should handle undo and redo properly', () => {
+    it('should handle undo and redo properly', async () => {
         const canvasRef = { current: document.createElement('canvas') };
         const { result, rerender } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
 
@@ -393,14 +393,14 @@ describe('useFabricCanvas', () => {
             result.current.saveChanges(); 
         });
 
-        act(() => {
-            result.current.undo();
+        await act(async () => {
+            await result.current.undo();
         });
 
         expect(mockLoadFromJSON).toHaveBeenCalledTimes(1);
 
-        act(() => {
-            result.current.redo();
+        await act(async () => {
+            await result.current.redo();
         });
 
         expect(mockLoadFromJSON).toHaveBeenCalledTimes(2);
@@ -486,5 +486,33 @@ describe('useFabricCanvas', () => {
         rerender();
         
         expect(result.current.fabricRef.current!.isDrawingMode).toBe(true);
+    });
+
+    it('should successfully resolve loadFromJSON promise and clear restoring lock (Issue #6)', async () => {
+        const existingOverlay = JSON.stringify({
+            version: '7.0.0',
+            objects: [],
+            canvasWidth: 800,
+            canvasHeight: 600,
+        });
+
+        (usePdfStore.getState as any).mockReturnValue({
+            overlays: [{ pageId: 'page-1', fabricJson: existingOverlay }]
+        });
+
+        const canvasRef = { current: document.createElement('canvas') };
+        const { result } = renderHook(() => useFabricCanvas(canvasRef, 'page-1'));
+
+        await act(async () => {
+            result.current.initCanvas(800, 600);
+        });
+
+        expect(mockLoadFromJSON).toHaveBeenCalledWith(existingOverlay);
+        // Ensure saving changes works and does not drop edits
+        act(() => {
+            mockToJSONValue = { ...mockToJSONValue, version: '1.2' };
+            result.current.saveChanges();
+        });
+        expect(mockSetOverlay).toHaveBeenCalled();
     });
 });

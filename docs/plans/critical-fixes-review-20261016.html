@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Technical Remediation and Architectural Strategy for Critical Issues in ConvertFloww" />
+    <title>Critical Issues Remediation Plan &mdash; ConvertFloww</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Mermaid 11 ESM CDN -->
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ 
+        startOnLoad: true, 
+        theme: "neutral", 
+        securityLevel: "loose",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+      });
+    </script>
+
+    <style>
+      :root {
+        --bg-page: #fafaf9;
+        --bg-card: #ffffff;
+        --text-primary: #0f172a;
+        --text-secondary: #334155;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --border-subtle: #cbd5e1;
+        --accent-danger: #dc2626;
+        --accent-danger-bg: #fef2f2;
+        --accent-success: #16a34a;
+        --accent-success-bg: #f0fdf4;
+        --accent-amber: #d97706;
+        --accent-indigo: #4f46e5;
+        --deep-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      }
+
+      /* 8px Grid Base System */
+      body {
+        background-color: var(--bg-page);
+        color: var(--text-primary);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      }
+
+      .deep-card {
+        background: var(--deep-gradient);
+      }
+
+      .card-hover-fx {
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+      }
+      .card-hover-fx:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Accessible Motion Preferences */
+      @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      .badge-danger {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #f87171;
+      }
+
+      .badge-success {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+      }
+
+      .badge-purple {
+        background-color: #f3e8ff;
+        color: #6b21a8;
+        border: 1px solid #d8b4fe;
+      }
+
+      .badge-amber {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+      }
+    </style>
+  </head>
+  <body class="antialiased min-h-screen">
+    <!-- Main Semantic Container -->
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+      <!-- Navigation & Header (8px grid spacing) -->
+      <header class="border-b border-stone-200 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <nav aria-label="Breadcrumb" class="mb-2">
+            <span class="text-xs font-mono uppercase tracking-widest text-red-600 font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+              Critical Remediation Track
+            </span>
+          </nav>
+          <h1 class="text-3xl font-serif font-bold text-slate-900 mt-1">ConvertFloww Remediation Plan</h1>
+          <p class="text-xs font-mono text-slate-500 mt-1">
+            Targeting Critical Issues #1 through #6 &bull; Non-critical PDF bugs isolated on back burner
+          </p>
+        </div>
+
+        <!-- Legend / Key -->
+        <div class="flex flex-wrap items-center gap-4 text-xs font-mono bg-white p-3 rounded-lg border border-stone-200 shadow-sm" role="region" aria-label="Issue Classification Legend">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 bg-red-100 border border-red-500 rounded-sm inline-block"></span>
+            <span class="text-slate-600">Vulnerability</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 bg-emerald-100 border border-emerald-500 rounded-sm inline-block"></span>
+            <span class="text-slate-600">Remediated Seam</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 deep-card rounded-sm inline-block border border-slate-700"></span>
+            <span class="text-slate-600">Deep Engine</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scope Isolation Notice -->
+      <section class="bg-amber-50/70 border border-amber-300 rounded-xl p-6 text-amber-900 space-y-2 text-sm shadow-sm" aria-label="Scope Guidance">
+        <div class="flex items-center gap-2 font-bold font-mono text-xs uppercase tracking-wider text-amber-800">
+          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Active Execution Scope: Priority Critical Flow
+        </div>
+        <p>
+          Per directive, all non-critical PDF engine items (Issues #7 through #10, #22–#25, font encodings, WebP overlays, double rotation) are deferred to the back burner. <strong>Only Critical Issue #6 (Fabric 7 Promise bug breaking undo/redo &amp; canvas restore) is in active remediation alongside Critical Issues #1–#5.</strong>
+        </p>
+      </section>
+
+      <!-- Critical Candidates Section -->
+      <section id="critical-candidates" class="space-y-12" aria-label="Critical Issues Analysis">
+
+        <!-- ==================== ISSUE #6 ==================== -->
+        <article id="issue-6" class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-6 card-hover-fx">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-serif font-bold text-slate-900">
+              1. Fabric.js 7 Promise Deserialization (Issue #6)
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full badge-danger">Critical Severity</span>
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-slate-100 text-slate-700 border border-slate-200">pdf-engine</span>
+            </div>
+          </div>
+
+          <!-- File Paths -->
+          <div class="text-xs font-mono text-slate-600 bg-stone-50 p-3 rounded border border-stone-200 overflow-x-auto space-y-1">
+            <div><span class="text-slate-400">Target File:</span> src/features/pdf-engine/hooks/useFabricCanvas.ts (lines 194, 420, 439)</div>
+            <div><span class="text-slate-400">Unit Tests:</span> src/features/pdf-engine/hooks/useFabricCanvas.test.ts</div>
+          </div>
+
+          <!-- Side-by-side architecture diagram -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-red-200 bg-red-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-red-700 font-bold mb-2">Before: Deprecated Callback Treated as Reviver</div>
+              <pre class="mermaid">
+                flowchart TD
+                  A[loadFromJSON JSON, callback] --> B{Empty Canvas?}
+                  B -->|Yes| C[Reviver Never Invoked]
+                  C --> D[isRestoringRef Stays True Permanently]
+                  D --> E[Subsequent Edits &amp; Exports Dropped]
+                  B -->|No| F[Callback Fires per Object, Not Done]
+                  classDef broken fill:#fee2e2,stroke:#ef4444,stroke-width:2px;
+                  class D,E broken;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Fabric 7 expects Promise. Passing callback treats it as object reviver, hanging state.</div>
+            </div>
+
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-emerald-700 font-bold mb-2">After: Async/Await with Guaranteed Finally Block</div>
+              <pre class="mermaid">
+                flowchart TD
+                  A[await canvas.loadFromJSON JSON] --> B[Promise Resolves All Objects]
+                  B --> C[Rescale Loaded Objects to Viewport]
+                  C --> D[canvas.renderAll]
+                  D --> E[finally: isRestoringRef.current = false]
+                  E --> F[Undo/Redo &amp; Exports Fully Operational]
+                  classDef safe fill:#dcfce7,stroke:#22c55e,stroke-width:2px;
+                  class E,F safe;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Guaranteed cleanup resets restoring state on both populated and empty canvases.</div>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p><strong class="text-slate-900">Failure Mechanism:</strong> In Fabric v7, <code>loadFromJSON(json, reviver)</code> returns a <code>Promise&lt;Canvas&gt;</code>. Passing an inline callback as the second argument treats it as the <em>reviver</em> function. When an empty page or blank state is loaded, zero objects exist, so the reviver is never executed. <code>isRestoringRef.current</code> remains locked at <code>true</code> indefinitely, silently swallowing all subsequent user drawing mutations.</p>
+            <p><strong class="text-slate-900">Remediation:</strong> Convert all three <code>loadFromJSON</code> invocations in <code>useFabricCanvas.ts</code> to promise resolution (<code>await</code> or <code>.then()</code>) wrapped in a <code>finally</code> block that guarantees <code>isRestoringRef.current = false</code>.</p>
+          </div>
+
+          <div class="border-t border-stone-200 pt-4">
+            <h4 class="text-xs font-mono uppercase tracking-wider text-slate-500 mb-2">Execution Verification</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono text-slate-600">
+              <div class="bg-stone-50 p-2 rounded border border-stone-200">&bull; Vitest mock updated to return Promise.resolve()</div>
+              <div class="bg-stone-50 p-2 rounded border border-stone-200">&bull; Empty canvas state resets restoring flag</div>
+              <div class="bg-stone-50 p-2 rounded border border-stone-200">&bull; Rescale runs against populated canvas elements</div>
+              <div class="bg-stone-50 p-2 rounded border border-stone-200">&bull; Undo / Redo restores exact Fabric object stack</div>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ==================== ISSUE #1 ==================== -->
+        <article id="issue-1" class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-6 card-hover-fx">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-serif font-bold text-slate-900">
+              2. Hardcoded Admin Password in Client Bundle (Issue #1)
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full badge-danger">Critical Vulnerability</span>
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-slate-100 text-slate-700 border border-slate-200">admin-auth</span>
+            </div>
+          </div>
+
+          <div class="text-xs font-mono text-slate-600 bg-stone-50 p-3 rounded border border-stone-200 overflow-x-auto space-y-1">
+            <div><span class="text-slate-400">Target File:</span> src/features/admin/AdminLayout.tsx (lines 8–10, 33–46)</div>
+            <div><span class="text-slate-400">Unit Tests:</span> src/features/admin/AdminLayout.test.tsx</div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-red-200 bg-red-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-red-700 font-bold mb-2">Before: Plaintext Password in Distributed JS</div>
+              <pre class="mermaid">
+                flowchart TD
+                  V[Any Visitor / DevTools] -->|Inspect Bundle| PW["const UNLOCK_PASSWORD = 'AdminUnlock'"]
+                  V -->|Enter String| SS[sessionStorage 'admin_portal_unlocked']
+                  SS --> AP[Unrestricted Access to Admin Portal]
+                  AP --> S[(Supabase Mutation as Anon)]
+                  classDef leak stroke:#dc2626,stroke-width:2px;
+                  class PW,SS leak;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Zero authentication. Anyone inspecting client JS bypasses admin gate.</div>
+            </div>
+
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-emerald-700 font-bold mb-2">After: Supabase Authenticated Session Gate</div>
+              <pre class="mermaid">
+                flowchart TD
+                  V[Visitor] --> G{Supabase Session &amp; Role === 'admin'}
+                  G -->|No| L[Render Supabase Auth Login Form]
+                  L -->|Submit Credentials| SA[supabase.auth.signInWithPassword]
+                  SA -->|Valid Admin JWT| G
+                  G -->|Yes| AP[Access Granted with Admin JWT]
+                  classDef secure fill:#dcfce7,stroke:#22c55e,stroke-width:2px;
+                  class SA,AP secure;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Zero credentials in client bundle. Access granted solely via cryptographically signed JWT.</div>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p><strong class="text-slate-900">Failure Mechanism:</strong> <code>UNLOCK_PASSWORD = 'AdminUnlock'</code> is embedded directly into compiled production assets and checked entirely inside React component state (<code>sessionStorage.setItem('admin_portal_unlocked', 'true')</code>). Because no server-side auth handshake is ever performed, database calls execute as the anonymous user.</p>
+            <p><strong class="text-slate-900">Remediation:</strong> Purge <code>UNLOCK_PASSWORD</code> and <code>UNLOCK_KEY</code> completely. Require genuine Supabase Auth credentials (<code>supabase.auth.signInWithPassword</code>) and gate the view strictly on <code>role === 'admin'</code> verified via the Supabase user session.</p>
+          </div>
+        </article>
+
+
+        <!-- ==================== ISSUE #2 ==================== -->
+        <article id="issue-2" class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-6 card-hover-fx">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-serif font-bold text-slate-900">
+              3. Profile "Login" Leaks Hashes &amp; Private Notes (Issue #2)
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full badge-danger">Critical Privacy Breach</span>
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-slate-100 text-slate-700 border border-slate-200">attendance-repo</span>
+            </div>
+          </div>
+
+          <div class="text-xs font-mono text-slate-600 bg-stone-50 p-3 rounded border border-stone-200 overflow-x-auto space-y-1">
+            <div><span class="text-slate-400">Target Files:</span> src/features/attendance/repository/profileRepository.ts, src/features/attendance/components/ProfileSelection.tsx</div>
+            <div><span class="text-slate-400">Store:</span> src/features/attendance/store/useAttendanceStore.ts</div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-red-200 bg-red-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-red-700 font-bold mb-2">Before: SELECT * Leaks All Hashes &amp; Logs</div>
+              <pre class="mermaid">
+                flowchart TD
+                  Visitor[Visitor Browser] -->|fetchAll| Q["SELECT * FROM profiles"]
+                  Q --> DB[(Supabase DB)]
+                  DB -->|Returns| L[Full Bcrypt Hashes, Private Notes, All Logs]
+                  L --> LS[Cached to Visitor localStorage]
+                  Visitor -->|Offline Hash Attack| P[Cracked Passwords in Seconds]
+                  classDef leak stroke:#dc2626,stroke-width:2px;
+                  class Q,L,LS leak;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Every visitor receives all users' bcrypt password hashes and private logs over the wire.</div>
+            </div>
+
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-emerald-700 font-bold mb-2">After: Partitioned Directory vs Authenticated Unlock</div>
+              <pre class="mermaid">
+                flowchart TD
+                  Visitor[Visitor Browser] -->|fetchDirectory| Q["SELECT id, name, avatar_url, attended, total..."]
+                  Q --> DB[(Supabase DB)]
+                  DB -->|Sanitized Public Metadata| DIR[Public Profile Grid]
+                  Visitor -->|Enter Password| RPC[verify_profile_password RPC / Session]
+                  RPC -->|Verified| SEC[Fetch Profile Private Notes &amp; Logs]
+                  classDef secure fill:#dcfce7,stroke:#22c55e,stroke-width:2px;
+                  class DIR,RPC,SEC secure;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Public grid only receives sanitized UI fields. Hashes are never transmitted to the browser.</div>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p><strong class="text-slate-900">Failure Mechanism:</strong> <code>ProfileRepository.fetchAll()</code> executes <code>.select('*')</code> on <code>profiles</code>. This transmits all users' bcrypt password hashes, private personal notes, and full historical attendance logs to any unauthenticated user landing on the home page. The application then saves these hashes in <code>localStorage</code>.</p>
+            <p><strong class="text-slate-900">Remediation:</strong> Refactor <code>fetchAll()</code> into <code>fetchDirectory()</code> selecting only public non-sensitive columns (<code>id, name, avatar_url, attended, total, target_goal, last_active_at, is_flagged</code>). Password verification and retrieval of notes/logs must occur strictly per-profile without ever publishing password hashes over the network.</p>
+          </div>
+        </article>
+
+
+        <!-- ==================== ISSUES #3 & #4 ==================== -->
+        <article id="issues-3-4" class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-6 card-hover-fx">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-serif font-bold text-slate-900">
+              4. Missing Schema Migrations &amp; Permissive RLS (Issues #3 &amp; #4)
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full badge-danger">Critical Infrastructure</span>
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-slate-100 text-slate-700 border border-slate-200">postgres-rls</span>
+            </div>
+          </div>
+
+          <div class="text-xs font-mono text-slate-600 bg-stone-50 p-3 rounded border border-stone-200 overflow-x-auto space-y-1">
+            <div><span class="text-slate-400">Missing Artifact:</span> supabase/migrations/20261016000000_baseline_schema_and_rls.sql</div>
+            <div><span class="text-slate-400">Scope:</span> profiles table, announcements table, avatars bucket, mark_announcement_seen RPC</div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="rounded-lg border border-red-200 bg-red-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-red-700 font-bold mb-2">Before: Orphaned DB State &amp; Open Anon Privileges</div>
+              <pre class="mermaid">
+                flowchart TD
+                  CLI[supabase db reset] --> F[FAIL: Missing profiles &amp; announcements]
+                  ANON[Anon User] -->|Write / Delete| P[(Unprotected Tables)]
+                  ANON -->|mark_announcement_seen| RPC[Client spoofable p_id]
+                  classDef broken fill:#fee2e2,stroke:#ef4444,stroke-width:2px;
+                  class F,ANON broken;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Repo contains only 3 ALTER migrations. A fresh deployment or reset fails completely.</div>
+            </div>
+
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50/20 p-4 flex flex-col justify-between">
+              <div class="text-xs uppercase font-mono tracking-wider text-emerald-700 font-bold mb-2">After: Versioned Baseline DDL with Explicit RLS</div>
+              <pre class="mermaid">
+                flowchart TD
+                  MIG[Versioned Baseline Migration] --> T1[CREATE TABLE profiles]
+                  MIG --> T2[CREATE TABLE announcements]
+                  MIG --> T3[CREATE BUCKET avatars]
+                  MIG --> RLS[ENABLE ROW LEVEL SECURITY]
+                  RLS --> POL1[Public Directory Read Policy]
+                  RLS --> POL2[Authenticated Mutation Policy]
+                  classDef secure fill:#dcfce7,stroke:#22c55e,stroke-width:2px;
+                  class MIG,RLS,POL1,POL2 secure;
+              </pre>
+              <div class="text-[11px] font-mono text-slate-500 mt-2">Full reproducible database lifecycle with strict zero-trust Row Level Security.</div>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p><strong class="text-slate-900">Failure Mechanism:</strong> The repository lacks foundational migrations for its core data model. Only three incremental <code>ALTER</code> statements exist. If a developer runs <code>supabase db reset</code>, it crashes. In production, tables lack declarative RLS policies, allowing anonymous users to execute raw <code>UPDATE</code> and <code>DELETE</code> operations.</p>
+            <p><strong class="text-slate-900">Remediation:</strong> Commit a consolidated baseline migration script creating <code>profiles</code>, <code>announcements</code>, and the <code>avatars</code> storage bucket, complete with strict Row Level Security (RLS) restricting write operations to authenticated sessions.</p>
+          </div>
+        </article>
+
+
+        <!-- ==================== ISSUE #5 ==================== -->
+        <article id="issue-5" class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-6 card-hover-fx">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-2xl font-serif font-bold text-slate-900">
+              5. Production Dependency CVEs &amp; LAN Server Exposure (Issue #5)
+            </h2>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 text-xs font-semibold rounded-full badge-danger">High / Critical Vulnerabilities</span>
+              <span class="px-2.5 py-1 text-xs font-mono rounded-full bg-slate-100 text-slate-700 border border-slate-200">security-hygiene</span>
+            </div>
+          </div>
+
+          <div class="text-xs font-mono text-slate-600 bg-stone-50 p-3 rounded border border-stone-200 overflow-x-auto space-y-1">
+            <div><span class="text-slate-400">Vite Config:</span> vite.config.ts (line 64: server.host: true)</div>
+            <div><span class="text-slate-400">Audit Status:</span> 32 vulnerabilities (21 high) in package-lock.json</div>
+          </div>
+
+          <div class="space-y-4 text-sm text-slate-700 leading-relaxed">
+            <p><strong class="text-slate-900">Dev Server LAN File Exposure:</strong> In <code>vite.config.ts</code>, <code>server: { host: true }</code> binds the local development server to <code>0.0.0.0</code>. Coupled with known Vite dev-server file-read advisories, any device on the same local network (Wi-Fi) can read arbitrary files from the developer's computer. <em>Remediation:</em> Default <code>host</code> to <code>false</code> (binding strictly to loopback <code>127.0.0.1</code>).</p>
+            
+            <p><strong class="text-slate-900">Vulnerable Core Dependencies:</strong> <code>pdfjs-dist</code> has a high-severity vulnerability allowing arbitrary JavaScript execution via malicious PDF structures. <code>react-router</code> dependencies contain open high-severity advisory CVEs. <em>Remediation:</em> Update package resolutions and bump direct dependencies to patched security releases.</p>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- Tech Stack Justification Section (User Rule Requirement) -->
+      <section class="bg-white rounded-xl border border-stone-200 p-8 shadow-sm space-y-4" aria-label="Tech Stack Justification">
+        <h3 class="text-xl font-serif font-bold text-slate-900">Tech Stack Architecture &amp; Rationale</h3>
+        <p class="text-sm text-slate-700 leading-relaxed">
+          For this architectural and remediation blueprint, we selected <strong>Tailwind CSS</strong>, <strong>Mermaid 11 (ESM)</strong>, and <strong>Semantic HTML5 with CSS Custom Properties</strong> for the following reasons:
+        </p>
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-slate-700">
+          <li class="p-3 bg-stone-50 rounded border border-stone-200">
+            <strong class="text-slate-900 block mb-1">Tailwind CSS (CDN)</strong>
+            Enables strict adherence to an 8px spacing grid without requiring an external build step, guaranteeing portable inspection in any browser or environment.
+          </li>
+          <li class="p-3 bg-stone-50 rounded border border-stone-200">
+            <strong class="text-slate-900 block mb-1">Mermaid 11 ESM</strong>
+            Renders reactive, client-side SVG sequence and flow diagrams directly from human-readable text specifications, providing visual before/after contrast for technical reviewers.
+          </li>
+          <li class="p-3 bg-stone-50 rounded border border-stone-200">
+            <strong class="text-slate-900 block mb-1">CSS Custom Properties</strong>
+            Decouples color tokens into variables (<code>--bg-page</code>, <code>--accent-danger</code>, etc.), facilitating seamless theme transitions and accessible dark/high-contrast modes.
+          </li>
+          <li class="p-3 bg-stone-50 rounded border border-stone-200">
+            <strong class="text-slate-900 block mb-1">Accessibility Landmarks</strong>
+            Employs HTML5 semantic landmarks (<code>header</code>, <code>main</code>, <code>article</code>, <code>section</code>, <code>nav</code>) and <code>prefers-reduced-motion</code> overrides for WCAG 2.1 AA compliance.
+          </li>
+        </ul>
+      </section>
+
+      <!-- Execution Priority Banner -->
+      <footer class="border-2 border-emerald-500 bg-white rounded-xl p-8 shadow-md space-y-4" aria-label="Remediation Sequencing">
+        <div class="flex items-center gap-2 text-emerald-700 text-xs font-mono font-bold uppercase tracking-widest">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Single-Flow Execution Sequence
+        </div>
+        <h3 class="text-2xl font-serif font-bold text-slate-900">
+          Step 1: Fix Fabric 7 Deserialization Bug (Issue #6)
+        </h3>
+        <p class="text-slate-700 text-sm leading-relaxed">
+          Begin with the single critical PDF engine flaw in <code class="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">src/features/pdf-engine/hooks/useFabricCanvas.ts</code>. Converting <code class="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">canvas.loadFromJSON</code> to promise handling immediately restores canvas editing, undo/redo stacks, and export integrity without touching deferred non-critical rendering tasks. Once verified through unit tests, proceed directly to sealing authentication and database migrations.
+        </p>
+      </footer>
+
+    </main>
+  </body>
+</html>

@@ -21,7 +21,6 @@
     "clsx": "^2.1.1",
     "fabric": "^7.4.0",
     "framer-motion": "^12.23.26",
-    "heic2any": "^0.0.4",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
@@ -61,7 +60,7 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-pwa": "^0.21.1",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.9"
   }
 }

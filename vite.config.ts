@@ -53,15 +53,32 @@ export default defineConfig({
         ]
       },
       workbox: {
-        importScripts: ['/sw-custom.js']
+        importScripts: ['/sw-custom.js'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.dicebear\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'dicebear-avatars',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       devOptions: {
-        enabled: true
+        enabled: false
       }
     })
   ],
   server: {
-    host: true,
+    // Restrict dev server to localhost (prevents LAN file-read exposure)
+    host: false,
   },
   worker: {
     format: 'es',
@@ -77,8 +94,6 @@ export default defineConfig({
             if (id.includes('pdfjs-dist')) return 'pdfjs';
             if (id.includes('jszip')) return 'jszip';
             if (id.includes('@dnd-kit')) return 'dnd-kit';
-            if (id.includes('@radix-ui')) return 'radix-ui';
-            if (id.includes('date-fns')) return 'date-fns';
             if (id.includes('framer-motion')) return 'framer-motion';
             if (id.includes('supabase')) return 'supabase';
             // Everything else goes to the default vendor/app chunks

@@ -3,11 +3,15 @@ import Cropper, { type Area } from 'react-easy-crop';
 import { Button } from './ui/Button';
 import GlassSurface from './ui/reactbits/GlassSurface';
 import { X, Upload, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ProfilePicturePickerProps {
     onCropComplete: (croppedImage: Blob) => void;
     onClose: () => void;
 }
+
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicturePickerProps) => {
     const [image, setImage] = useState<string | null>(null);
@@ -20,6 +24,19 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
     const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
+
+            if (file.type && !ALLOWED_MIME_TYPES.includes(file.type.toLowerCase())) {
+                toast.error('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.');
+                e.target.value = '';
+                return;
+            }
+
+            if (file.size > MAX_FILE_SIZE) {
+                toast.error('Image file size exceeds 2MB limit.');
+                e.target.value = '';
+                return;
+            }
+
             setSelectedFile(file);
             const isGifFile = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
             setIsGif(isGifFile);
@@ -149,8 +166,8 @@ export const ProfilePicturePicker = ({ onCropComplete, onClose }: ProfilePicture
                             <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors">
                                 <Upload size={48} className="text-primary-500 mb-4" />
                                 <span className="text-white font-medium">Select an image or GIF</span>
-                                <span className="text-white/40 text-xs mt-1">Supports JPG, PNG & Animated GIF</span>
-                                <input type="file" className="hidden" accept="image/*" onChange={onSelectFile} />
+                                <span className="text-white/40 text-xs mt-1">Supports JPG, PNG, WebP & GIF (max 2MB)</span>
+                                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onSelectFile} />
                             </label>
                         )}
                     </div>
